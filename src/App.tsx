@@ -1,27 +1,24 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AppProvider } from '@/contexts/AppContext';
+import LoginPage from '@/pages/LoginPage';
+import CEODashboard from '@/pages/CEODashboard';
+import RepDashboard from '@/pages/RepDashboard';
+import { Toaster } from '@/components/ui/toaster';
 
-const queryClient = new QueryClient();
+function AppContent() {
+  const { user } = useAuth();
+  if (!user) return <LoginPage />;
+  if (user.role === 'ceo') return <CEODashboard />;
+  return <RepDashboard />;
+}
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+  <AuthProvider>
+    <AppProvider>
+      <AppContent />
       <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </AppProvider>
+  </AuthProvider>
 );
 
 export default App;
