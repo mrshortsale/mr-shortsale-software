@@ -36,6 +36,7 @@ export default function CEODashboard() {
       case 'ai-calls': return <AIInboundCalls />;
       case 'data': return <DataSources />;
       case 'roadmap': return <RoadmapView />;
+      case 'presentation': return <Presentation />;
       case 'settings': return <div className="p-8"><h2 className="text-2xl font-bold text-foreground">Settings</h2><p className="text-muted-foreground mt-2">Account and platform settings coming soon.</p></div>;
       default: return <MorningBriefing />;
     }
