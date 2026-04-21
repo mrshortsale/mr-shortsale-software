@@ -1,179 +1,212 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
-import { getLeadsForAgent, getAICallScript, Lead } from '@/data/leads';
-import { Phone, MessageSquare, Clock, XCircle, ChevronRight, MapPin, Calendar, Shield, AlertTriangle, Sparkles } from 'lucide-react';
+import { Lead } from '@/data/leads';
+import { getPriorContact } from '@/data/activity';
+import { Phone, MessageSquare, MapPin, AlertTriangle, Sparkles, Clock, Filter, ArrowUpDown, Target } from 'lucide-react';
+import LeadDetailDrawer from '@/components/shared/LeadDetailDrawer';
+
+type SortKey = 'urgency' | 'auction' | 'equity' | 'name';
+type FilterLang = 'all' | 'EN' | 'ES';
+type FilterStatus = 'all' | 'Not Called' | 'Called' | 'Connected' | 'Callback Scheduled' | 'SMS Sent' | 'VM Left';
 
 export default function LeadQueue() {
   const { user } = useAuth();
   const { leads, updateLeadStatus, setActiveCallLeadId } = useApp();
-  const [selectedLead, setSelectedLead] = useState<string | null>(null);
+  const [drawerLeadId, setDrawerLeadId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('urgency');
+  const [filterLang, setFilterLang] = useState<FilterLang>('all');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
 
-  const agentLeads = leads.filter(l => l.assigned_agent === user?.id).sort((a, b) => b.urgency_score - a.urgency_score);
-  const selected = agentLeads.find(l => l.id === selectedLead);
+  const agentLeads = useMemo(() => {
+    let list = leads.filter(l => l.assigned_agent === user?.id);
+    if (filterLang !== 'all') list = list.filter(l => l.language_preference === filterLang);
+    if (filterStatus !== 'all') list = list.filter(l => l.call_status === filterStatus);
+    list = [...list].sort((a, b) => {
+      if (sortKey === 'urgency') return b.urgency_score - a.urgency_score;
+      if (sortKey === 'auction') return a.days_to_auction - b.days_to_auction;
+      if (sortKey === 'equity') return a.equity_pct - b.equity_pct;
+      return a.homeowner_name.localeCompare(b.homeowner_name);
+    });
+    return list;
+  }, [leads, user, sortKey, filterLang, filterStatus]);
 
   const handleCall = (leadId: string) => {
     updateLeadStatus(leadId, 'In Progress');
     setActiveCallLeadId(leadId);
   };
 
-  const equityColor = (pct: number) => pct <= 14 ? 'equity-bar-red' : pct <= 20 ? 'equity-bar-amber' : 'equity-bar-green';
-  const auctionColor = (days: number) => days < 30 ? 'text-destructive' : days < 60 ? 'text-warning' : 'text-accent';
+  // "Today" stats banner
+  const todayStats = useMemo(() => {
+    const mine = leads.filter(l => l.assigned_agent === user?.id);
+    const calls = mine.filter(l => l.last_call_date === '2026-04-09' || l.call_status !== 'Not Called').length;
+    const connected = mine.filter(l => l.call_status === 'Connected' || l.last_call_outcome?.includes('Connected')).length;
+    const qualified = mine.filter(l => l.last_call_outcome?.includes('qualified')).length;
+    return { calls, connected, qualified, goal: 12 };
+  }, [leads, user]);
+
+  const drawerLead = drawerLeadId ? leads.find(l => l.id === drawerLeadId) || null : null;
 
   return (
-    <div className="flex gap-4">
-      {/* Lead list */}
-      <div className={`flex-1 space-y-3 ${selected ? 'hidden lg:block' : ''}`}>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-bold text-foreground">My Lead Queue</h2>
-          <span className="text-sm text-muted-foreground">{agentLeads.length} leads</span>
+    <div className="space-y-4">
+      {/* Today banner */}
+      <div className="rounded-xl bg-gradient-to-r from-primary to-secondary p-4 text-primary-foreground flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Target size={18} />
+          <span className="font-bold text-sm">Today</span>
         </div>
-        {agentLeads.map((lead, i) => (
-          <div
+        <BannerStat label="Calls" value={todayStats.calls} goal={todayStats.goal} />
+        <BannerStat label="Connected" value={todayStats.connected} />
+        <BannerStat label="Qualified" value={todayStats.qualified} />
+        <span className="ml-auto text-xs opacity-80 hidden sm:block">
+          AI pre-researched all {agentLeads.length} of your leads · Scripts ready
+        </span>
+      </div>
+
+      {/* Filters/Sort */}
+      <div className="flex flex-wrap items-center gap-2 metric-card py-3">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ArrowUpDown size={12} /> Sort
+        </div>
+        {(['urgency', 'auction', 'equity', 'name'] as SortKey[]).map(k => (
+          <button key={k} onClick={() => setSortKey(k)} className={`text-xs px-2.5 py-1 rounded-full ${sortKey === k ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}>
+            {k === 'urgency' ? 'Urgency' : k === 'auction' ? 'Days to auction' : k === 'equity' ? 'Equity' : 'Name'}
+          </button>
+        ))}
+        <div className="w-px h-4 bg-border mx-2" />
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Filter size={12} /> Lang
+        </div>
+        {(['all', 'EN', 'ES'] as FilterLang[]).map(l => (
+          <button key={l} onClick={() => setFilterLang(l)} className={`text-xs px-2.5 py-1 rounded-full ${filterLang === l ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+            {l === 'all' ? 'All' : l}
+          </button>
+        ))}
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value as FilterStatus)}
+          className="text-xs px-2 py-1 rounded-md border bg-card text-foreground ml-auto"
+        >
+          <option value="all">All statuses</option>
+          <option value="Not Called">Not Called</option>
+          <option value="Connected">Connected</option>
+          <option value="Callback Scheduled">Callback Scheduled</option>
+          <option value="SMS Sent">SMS Sent</option>
+          <option value="VM Left">VM Left</option>
+        </select>
+        <span className="text-xs text-muted-foreground">{agentLeads.length} leads</span>
+      </div>
+
+      {/* Leads */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {agentLeads.map(lead => (
+          <LeadCard
             key={lead.id}
-            className={`metric-card cursor-pointer hover:shadow-md transition-shadow ${selectedLead === lead.id ? 'ring-2 ring-secondary' : ''}`}
-            onClick={() => setSelectedLead(lead.id)}
-          >
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-foreground">{lead.homeowner_name}</span>
-                  <span className={lead.language_preference === 'ES' ? 'badge-es' : 'badge-en'}>{lead.language_preference}</span>
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin size={10} />{lead.address}, {lead.city}</p>
-              </div>
-              <div className="text-right">
-                <span className={`text-xs font-bold ${auctionColor(lead.days_to_auction)}`}>
-                  {lead.days_to_auction < 30 && <AlertTriangle size={10} className="inline mr-0.5" />}
-                  {lead.days_to_auction} days
-                </span>
-                <p className="text-xs text-muted-foreground">to auction</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">{lead.filing_type}</span>
-              <span className="text-xs text-muted-foreground">{lead.filing_date}</span>
-              <span className="text-xs text-muted-foreground ml-auto">{lead.data_source_primary}{lead.attom_verified && ' · ATTOM ✓'}</span>
-            </div>
-
-            {/* Equity bar */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-muted-foreground w-16">Equity {lead.equity_pct}%</span>
-              <div className="flex-1 bg-muted rounded-full h-2">
-                <div className={`equity-bar ${equityColor(lead.equity_pct)}`} style={{ width: `${lead.equity_pct * 4}%` }} />
-              </div>
-            </div>
-
-            {/* Status + actions */}
-            <div className="flex items-center gap-2">
-              <StatusBadge status={lead.call_status} />
-              {lead.callback_scheduled_at && <span className="text-xs text-warning">CB: 3pm</span>}
-              <div className="ml-auto flex gap-1.5">
-                <button onClick={e => { e.stopPropagation(); handleCall(lead.id); }} className="px-3 py-1.5 bg-accent text-accent-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1"><Phone size={12} />Call Now</button>
-                <button onClick={e => { e.stopPropagation(); updateLeadStatus(lead.id, 'SMS Sent'); }} className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg text-xs font-medium hover:opacity-90 flex items-center gap-1"><MessageSquare size={12} />SMS</button>
-              </div>
-            </div>
-          </div>
+            lead={lead}
+            onSelect={() => setDrawerLeadId(lead.id)}
+            onCall={() => handleCall(lead.id)}
+            onSMS={() => updateLeadStatus(lead.id, 'SMS Sent')}
+          />
         ))}
       </div>
 
-      {/* AI Research Panel */}
-      {selected && (
-        <div className="w-full lg:w-96 xl:w-[440px] shrink-0">
-          <div className="sticky top-20">
-            <div className="metric-card space-y-5 max-h-[calc(100vh-120px)] overflow-y-auto">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-foreground">{selected.homeowner_name}</h3>
-                  <p className="text-sm text-muted-foreground">{selected.address}, {selected.city} {selected.state}</p>
-                </div>
-                <button onClick={() => setSelectedLead(null)} className="lg:hidden text-muted-foreground"><XCircle size={20} /></button>
-              </div>
+      <LeadDetailDrawer
+        lead={drawerLead}
+        open={!!drawerLeadId}
+        onOpenChange={(o) => !o && setDrawerLeadId(null)}
+        onCall={handleCall}
+      />
+    </div>
+  );
+}
 
-              {/* Property summary */}
-              <Section title="Property Summary">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <Info label="Beds/Baths" value={`${selected.beds}bd / ${selected.baths}ba`} />
-                  <Info label="Sqft" value={selected.sqft.toLocaleString()} />
-                  <Info label="Year Built" value={String(selected.year_built)} />
-                  <Info label="Est. Value" value={`$${selected.estimated_value.toLocaleString()}`} />
-                  <Info label="Mortgage Balance" value={`$${selected.mortgage_balance.toLocaleString()}`} />
-                  <Info label="Equity" value={`${selected.equity_pct}%`} />
-                </div>
-              </Section>
+function BannerStat({ label, value, goal }: { label: string; value: number; goal?: number }) {
+  return (
+    <div className="text-sm">
+      <span className="opacity-80">{label}: </span>
+      <span className="font-bold">{value}</span>
+      {goal !== undefined && <span className="opacity-70"> / {goal}</span>}
+    </div>
+  );
+}
 
-              {/* Data verification */}
-              <Section title="Data Verification">
-                <div className="text-sm space-y-1">
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Primary:</span> {selected.data_source_primary}</p>
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">ATTOM:</span> {selected.attom_verified ? '✓ Equity confirmed' : 'Pending'}</p>
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Status:</span> <span className="text-accent">No discrepancies</span></p>
-                </div>
-              </Section>
+const urgencyBadge = (s: number) =>
+  s >= 9 ? 'bg-destructive text-destructive-foreground animate-pulse' :
+  s >= 7 ? 'bg-warning text-primary-foreground' :
+  s >= 4 ? 'bg-secondary/20 text-secondary' :
+  'bg-muted text-muted-foreground';
 
-              {/* Owner profile */}
-              <Section title="Owner Profile">
-                <div className="text-sm space-y-1">
-                  <Info label="Owner" value={selected.homeowner_name} />
-                  <Info label="Purchase Price" value={`$${selected.purchase_price.toLocaleString()}`} />
-                  <Info label="Purchase Date" value={selected.purchase_date} />
-                  <Info label="Lender" value={selected.mortgage_lender} />
-                  <Info label="Phone" value={selected.phone} />
-                  <Info label="Email" value={selected.email} />
-                </div>
-              </Section>
+const equityColor = (pct: number) => pct <= 14 ? 'bg-destructive' : pct <= 20 ? 'bg-warning' : 'bg-accent';
+const auctionColor = (days: number) => days < 30 ? 'text-destructive' : days < 60 ? 'text-warning' : 'text-accent';
 
-              {/* Urgency */}
-              <Section title="Urgency Signals">
-                <div className="text-sm space-y-1">
-                  <Info label="Auction Date" value={selected.auction_date} />
-                  <Info label="Days Left" value={`${selected.days_to_auction} days`} />
-                  <Info label="Filing Type" value={selected.filing_type} />
-                  <Info label="Urgency Score" value={`${selected.urgency_score}/10`} />
-                </div>
-              </Section>
+function LeadCard({ lead, onSelect, onCall, onSMS }: { lead: Lead; onSelect: () => void; onCall: () => void; onSMS: () => void }) {
+  const prior = getPriorContact(lead.id);
 
-              {/* Prior contact */}
-              <Section title="Prior Contact History">
-                <p className="text-sm text-muted-foreground">{selected.prior_contact ? 'Previously contacted — check call history' : 'No prior contact on record'}</p>
-              </Section>
-
-              {/* AI Script */}
-              <Section title="AI Call Script">
-                <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted p-3 rounded-lg">{getAICallScript(selected)}</pre>
-              </Section>
-
-              <button onClick={() => handleCall(selected.id)} className="w-full py-2.5 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2">
-                <Phone size={16} /> Call {selected.homeowner_name.split(' ')[0]} Now
-              </button>
-            </div>
-          </div>
+  return (
+    <div onClick={onSelect} className="metric-card cursor-pointer hover:shadow-md hover:border-secondary/40 transition-all">
+      <div className="flex items-start gap-3 mb-3">
+        <div className={`shrink-0 px-2 py-1.5 rounded-lg font-bold text-sm min-w-[44px] text-center ${urgencyBadge(lead.urgency_score)}`}>
+          {lead.urgency_score}
+          <div className="text-[9px] opacity-80 leading-none">/10</div>
         </div>
-      )}
-    </div>
-  );
-}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-bold text-foreground truncate">{lead.homeowner_name}</span>
+            <span className={lead.language_preference === 'ES' ? 'badge-es' : 'badge-en'}>{lead.language_preference}</span>
+          </div>
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin size={10} />{lead.address}, {lead.city}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <span className={`text-xs font-bold ${auctionColor(lead.days_to_auction)}`}>
+            {lead.days_to_auction < 30 && <AlertTriangle size={10} className="inline mr-0.5" />}
+            {lead.days_to_auction}d
+          </span>
+          <p className="text-[10px] text-muted-foreground">to auction</p>
+        </div>
+      </div>
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{title}</h4>
-      {children}
-    </div>
-  );
-}
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary">{lead.filing_type}</span>
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent/10 text-accent">
+          <Sparkles size={9} /> AI Researched
+        </span>
+        {prior.length > 0 && (
+          <span title={`${prior.length} prior touch${prior.length > 1 ? 'es' : ''} — last: ${prior[prior.length - 1].outcome}`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-warning/15 text-warning cursor-help">
+            <Clock size={9} /> Prior contact
+          </span>
+        )}
+        <span className="text-[10px] text-muted-foreground ml-auto">{lead.data_source_primary}</span>
+      </div>
 
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[10px] text-muted-foreground w-16">Equity {lead.equity_pct}%</span>
+        <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+          <div className={`h-full rounded-full ${equityColor(lead.equity_pct)}`} style={{ width: `${Math.min(100, lead.equity_pct * 4)}%` }} />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <StatusBadge status={lead.call_status} />
+        {lead.callback_scheduled_at && <span className="text-[10px] text-warning font-medium">CB scheduled</span>}
+        <div className="ml-auto flex gap-1.5">
+          <button onClick={e => { e.stopPropagation(); onCall(); }} className="px-2.5 py-1 bg-accent text-accent-foreground rounded-md text-[11px] font-medium hover:opacity-90 flex items-center gap-1">
+            <Phone size={11} />Call
+          </button>
+          <button onClick={e => { e.stopPropagation(); onSMS(); }} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded-md text-[11px] font-medium hover:opacity-90 flex items-center gap-1">
+            <MessageSquare size={11} />SMS
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cls = status === 'Connected' ? 'badge-qualified' : status === 'Not Called' ? 'bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full' : status === 'Callback Scheduled' ? 'badge-pending' : status === 'SMS Sent' ? 'badge-en' : status === 'VM Left' ? 'badge-pending' : 'badge-urgent';
+  const cls = status === 'Connected' ? 'badge-qualified'
+    : status === 'Not Called' ? 'bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded-full'
+    : status === 'Callback Scheduled' ? 'badge-pending'
+    : status === 'SMS Sent' ? 'badge-en'
+    : status === 'VM Left' ? 'badge-pending'
+    : 'badge-urgent';
   return <span className={cls}>{status}</span>;
 }
