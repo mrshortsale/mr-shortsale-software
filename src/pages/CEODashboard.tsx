@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
@@ -10,6 +10,7 @@ import TeamPerformance from '@/components/ceo/TeamPerformance';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
 import DataSources from '@/components/ceo/DataSources';
 import RoadmapView from '@/components/ceo/RoadmapView';
+import Presentation from '@/components/ceo/Presentation';
 
 const navItems = [
   { id: 'briefing', label: 'Morning Briefing', icon: Home },
@@ -18,6 +19,7 @@ const navItems = [
   { id: 'ai-calls', label: 'AI Inbound Calls', icon: Phone },
   { id: 'data', label: 'Data Sources', icon: Database },
   { id: 'roadmap', label: 'Roadmap', icon: Map },
+  { id: 'presentation', label: 'Presentation', icon: Sparkles },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
