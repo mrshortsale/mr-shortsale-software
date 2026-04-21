@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
 import PipelineBoard from '@/components/ceo/PipelineBoard';
 import TeamPerformance from '@/components/ceo/TeamPerformance';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
+import AIAgentsRoster from '@/components/ceo/AIAgentsRoster';
 import DataSources from '@/components/ceo/DataSources';
 import RoadmapView from '@/components/ceo/RoadmapView';
 import Presentation from '@/components/ceo/Presentation';
@@ -17,6 +18,7 @@ const navItems = [
   { id: 'pipeline', label: 'Short Sale Pipeline', icon: Kanban },
   { id: 'team', label: 'Team Performance', icon: BarChart3 },
   { id: 'ai-calls', label: 'AI Inbound Calls', icon: Phone },
+  { id: 'ai-agents', label: 'AI Agents', icon: Bot },
   { id: 'data', label: 'Data Sources', icon: Database },
   { id: 'roadmap', label: 'Roadmap', icon: Map },
   { id: 'presentation', label: 'Presentation', icon: Sparkles },
@@ -34,6 +36,7 @@ export default function CEODashboard() {
       case 'pipeline': return <PipelineBoard />;
       case 'team': return <TeamPerformance />;
       case 'ai-calls': return <AIInboundCalls />;
+      case 'ai-agents': return <AIAgentsRoster />;
       case 'data': return <DataSources />;
       case 'roadmap': return <RoadmapView />;
       case 'presentation': return <Presentation />;
