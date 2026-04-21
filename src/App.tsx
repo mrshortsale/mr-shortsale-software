@@ -4,6 +4,7 @@ import LoginPage from '@/pages/LoginPage';
 import CEODashboard from '@/pages/CEODashboard';
 import RepDashboard from '@/pages/RepDashboard';
 import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from 'sonner';
 
 function AppContent() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ const App = () => (
     <AppProvider>
       <AppContent />
       <Toaster />
+      <SonnerToaster position="bottom-right" theme="light" richColors closeButton />
     </AppProvider>
   </AuthProvider>
 );

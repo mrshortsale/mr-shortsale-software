@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
+import AgentDrillDown from './AgentDrillDown';
 
 type Period = 'today' | 'week' | 'month';
 
@@ -28,32 +29,39 @@ const colors = ['hsl(160,75%,24%)', 'hsl(212,70%,37%)', 'hsl(36,80%,28%)', 'hsl(
 
 export default function TeamPerformance() {
   const [period, setPeriod] = useState<Period>('today');
+  const [drillAgent, setDrillAgent] = useState<typeof agentStats.today[0] | null>(null);
   const data = agentStats[period];
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         {(['today', 'week', 'month'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
             {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
           </button>
         ))}
+        <span className="ml-auto text-xs text-muted-foreground">Click any agent for drill-down →</span>
       </div>
 
       <div className="metric-card">
         <h3 className="font-bold text-foreground mb-4">Calls by Agent</h3>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={data} layout="vertical">
+          <BarChart data={data} layout="vertical" onClick={(e) => {
+            if (e && e.activePayload && e.activePayload[0]) {
+              const name = (e.activePayload[0].payload as { name: string }).name;
+              const a = data.find(x => x.name === name);
+              if (a) setDrillAgent(a);
+            }
+          }}>
             <XAxis type="number" />
             <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
-            <Bar dataKey="calls" radius={[0, 6, 6, 0]} barSize={22}>
+            <Bar dataKey="calls" radius={[0, 6, 6, 0]} barSize={22} cursor="pointer">
               {data.map((_, i) => <Cell key={i} fill={colors[i]} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Table */}
       <div className="metric-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -68,7 +76,7 @@ export default function TeamPerformance() {
           </thead>
           <tbody>
             {data.map((agent, i) => (
-              <tr key={i} className="border-b last:border-0">
+              <tr key={i} className="border-b last:border-0 hover:bg-muted/40 cursor-pointer" onClick={() => setDrillAgent(agent)}>
                 <td className="py-3 font-medium text-foreground">{agent.name}</td>
                 <td className="py-3 text-right text-foreground">{agent.calls}</td>
                 <td className="py-3 text-right text-foreground">{agent.connected}</td>
@@ -80,6 +88,8 @@ export default function TeamPerformance() {
           </tbody>
         </table>
       </div>
+
+      <AgentDrillDown agent={drillAgent} open={!!drillAgent} onOpenChange={(o) => !o && setDrillAgent(null)} />
     </div>
   );
 }

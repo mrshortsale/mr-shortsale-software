@@ -1,9 +1,13 @@
+import { useEffect, useState } from 'react';
 import { ArrowUp, Users, Phone, Bot, CheckSquare, Square, AlertTriangle, Sparkles } from 'lucide-react';
 import { aiInboundCalls } from '@/data/calls';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
+import AIActivityTicker from './AIActivityTicker';
+import { useLiveLeadFeed } from '@/hooks/useLiveSimulation';
 
 const pipelineData = [
-  { name: 'Initial Contact', count: 8 },
+  { name: 'Initial Contact', count: 5 },
+  { name: 'Docs Collected', count: 3 },
   { name: 'Bank Submitted', count: 3 },
   { name: 'Pending Approval', count: 1 },
 ];
@@ -17,7 +21,7 @@ const teamData = [
 const tasks = [
   { text: 'Review 47 new leads from Realie.ai', done: true },
   { text: 'Approve AI call scripts — Westchester batch', done: true },
-  { text: 'Follow up: Johnson file — auction in 18 days', done: false, priority: 'urgent' },
+  { text: 'Follow up: Lopez file — auction in 28 days', done: false, priority: 'urgent' },
   { text: 'Review 6 AI call transcripts from last night', done: false, priority: 'new' },
   { text: 'Send DocuSign to Rodriguez family', done: false },
 ];
@@ -25,28 +29,43 @@ const tasks = [
 const recentAICalls = aiInboundCalls.slice(0, 3);
 
 export default function MorningBriefing() {
+  const [newLeads, setNewLeads] = useState(47);
+  const [callsCompleted, setCallsCompleted] = useState(31);
+
+  useLiveLeadFeed(() => setNewLeads(n => n + 1));
+
+  // Simulate calls ticking up occasionally
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (Math.random() > 0.5) setCallsCompleted(c => c + 1);
+    }, 14000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Top metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="New Leads Today" value="47" subtitle="via Realie.ai + BatchData — same day" icon={<ArrowUp className="text-accent" size={20} />} accent="accent" />
+        <MetricCard title="New Leads Today" value={String(newLeads)} subtitle="via Realie.ai + BatchData — same day" icon={<ArrowUp className="text-accent" size={20} />} accent="accent" pulse />
         <MetricCard title="Equity-Qualified" value="18" subtitle="ready to call" icon={<Users className="text-secondary" size={20} />} accent="secondary" />
-        <MetricCard title="Calls Completed" value="31" subtitle="across all agents today" icon={<Phone className="text-primary" size={20} />} accent="primary" />
+        <MetricCard title="Calls Completed" value={String(callsCompleted)} subtitle="across all agents today" icon={<Phone className="text-primary" size={20} />} accent="primary" />
         <MetricCard title="AI Inbound Handled" value="6" subtitle="after hours last night" icon={<Bot size={20} />} accent="warning" />
       </div>
 
+      {/* Live AI Activity ticker */}
+      <AIActivityTicker />
+
       {/* Second row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pipeline */}
         <div className="metric-card">
           <h3 className="font-bold text-foreground mb-4">Active Short Sale Pipeline</h3>
-          <ResponsiveContainer width="100%" height={140}>
+          <ResponsiveContainer width="100%" height={160}>
             <BarChart data={pipelineData} layout="vertical">
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
               <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={24}>
                 {pipelineData.map((_, i) => (
-                  <Cell key={i} fill={['hsl(212,70%,37%)', 'hsl(160,75%,24%)', 'hsl(36,80%,28%)'][i]} />
+                  <Cell key={i} fill={['hsl(212,70%,37%)', 'hsl(160,75%,24%)', 'hsl(36,80%,28%)', 'hsl(210,93%,17%)'][i]} />
                 ))}
               </Bar>
             </BarChart>
@@ -54,7 +73,6 @@ export default function MorningBriefing() {
           <p className="text-xs text-muted-foreground mt-2">0 denials to date · avg. close 67 days</p>
         </div>
 
-        {/* Task checklist */}
         <div className="metric-card">
           <h3 className="font-bold text-foreground mb-4">My Task Checklist</h3>
           <div className="space-y-3">
@@ -70,9 +88,7 @@ export default function MorningBriefing() {
         </div>
       </div>
 
-      {/* Third row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Team performance */}
         <div className="metric-card">
           <h3 className="font-bold text-foreground mb-4">Team Performance Today</h3>
           <ResponsiveContainer width="100%" height={120}>
@@ -85,7 +101,6 @@ export default function MorningBriefing() {
           <p className="text-xs text-muted-foreground mt-2">4 qualified handed to Cristina</p>
         </div>
 
-        {/* AI inbound calls */}
         <div className="metric-card">
           <h3 className="font-bold text-foreground mb-4">AI Inbound Calls — Last 24hrs</h3>
           <div className="space-y-3">
@@ -107,16 +122,16 @@ export default function MorningBriefing() {
   );
 }
 
-function MetricCard({ title, value, subtitle, icon, accent }: { title: string; value: string; subtitle: string; icon: React.ReactNode; accent: string }) {
-  const borderClass = accent === 'warning' ? 'border-l-4' : 'border-l-4';
+function MetricCard({ title, value, subtitle, icon, accent, pulse }: { title: string; value: string; subtitle: string; icon: React.ReactNode; accent: string; pulse?: boolean }) {
   const borderColor = accent === 'accent' ? 'border-l-accent' : accent === 'secondary' ? 'border-l-secondary' : accent === 'warning' ? 'border-l-warning' : 'border-l-primary';
   return (
-    <div className={`metric-card ${borderClass} ${borderColor}`}>
+    <div className={`metric-card border-l-4 ${borderColor} relative overflow-hidden`}>
+      {pulse && <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-accent animate-ping" />}
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-muted-foreground">{title}</span>
         {icon}
       </div>
-      <p className="text-3xl font-bold text-foreground animate-count-up">{value}</p>
+      <p key={value} className="text-3xl font-bold text-foreground animate-count-up">{value}</p>
       <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
     </div>
   );
