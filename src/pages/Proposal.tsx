@@ -56,7 +56,14 @@ export default function Proposal() {
               </div>
               <ul className="space-y-3 text-sm">
                 <Feature label="AI Lead Dashboard" sub="CEO view + Rep view, full pipeline" />
-                <Feature label="Batch Leads API" sub="35K leads/month, 3,100 counties, $3.95/mo flat" />
+                <Feature label="Batch Leads API" sub="Fresh leads daily across 3,100 counties. No 3-day lag. No manual Excel exports. 35,000 distressed property leads/month pulled, equity-filtered, deduplicated, and scored automatically." />
+                <div className="ml-8 -mt-1 mb-1 rounded-lg p-3 border border-orange-500/40 bg-orange-500/10">
+                  <p className="text-xs text-orange-200 leading-relaxed">
+                    <span className="font-bold pf-orange">⚡ The 3-day lag problem:</span> Your current vendor delivers leads
+                    3 days late. In real estate, that means your competitor already called. Our platform pulls fresh leads
+                    daily — so your reps are always first.
+                  </p>
+                </div>
                 <Feature label="AI Lead Scoring" sub="Equity, motivation, property signals" />
                 <Feature label="Mojo Triple Dialer API" sub="Auto-push leads, call outcomes sync back" />
                 <Feature label="Meta / Facebook Ads Speed-to-Lead" sub="Real-time feed, 5-min alert timer" />
