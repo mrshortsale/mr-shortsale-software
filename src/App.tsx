@@ -5,6 +5,7 @@ import LoginPage from '@/pages/LoginPage';
 import CEODashboard from '@/pages/CEODashboard';
 import RepDashboard from '@/pages/RepDashboard';
 import Proposal from '@/pages/Proposal';
+import Costs from '@/pages/Costs';
 import NotFound from '@/pages/NotFound';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
@@ -22,6 +23,7 @@ const App = () => (
       <AppProvider>
         <Routes>
           <Route path="/proposal" element={<Proposal />} />
+          <Route path="/costs" element={<Costs />} />
           <Route path="/" element={<AppShell />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
