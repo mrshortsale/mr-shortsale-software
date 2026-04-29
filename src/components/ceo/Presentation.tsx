@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Rocket,
   Heart,
+  Workflow,
 } from 'lucide-react';
+import workflowDiagram from '@/assets/workflow-v2.svg';
 
 interface Slide {
   id: number;
@@ -233,9 +235,43 @@ const slides: Slide[] = [
     ),
   },
 
-  // Slide 6 — Closing
+  // Slide 6 — End-to-end workflow diagram
   {
     id: 6,
+    render: () => (
+      <div className="h-full w-full bg-card flex flex-col">
+        <div className="px-10 lg:px-14 pt-8 pb-4 border-b">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-secondary font-semibold mb-2 flex items-center gap-2">
+                <Workflow size={12} /> How it all connects
+              </p>
+              <h2 className="text-3xl lg:text-4xl font-bold text-foreground leading-tight">
+                End-to-end workflow — every system, every signal.
+              </h2>
+            </div>
+            <div className="flex gap-2 text-[10px]">
+              <Legend dot="bg-secondary" label="Data Sources" />
+              <Legend dot="bg-accent" label="AI Layer" />
+              <Legend dot="bg-speed" label="Speed-to-Lead" />
+              <Legend dot="bg-primary" label="Operations" />
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 bg-muted/30 p-4 lg:p-6 flex items-center justify-center overflow-auto">
+          <img
+            src={workflowDiagram}
+            alt="Mr. Short Sale — updated AI platform workflow v2: data sources, dedup, AI scoring, Mojo dialer, Meta speed-to-lead, AI voice"
+            className="max-w-full max-h-full object-contain rounded-lg bg-card shadow-md"
+          />
+        </div>
+      </div>
+    ),
+  },
+
+  // Slide 7 — Closing
+  {
+    id: 7,
     render: () => (
       <div className="h-full w-full p-12 lg:p-16 flex flex-col justify-between text-primary-foreground relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, hsl(210 93% 17%) 0%, hsl(210 93% 12%) 100%)' }}>
@@ -277,8 +313,18 @@ const slideTitles = [
   'The solution',
   'The impact',
   'Roadmap',
+  'Workflow',
   'Why now',
 ];
+
+function Legend({ dot, label }: { dot: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted text-foreground font-medium">
+      <span className={`w-2 h-2 rounded-full ${dot}`} />
+      {label}
+    </span>
+  );
+}
 
 export default function Presentation() {
   const [current, setCurrent] = useState(0);
