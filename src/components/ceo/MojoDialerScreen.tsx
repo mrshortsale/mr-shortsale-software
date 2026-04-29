@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Phone, Send, Activity, CheckCircle, XCircle, VoicemailIcon, Clock, Ban } from 'lucide-react';
+import { Phone, Send, Activity, CheckCircle, XCircle, Voicemail, Clock, Ban } from 'lucide-react';
 import { getMojoStatus, MojoQueueStatus, sendToMojo, MojoOutcome } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
 
@@ -15,7 +15,7 @@ const RECENT: { name: string; outcome: MojoOutcome; agent: string; time: string 
 const outcomeStyle: Record<MojoOutcome, { icon: React.ReactNode; cls: string }> = {
   Answered: { icon: <CheckCircle size={12} />, cls: 'bg-accent/15 text-accent' },
   Interested: { icon: <CheckCircle size={12} />, cls: 'bg-accent text-accent-foreground' },
-  Voicemail: { icon: <VoicemailIcon size={12} />, cls: 'bg-warning/15 text-warning' },
+  Voicemail: { icon: <Voicemail size={12} />, cls: 'bg-warning/15 text-warning' },
   'No Answer': { icon: <XCircle size={12} />, cls: 'bg-muted text-muted-foreground' },
   DNC: { icon: <Ban size={12} />, cls: 'bg-destructive/15 text-destructive' },
   'Callback Scheduled': { icon: <Clock size={12} />, cls: 'bg-secondary/15 text-secondary' },
