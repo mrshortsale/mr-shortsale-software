@@ -207,10 +207,42 @@ export default function Proposal() {
       <section className="px-6 lg:px-16 py-12">
         <div className="max-w-6xl mx-auto">
           <SectionTitle eyebrow="Ownership" title="What you own at the end" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
-            <OwnCard icon={<Lock size={22} />} title="100% Your Platform" body="Code, data, leads — all yours. No lock-in." />
-            <OwnCard icon={<Database size={22} />} title="Your Data, Your Platform" body="All leads, calls, and history belong to you. Exportable any time." />
-            <OwnCard icon={<Wrench size={22} />} title="SJ Manages It All" body="Hosting, updates, bug fixes included." />
+
+          {/* OWNERSHIP PROMISE BANNER */}
+          <div
+            className="mt-8 rounded-2xl p-7 lg:p-9 border-2 flex items-start gap-5 lg:gap-7"
+            style={{ background: 'linear-gradient(135deg, #052e1c 0%, #064e3b 100%)', borderColor: '#10b981' }}
+          >
+            <div className="text-5xl lg:text-6xl shrink-0 leading-none">🔒</div>
+            <div>
+              <h3 className="text-xl lg:text-3xl font-bold text-white leading-tight">
+                You build it once. You own it forever. No licensing fees. Ever.
+              </h3>
+              <p className="mt-3 text-sm lg:text-base leading-relaxed" style={{ color: '#a7f3d0' }}>
+                This is not a SaaS subscription. We are not renting you software. We are building a custom platform
+                for X-Cap Realty — and when it's done, it belongs to you. The code is yours. The data is yours.
+                The leads are yours. If you ever want to move it to another provider, take it. SJ Innovation's only
+                ongoing role is managing the platform on your behalf — and you can change that any time.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
+            <OwnCard
+              icon={<Lock size={22} />}
+              title="You Own the Code"
+              body="One build fee. Yours permanently. Not a template, not a white-label — a custom platform built for X-Cap Realty."
+            />
+            <OwnCard
+              icon={<Database size={22} />}
+              title="You Own the Data"
+              body="Every lead, every call log, every note belongs to X-Cap Realty. No one else sees it. Exportable any time."
+            />
+            <OwnCard
+              icon={<Wrench size={22} />}
+              title="SJ Manages It — You Don't Have To"
+              body="$99/mo. Just log in and work leads. No IT person, no vendor accounts, no upkeep on your side."
+            />
           </div>
         </div>
       </section>
