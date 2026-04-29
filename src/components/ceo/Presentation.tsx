@@ -341,7 +341,7 @@ export default function Presentation() {
             <Sparkles size={22} className="text-accent" />
             Your Proposal
           </h2>
-          <p className="text-sm text-muted-foreground">A 6-slide summary of what we're building for Mr. Short Sale.</p>
+          <p className="text-sm text-muted-foreground">A 7-slide summary of what we're building for Mr. Short Sale.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -374,7 +374,7 @@ export default function Presentation() {
       </div>
 
       {/* Thumbnail strip */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
         {slides.map((s, i) => (
           <button
             key={s.id}
