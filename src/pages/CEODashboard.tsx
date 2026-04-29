@@ -27,6 +27,7 @@ const navItems = [
   { id: 'roadmap', label: 'Roadmap', icon: Map },
   { id: 'presentation', label: 'Presentation', icon: Sparkles },
   { id: 'proposal', label: 'View Proposal', icon: FileText, external: '/proposal' as const },
+  { id: 'costs', label: 'Cost Transparency', icon: FileText, external: '/costs' as const },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
