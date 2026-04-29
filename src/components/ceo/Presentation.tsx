@@ -238,35 +238,7 @@ const slides: Slide[] = [
   // Slide 6 — End-to-end workflow diagram
   {
     id: 6,
-    render: () => (
-      <div className="h-full w-full bg-card flex flex-col">
-        <div className="px-10 lg:px-14 pt-8 pb-4 border-b">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-secondary font-semibold mb-2 flex items-center gap-2">
-                <Workflow size={12} /> How it all connects
-              </p>
-              <h2 className="text-3xl lg:text-4xl font-bold text-foreground leading-tight">
-                End-to-end workflow — every system, every signal.
-              </h2>
-            </div>
-            <div className="flex gap-2 text-[10px]">
-              <Legend dot="bg-secondary" label="Data Sources" />
-              <Legend dot="bg-accent" label="AI Layer" />
-              <Legend dot="bg-speed" label="Speed-to-Lead" />
-              <Legend dot="bg-primary" label="Operations" />
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 min-h-0 bg-muted/30 p-4 lg:p-6 flex items-center justify-center overflow-auto">
-          <img
-            src={workflowDiagram}
-            alt="Mr. Short Sale — updated AI platform workflow v2: data sources, dedup, AI scoring, Mojo dialer, Meta speed-to-lead, AI voice"
-            className="max-w-full max-h-full object-contain rounded-lg bg-card shadow-md"
-          />
-        </div>
-      </div>
-    ),
+    render: () => <WorkflowSlide />,
   },
 
   // Slide 7 — Closing
