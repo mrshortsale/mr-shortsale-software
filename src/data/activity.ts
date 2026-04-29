@@ -2,7 +2,7 @@
 export interface AIActivity {
   id: string;
   ts: string; // relative time like "2m ago"
-  source: 'Realie' | 'BatchData' | 'ATTOM' | 'AI' | 'Twilio' | 'Vapi';
+  source: 'Realie' | 'BatchLeads' | 'ATTOM' | 'AI' | 'Twilio' | 'Vapi';
   message: string;
 }
 
@@ -12,9 +12,9 @@ export const aiActivityFeed: AIActivity[] = [
   { id: 'a3', ts: '4m ago', source: 'AI', message: 'Generated personalized call scripts for 7 new leads' },
   { id: 'a4', ts: '6m ago', source: 'Twilio', message: 'Sent bilingual SMS to Robert Chen — delivered' },
   { id: 'a5', ts: '9m ago', source: 'AI', message: 'Re-scored 12 leads — 3 moved to urgency 8+' },
-  { id: 'a6', ts: '12m ago', source: 'BatchData', message: 'Fresh NTS feed processed — 4 matches in target ZIPs' },
+  { id: 'a6', ts: '12m ago', source: 'BatchLeads', message: 'Fresh NTS feed processed — 4 matches in target ZIPs' },
   { id: 'a7', ts: '15m ago', source: 'Vapi', message: 'AI agent answered inbound call (Spanish) — qualified lead' },
-  { id: 'a8', ts: '18m ago', source: 'AI', message: 'Detected duplicate lead from BatchData — auto-merged' },
+  { id: 'a8', ts: '18m ago', source: 'AI', message: 'Detected duplicate lead from Batch Leads API — auto-merged' },
   { id: 'a9', ts: '22m ago', source: 'ATTOM', message: 'Property valuation refreshed for 8 active pipeline cases' },
   { id: 'a10', ts: '26m ago', source: 'Twilio', message: 'Auto-SMS reply received from Patricia Lopez — flagged hot' },
   { id: 'a11', ts: '31m ago', source: 'Realie', message: 'Sync complete — 47 new filings, 18 equity-qualified' },
@@ -24,11 +24,11 @@ export const aiActivityFeed: AIActivity[] = [
 // Simulated incoming leads for the live "pulse" feel
 export const incomingLeadSamples = [
   { address: '33 Birch Ln', city: 'Yonkers', equity: 14, source: 'Realie' as const },
-  { address: '87 Oakwood Dr', city: 'White Plains', equity: 11, source: 'BatchData' as const },
+  { address: '87 Oakwood Dr', city: 'White Plains', equity: 11, source: 'BatchLeads' as const },
   { address: '22 Hillcrest Ave', city: 'New Rochelle', equity: 18, source: 'Realie' as const },
   { address: '101 Sunset Pl', city: 'Tarrytown', equity: 9, source: 'ATTOM' as const },
   { address: '55 Glenwood Rd', city: 'Scarsdale', equity: 22, source: 'Realie' as const },
-  { address: '14 Meadow Ct', city: 'Mount Vernon', equity: 16, source: 'BatchData' as const },
+  { address: '14 Meadow Ct', city: 'Mount Vernon', equity: 16, source: 'BatchLeads' as const },
 ];
 
 // Prior contact history per lead id (sparse — only ~30% of leads)

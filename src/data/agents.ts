@@ -34,14 +34,14 @@ export const agents: Agent[] = [
     accent: 'secondary',
     gradient: 'from-secondary/90 to-secondary/60',
     status: 'active',
-    shortDescription: 'Pulls fresh foreclosure filings from Realie.ai + BatchData every morning at 6 AM.',
+    shortDescription: 'Pulls fresh foreclosure filings from Realie.ai + Batch Leads API every morning at 6 AM.',
     longDescription: [
-      'Connects to Realie.ai and BatchData APIs every morning at 6:00 AM sharp.',
+      'Connects to Realie.ai and Batch Leads APIs every morning at 6:00 AM sharp.',
       'Filters filings by your target ZIP codes (Westchester, Bronx, Queens).',
       'De-duplicates and pushes only fresh records into your queue.',
       'You wake up to a curated list — no manual scraping, no missed filings.',
     ],
-    stack: ['Realie.ai', 'BatchData'],
+    stack: ['Realie.ai', 'BatchLeads'],
     stats: [
       { label: 'Pulled today', value: '47' },
       { label: 'Target ZIPs', value: '12' },
@@ -50,8 +50,8 @@ export const agents: Agent[] = [
     lastAction: 'Pulled 3 new NOD filings from Westchester County clerk',
     lastActionTime: 'just now',
     weeklyImpact: { hoursSaved: '6.4 hrs', actions: '312', accuracy: '100%' },
-    flow: 'Realie.ai + BatchData → Scout → Lead Queue',
-    activitySources: ['Realie', 'BatchData'],
+    flow: 'Realie.ai + Batch Leads API → Scout → Lead Queue',
+    activitySources: ['Realie', 'BatchLeads'],
   },
   {
     id: 'sherlock',

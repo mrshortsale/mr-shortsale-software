@@ -46,6 +46,10 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        speed: {
+          DEFAULT: "hsl(var(--speed))",
+          foreground: "hsl(var(--speed-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",

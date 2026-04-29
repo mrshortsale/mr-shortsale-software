@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
@@ -10,12 +10,16 @@ import TeamPerformance from '@/components/ceo/TeamPerformance';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
 import AIAgentsRoster from '@/components/ceo/AIAgentsRoster';
 import DataSources from '@/components/ceo/DataSources';
+import SpeedToLeadScreen from '@/components/ceo/SpeedToLeadScreen';
+import MojoDialerScreen from '@/components/ceo/MojoDialerScreen';
 import RoadmapView from '@/components/ceo/RoadmapView';
 import Presentation from '@/components/ceo/Presentation';
 
 const navItems = [
   { id: 'briefing', label: 'Morning Briefing', icon: Home },
   { id: 'pipeline', label: 'Short Sale Pipeline', icon: Kanban },
+  { id: 'speed', label: 'Speed-to-Lead', icon: Zap },
+  { id: 'dialer', label: 'Mojo Dialer', icon: PhoneCall },
   { id: 'team', label: 'Team Performance', icon: BarChart3 },
   { id: 'ai-calls', label: 'AI Inbound Calls', icon: Phone },
   { id: 'ai-agents', label: 'AI Agents', icon: Bot },
@@ -38,6 +42,8 @@ export default function CEODashboard() {
       case 'ai-calls': return <AIInboundCalls />;
       case 'ai-agents': return <AIAgentsRoster />;
       case 'data': return <DataSources />;
+      case 'speed': return <SpeedToLeadScreen />;
+      case 'dialer': return <MojoDialerScreen />;
       case 'roadmap': return <RoadmapView />;
       case 'presentation': return <Presentation />;
       case 'settings': return <div className="p-8"><h2 className="text-2xl font-bold text-foreground">Settings</h2><p className="text-muted-foreground mt-2">Account and platform settings coming soon.</p></div>;

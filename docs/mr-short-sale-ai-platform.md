@@ -36,7 +36,7 @@ Authentication is a simplified one-click prototype login (`AuthContext`) — no 
 
 ## 3. Product Pillars
 
-1. **Triple-Source Lead Intelligence** — Realie.ai + BatchData + ATTOM cross-verification.
+1. **Triple-Source Lead Intelligence** — Realie.ai + Batch Leads API + ATTOM cross-verification.
 2. **Autonomous AI Workforce** — 6 named agents with explainable behavior.
 3. **Bilingual by Default** — every voice and SMS interaction supports EN/ES.
 4. **Urgency-First Workflow** — explainable 1–10 scoring on every lead.
@@ -55,7 +55,7 @@ Authentication is a simplified one-click prototype login (`AuthContext`) — no 
 | 3 | **Team Performance** | `src/components/ceo/TeamPerformance.tsx` | Per-rep stats; click → `AgentDrillDown` with 7-day trend, best-connect-time, connection rate by filing type (Recharts). |
 | 4 | **AI Inbound Calls** | `src/components/ceo/AIInboundCalls.tsx` | Vapi mock transcripts, waveform, structured data extraction, EN/ES detection. |
 | 5 | **AI Agents** | `src/components/ceo/AIAgentsRoster.tsx` | 6-agent roster with status, stats, last action; click → `AgentActivityDrawer`. |
-| 6 | **Data Sources** | `src/components/ceo/DataSources.tsx` | Realie / BatchData / ATTOM connection health and sync logs. |
+| 6 | **Data Sources** | `src/components/ceo/DataSources.tsx` | Realie / Batch Leads API / ATTOM connection health and sync logs. |
 | 7 | **Roadmap** | `src/components/ceo/RoadmapView.tsx` | Phase 1 + 2 marked **Live in Demo**; Phase 3 forward-looking. |
 | 8 | **Presentation Mode** | `src/components/ceo/Presentation.tsx` | Sales-deck view for showing the platform to investors / partners. |
 
@@ -82,7 +82,7 @@ Defined in `src/data/agents.ts`. Each agent has: id, role, status, stack, today'
 
 | Agent | Role | Powered By | What It Does |
 |---|---|---|---|
-| 🎯 **Scout** | Lead Hunter | Realie.ai, BatchData | Pulls fresh NOD/NTS filings every day at 6 AM, filters by target ZIPs, de-dupes. |
+| 🎯 **Scout** | Lead Hunter | Realie.ai, Batch Leads API | Pulls fresh NOD/NTS filings every day at 6 AM, filters by target ZIPs, de-dupes. |
 | 🔍 **Sherlock** | Research Analyst | ATTOM, GPT-4o | Cross-verifies property data, calculates true equity, flags discrepancies. |
 | ⚡ **Pulse** | Urgency Scorer | GPT-4o | Scores leads 1–10 from auction date, equity %, prior touches. Re-scores on new signals. |
 | 💬 **Echo** | Script Writer | GPT-4o | Generates personalized bilingual call scripts per lead in seconds. |
@@ -97,13 +97,13 @@ Defined in `src/data/agents.ts`. Each agent has: id, role, status, stack, today'
 
 ### 6.1 Source Stack
 - **Realie.ai** — primary foreclosure filings feed (NOD, LP, NTS).
-- **BatchData** — secondary filings + skip-trace contact data.
+- **Batch Leads API** — secondary filings + skip-trace contact data.
 - **ATTOM** — property valuation, mortgage balance, owner records.
 
 ### 6.2 Filtering Rules
 - Target ZIPs: Westchester, Bronx, Queens (12 ZIPs in demo).
 - **Equity rule:** lead is *qualified* only when equity ≤ 25% (short-sale candidate).
-- De-duplication across Realie + BatchData via address + APN match.
+- De-duplication across Realie + Batch Leads API via address + APN match.
 
 ### 6.3 Urgency Scoring (1–10)
 Inputs: days-to-auction, equity %, prior contact count, filing chain stage.
@@ -131,7 +131,7 @@ Implementation: `getUrgencyReason()` in `src/data/activity.ts`.
 ### 7.3 Future Backend (Lovable Cloud)
 When greenlit for production:
 - Database tables for `leads`, `cases`, `calls`, `sms`, `activity`, `users`, `user_roles`.
-- Edge Functions for Realie / BatchData / ATTOM / Vapi / Twilio integrations.
+- Edge Functions for Realie / Batch Leads API / ATTOM / Vapi / Twilio integrations.
 - RLS policies with `has_role()` security-definer pattern (CEO vs. Rep).
 
 ### 7.4 Project Structure
@@ -190,7 +190,7 @@ src/
 ## 10. Out of Scope (v1)
 
 - Real backend / persistence (all in-memory seed data)
-- Real Realie / BatchData / ATTOM / Vapi / Twilio API calls
+- Real Realie / Batch Leads API / ATTOM / Vapi / Twilio API calls
 - Drag-and-drop on kanban
 - Mobile-first redesign of drawers (responsive but desktop-primary)
 - Agent configuration / pause controls (read-only showcase)

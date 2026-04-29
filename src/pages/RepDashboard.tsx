@@ -8,6 +8,7 @@ import LeadQueue from '@/components/rep/LeadQueue';
 import CallHistory from '@/components/rep/CallHistory';
 import RepStats from '@/components/rep/RepStats';
 import ActiveCall from '@/components/rep/ActiveCall';
+import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 
 const navItems = [
   { id: 'queue', label: 'My Queue', icon: List },
@@ -72,7 +73,8 @@ export default function RepDashboard() {
         </div>
       </header>
 
-      <main className="p-4 lg:p-6">
+      <main className="p-4 lg:p-6 space-y-4">
+        {activeTab === 'queue' && <SpeedToLeadFeed compact />}
         {renderContent()}
       </main>
     </div>

@@ -2,7 +2,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Lead, getAICallScript } from '@/data/leads';
 import { getPriorContact, getUrgencyReason } from '@/data/activity';
 import { getSMSThread } from '@/data/sms';
-import { Phone, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot } from 'lucide-react';
+import { getAttomIntelForLead } from '@/integrations/attom';
+import { Phone, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot, Layers, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import SMSThread from './SMSThread';
 
@@ -26,6 +27,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
 
   const prior = getPriorContact(lead.id);
   const reason = getUrgencyReason(lead.urgency_score, lead.days_to_auction, lead.equity_pct, prior.length);
+  const attom = getAttomIntelForLead(lead.id, { value: lead.estimated_value, equity: lead.equity_pct, owner: lead.homeowner_name, purchaseDate: lead.purchase_date });
 
   return (
     <>
@@ -57,6 +59,16 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
                     <Clock size={10} /> {prior.length} prior touch{prior.length > 1 ? 'es' : ''}
                   </span>
                 )}
+                {attom.highEquity && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent text-accent-foreground">
+                    <TrendingUp size={10} /> High Equity
+                  </span>
+                )}
+                {attom.taxDelinquent && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive text-destructive-foreground">
+                    <AlertTriangle size={10} /> Tax Delinquent
+                  </span>
+                )}
               </div>
             </SheetHeader>
           </div>
@@ -74,11 +86,21 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
               </div>
             </Section>
 
-            {/* Verification */}
+            {/* ATTOM Property Intel */}
+            <Section title={<><Layers size={12} className="inline mr-1 text-secondary" />ATTOM Property Intel</>}>
+              <div className="rounded-lg border bg-secondary/5 p-3 space-y-1.5">
+                <Info label="Estimated Value (AVM)" value={`$${attom.estimatedValue.toLocaleString()}`} />
+                <Info label="Equity %" value={`${attom.equityPct}%${attom.highEquity ? ' · HIGH' : ''}`} />
+                <Info label="Owner Name" value={attom.ownerName} />
+                <Info label="Last Sale Date" value={attom.lastSaleDate} />
+                <Info label="Tax Delinquent" value={attom.taxDelinquent ? 'Yes — flagged' : 'No'} />
+              </div>
+            </Section>
+
             <Section title="Data Verification">
               <div className="space-y-2">
-                <VerifyRow source={lead.data_source_primary} verified ts="6:02 AM today" />
-                <VerifyRow source={lead.data_source_primary === 'Realie' ? 'BatchData' : 'Realie'} verified ts="6:04 AM today" cross />
+                <VerifyRow source={lead.data_source_primary === 'BatchLeads' ? 'Batch Leads API' : 'Realie.ai'} verified ts="6:02 AM today" />
+                <VerifyRow source={lead.data_source_primary === 'Realie' ? 'Batch Leads API' : 'Realie.ai'} verified ts="6:04 AM today" cross />
                 <VerifyRow source="ATTOM" verified={lead.attom_verified} ts="6:08 AM today" cross note="Equity confirmed" />
               </div>
             </Section>
