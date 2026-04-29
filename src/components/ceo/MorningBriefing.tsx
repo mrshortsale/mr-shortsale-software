@@ -3,6 +3,7 @@ import { ArrowUp, Users, Phone, Bot, CheckSquare, Square, AlertTriangle, Sparkle
 import { aiInboundCalls } from '@/data/calls';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import AIActivityTicker from './AIActivityTicker';
+import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 import { useLiveLeadFeed } from '@/hooks/useLiveSimulation';
 
 const pipelineData = [
@@ -51,6 +52,9 @@ export default function MorningBriefing() {
         <MetricCard title="Calls Completed" value={String(callsCompleted)} subtitle="across all agents today" icon={<Phone className="text-primary" size={20} />} accent="primary" />
         <MetricCard title="AI Inbound Handled" value="6" subtitle="after hours last night" icon={<Bot size={20} />} accent="warning" />
       </div>
+
+      {/* Speed-to-Lead live feed (Meta Ads) */}
+      <SpeedToLeadFeed compact />
 
       {/* Live AI Activity ticker */}
       <AIActivityTicker />
