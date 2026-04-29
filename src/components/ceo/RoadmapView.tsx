@@ -18,7 +18,7 @@ const phases: Phase[] = [
     title: 'Connect & Consolidate',
     status: 'Live in Demo',
     deliverables: [
-      'Realie.ai + Batch Leads API API integration',
+      'Realie.ai + Batch Leads API integration',
       'Equity filter pipeline (≤25%)',
       'Mojo Dialer API connection',
       'CEO dashboard v1',

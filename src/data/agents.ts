@@ -36,7 +36,7 @@ export const agents: Agent[] = [
     status: 'active',
     shortDescription: 'Pulls fresh foreclosure filings from Realie.ai + Batch Leads API every morning at 6 AM.',
     longDescription: [
-      'Connects to Realie.ai and Batch Leads API APIs every morning at 6:00 AM sharp.',
+      'Connects to Realie.ai and Batch Leads APIs every morning at 6:00 AM sharp.',
       'Filters filings by your target ZIP codes (Westchester, Bronx, Queens).',
       'De-duplicates and pushes only fresh records into your queue.',
       'You wake up to a curated list — no manual scraping, no missed filings.',
