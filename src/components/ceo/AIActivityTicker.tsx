@@ -4,7 +4,7 @@ import { Activity } from 'lucide-react';
 
 const sourceColors: Record<string, string> = {
   Realie: 'text-secondary',
-  BatchData: 'text-accent',
+  Batch Leads API: 'text-accent',
   ATTOM: 'text-warning',
   AI: 'text-primary',
   Twilio: 'text-secondary',

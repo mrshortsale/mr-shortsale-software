@@ -2,7 +2,7 @@ import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 const sources = [
   { name: 'Realie.ai', status: 'Active', lastPull: 'Today 6:02 AM', records: '47 new', latency: '8ms', role: 'PRIMARY', desc: 'AI-sourced from 3,100+ counties' },
-  { name: 'BatchData', status: 'Active', lastPull: 'Today 6:05 AM', records: '43 new (cross-check)', latency: '240ms', role: 'SPEED + CONTACTS', desc: 'Contact append + speed verification' },
+  { name: 'BatchLeads', status: 'Active', lastPull: 'Today 6:05 AM', records: '43 new (cross-check)', latency: '240ms', role: 'SPEED + CONTACTS', desc: 'Contact append + speed verification' },
   { name: 'ATTOM', status: 'Active', lastPull: 'Today 6:10 AM', records: '31 of 47 equity validated', latency: '1.2s', role: 'EQUITY VALIDATION', desc: 'AVM + equity % confirmation' },
   { name: 'Mojo Dialer API', status: 'Connected', lastPull: 'Last sync: 5 min ago', records: '—', latency: '—', role: 'DIALER', desc: 'One-click dial integration' },
   { name: 'Twilio SMS', status: 'Active', lastPull: '—', records: 'Sent: 9 · Delivered: 8 · Failed: 1', latency: '—', role: 'SMS', desc: 'Auto follow-up messaging' },
@@ -10,7 +10,7 @@ const sources = [
 
 const comparison = [
   { source: 'Realie.ai', speed: 'Same day (<10ms)', counties: '3,100+ all 50 states', equity: 'Ownership + mortgage data', cost: '$50-200/mo', role: 'PRIMARY' },
-  { source: 'BatchData', speed: '24-48 hours', counties: '3,200+ nationwide', equity: 'Contact + equity field', cost: '~$0.01/call', role: 'SPEED + CONTACTS' },
+  { source: 'BatchLeads', speed: '24-48 hours', counties: '3,200+ nationwide', equity: 'Contact + equity field', cost: '~$0.01/call', role: 'SPEED + CONTACTS' },
   { source: 'ATTOM', speed: 'Daily updates', counties: '158M properties', equity: 'AVM + equity %', cost: '~$0.10/call', role: 'EQUITY VALIDATION' },
   { source: 'PropStream', speed: 'Daily', counties: '160M properties', equity: 'AI Foreclosure Factor', cost: 'Subscription', role: 'FUTURE OPTION' },
   { source: 'Mojo Data Add-on', speed: '3 days lag', counties: 'County/state only', equity: 'None — manual', cost: '$49/mo', role: 'REPLACE' },

@@ -124,7 +124,7 @@ const slides: Slide[] = [
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-12 flex-1">
           {[
-            { icon: Database, color: 'secondary', t: 'Same-day data', d: 'Realie.ai + BatchData pull fresh county filings every morning at 6 AM. No more 3-day lag.' },
+            { icon: Database, color: 'secondary', t: 'Same-day data', d: 'Realie.ai + Batch Leads API pull fresh county filings every morning at 6 AM. No more 3-day lag.' },
             { icon: Bot, color: 'accent', t: 'AI-qualified leads', d: 'Every lead is pre-researched, equity-filtered to ≤25%, and arrives with a personalized script ready.' },
             { icon: Phone, color: 'primary', t: '24/7 AI voice agent', d: 'Spanish + English with accent detection. No inbound call ever goes unanswered again.' },
           ].map((c) => (

@@ -78,7 +78,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
             <Section title="Data Verification">
               <div className="space-y-2">
                 <VerifyRow source={lead.data_source_primary} verified ts="6:02 AM today" />
-                <VerifyRow source={lead.data_source_primary === 'Realie' ? 'BatchData' : 'Realie'} verified ts="6:04 AM today" cross />
+                <VerifyRow source={lead.data_source_primary === 'Realie' ? 'BatchLeads' : 'Realie'} verified ts="6:04 AM today" cross />
                 <VerifyRow source="ATTOM" verified={lead.attom_verified} ts="6:08 AM today" cross note="Equity confirmed" />
               </div>
             </Section>

@@ -46,7 +46,7 @@ export default function MorningBriefing() {
     <div className="space-y-6">
       {/* Top metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="New Leads Today" value={String(newLeads)} subtitle="via Realie.ai + BatchData — same day" icon={<ArrowUp className="text-accent" size={20} />} accent="accent" pulse />
+        <MetricCard title="New Leads Today" value={String(newLeads)} subtitle="via Realie.ai + Batch Leads API — same day" icon={<ArrowUp className="text-accent" size={20} />} accent="accent" pulse />
         <MetricCard title="Equity-Qualified" value="18" subtitle="ready to call" icon={<Users className="text-secondary" size={20} />} accent="secondary" />
         <MetricCard title="Calls Completed" value={String(callsCompleted)} subtitle="across all agents today" icon={<Phone className="text-primary" size={20} />} accent="primary" />
         <MetricCard title="AI Inbound Handled" value="6" subtitle="after hours last night" icon={<Bot size={20} />} accent="warning" />
