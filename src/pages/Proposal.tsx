@@ -410,3 +410,18 @@ function StepCard({ n, icon, title, body }: { n: number; icon: React.ReactNode; 
     </div>
   );
 }
+
+function NeedItem({ n, label, sub, accent }: { n: string; label: string; sub: string; accent: 'orange' | 'green' }) {
+  const color = accent === 'orange' ? '#f97316' : '#10b981';
+  return (
+    <li className="flex items-start gap-3">
+      <span className="shrink-0 mt-0.5 w-7 h-7 rounded-md flex items-center justify-center font-bold text-sm" style={{ background: `${color}20`, color }}>
+        {n}
+      </span>
+      <div>
+        <p className="font-semibold text-slate-100">{label}</p>
+        <p className="text-xs text-slate-400">{sub}</p>
+      </div>
+    </li>
+  );
+}
