@@ -220,6 +220,71 @@ export default function Proposal() {
         </div>
       </section>
 
+      {/* WHAT WE NEED FROM YOU */}
+      <section className="px-6 lg:px-16 py-12">
+        <div className="max-w-6xl mx-auto">
+          <SectionTitle eyebrow="Onboarding" title="What we need from you" />
+          <p className="text-sm text-slate-400 mt-3 max-w-2xl">
+            A short checklist to keep the 6-week build on track. Nothing complicated — most of it lives in tools you already use.
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
+            {/* LEFT — required before Week 1 */}
+            <div className="pf-card p-6 border-l-4" style={{ borderLeftColor: '#f97316' }}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="px-2.5 py-1 rounded-md text-xs font-bold text-white" style={{ background: '#f97316' }}>BEFORE WEEK 1</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider">Required to start</span>
+              </div>
+              <ul className="space-y-3 text-sm">
+                <NeedItem n="①" label="$2,250 upfront payment" sub="Required to start Week 1" accent="orange" />
+                <NeedItem n="②" label="Lead Excel/CSV export" sub="Columns: name, address, phone, lead source, status — for demo build" accent="orange" />
+                <NeedItem n="③" label="Mojo Dialer credentials or API key" sub="Needed in Week 4 to wire up the dialer" accent="orange" />
+                <NeedItem n="④" label="Facebook Business Manager admin access" sub="Required for the Speed-to-Lead webhook" accent="orange" />
+              </ul>
+            </div>
+
+            {/* RIGHT — collected in onboarding call */}
+            <div className="pf-card p-6 border-l-4" style={{ borderLeftColor: '#10b981' }}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="px-2.5 py-1 rounded-md text-xs font-bold text-white" style={{ background: '#10b981' }}>ONBOARDING CALL</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider">30 min after signing</span>
+              </div>
+              <ul className="space-y-3 text-sm">
+                <NeedItem n="⑤" label="ICP definition call with George (15 min)" sub="Equity %, property types, target zip codes, distress signals" accent="green" />
+                <NeedItem n="⑥" label="Team list" sub="Names, emails, language preference EN or ES per user" accent="green" />
+                <NeedItem n="⑦" label="Logo + brand colors (optional)" sub="X-Cap Realty or Mr. Short Sale branding" accent="green" />
+                <NeedItem n="⑧" label="API option choice" sub="Option A (your card · ~$15–30/mo) or Option B (SJ manages · ~$125–135/mo flat)" accent="green" />
+              </ul>
+            </div>
+          </div>
+
+          {/* Combined checklist callout */}
+          <div className="mt-6 rounded-xl p-5 border border-blue-500/30 bg-blue-500/5">
+            <p className="text-xs uppercase tracking-wider text-blue-400 font-bold mb-3">Full Checklist</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              {[
+                ['①', 'Upfront payment'],
+                ['②', 'Lead CSV export'],
+                ['③', 'Mojo credentials'],
+                ['④', 'Facebook admin'],
+                ['⑤', 'ICP call'],
+                ['⑥', 'Team list'],
+                ['⑦', 'Logo + colors'],
+                ['⑧', 'API option'],
+              ].map(([n, label]) => (
+                <div key={n} className="flex items-center gap-2 text-slate-200">
+                  <span className="text-blue-400 font-bold text-base">{n}</span>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-4 italic">
+              Items ①–④ needed before Week 1. Items ⑤–⑧ collected in a 30-min onboarding call after signing.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="px-6 lg:px-16 py-10 border-t pf-divider">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
