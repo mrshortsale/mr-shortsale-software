@@ -2,7 +2,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Lead, getAICallScript } from '@/data/leads';
 import { getPriorContact, getUrgencyReason } from '@/data/activity';
 import { getSMSThread } from '@/data/sms';
-import { Phone, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot } from 'lucide-react';
+import { getAttomIntelForLead } from '@/integrations/attom';
+import { Phone, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot, Layers, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import SMSThread from './SMSThread';
 
@@ -26,6 +27,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
 
   const prior = getPriorContact(lead.id);
   const reason = getUrgencyReason(lead.urgency_score, lead.days_to_auction, lead.equity_pct, prior.length);
+  const attom = getAttomIntelForLead(lead.id, { value: lead.estimated_value, equity: lead.equity_pct, owner: lead.homeowner_name, purchaseDate: lead.purchase_date });
 
   return (
     <>
@@ -55,6 +57,16 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
                 {prior.length > 0 && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/30">
                     <Clock size={10} /> {prior.length} prior touch{prior.length > 1 ? 'es' : ''}
+                  </span>
+                )}
+                {attom.highEquity && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent text-accent-foreground">
+                    <TrendingUp size={10} /> High Equity
+                  </span>
+                )}
+                {attom.taxDelinquent && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive text-destructive-foreground">
+                    <AlertTriangle size={10} /> Tax Delinquent
                   </span>
                 )}
               </div>
