@@ -4,11 +4,20 @@ import { Activity } from 'lucide-react';
 
 const sourceColors: Record<string, string> = {
   Realie: 'text-secondary',
-  Batch Leads API: 'text-accent',
+  BatchLeads: 'text-accent',
   ATTOM: 'text-warning',
   AI: 'text-primary',
   Twilio: 'text-secondary',
   Vapi: 'text-accent',
+};
+
+const sourceLabels: Record<string, string> = {
+  Realie: 'Realie',
+  BatchLeads: 'Batch Leads API',
+  ATTOM: 'ATTOM',
+  AI: 'AI',
+  Twilio: 'Twilio',
+  Vapi: 'Vapi',
 };
 
 export default function AIActivityTicker() {
@@ -43,7 +52,7 @@ export default function AIActivityTicker() {
             className="flex items-start gap-2 py-1 px-2 rounded animate-fade-in hover:bg-muted/40"
             style={{ opacity: 1 - i * 0.15 }}
           >
-            <span className={`font-bold shrink-0 ${sourceColors[it.source] || 'text-foreground'}`}>{it.source}</span>
+            <span className={`font-bold shrink-0 ${sourceColors[it.source] || 'text-foreground'}`}>{sourceLabels[it.source] || it.source}</span>
             <span className="text-foreground flex-1">{it.message}</span>
             <span className="text-muted-foreground shrink-0">{it.ts}</span>
           </div>
