@@ -33,9 +33,10 @@ export default function Proposal() {
 
       {/* SUMMARY BAR */}
       <section className="px-6 lg:px-16 py-10 border-b pf-divider">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <SummaryStat value="$4,500" label="Phase 1 Build Fee" />
-          <SummaryStat value="~$125/mo" label="Est. Monthly Running Cost" />
+          <SummaryStat value="$99/mo" label="Platform Managed by SJ Innovation" />
+          <SummaryStat value="API Flexible" label="Pay direct or let SJ manage" />
           <SummaryStat value="6 Weeks" label="Build Timeline" />
           <SummaryStat value="35,000" label="Leads/mo · 3,100 Counties" />
           <SummaryStat value="You Own It" label="100% Your Platform" highlight />
@@ -80,39 +81,87 @@ export default function Proposal() {
         </div>
       </section>
 
-      {/* MONTHLY COST TABLE */}
+      {/* PICK YOUR API OPTION */}
       <section className="px-6 lg:px-16 py-12 bg-[#0b0d16]">
         <div className="max-w-6xl mx-auto">
-          <SectionTitle eyebrow="Running Costs" title="Monthly cost breakdown" />
+          <SectionTitle eyebrow="API Costs" title="Pick your option" />
+          <p className="text-sm text-slate-400 mt-3 max-w-2xl">
+            APIs (Batch Leads, OpenAI, Twilio) are billed by usage. You choose how you want them handled.
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
+            {/* Option A */}
+            <div className="pf-card p-6 border-l-4" style={{ borderLeftColor: '#2563eb' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2.5 py-1 rounded-md text-xs font-bold pf-blue text-white">OPTION A</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider">You control your APIs</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-400 mt-2">~$15–$30 / mo<span className="text-sm text-slate-400 font-normal"> in API charges</span></p>
+              <ul className="space-y-2.5 mt-5 text-sm">
+                <Feature label="Your API accounts" sub="Batch Leads, OpenAI, Twilio in your name" />
+                <Feature label="Direct billing" sub="API charges go straight to your credit card" />
+                <Feature label="SJ configures + manages" sub="We wire up the connections, you keep control" />
+                <Feature label="Full visibility" sub="See exactly what each API costs you each month" />
+              </ul>
+            </div>
+            {/* Option B */}
+            <div className="pf-card p-6 border-l-4" style={{ borderLeftColor: '#f97316' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2.5 py-1 rounded-md text-xs font-bold text-white" style={{ background: '#f97316' }}>OPTION B</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider">SJ manages everything</span>
+              </div>
+              <p className="text-2xl font-bold pf-orange mt-2">~$125–$135 / mo<span className="text-sm text-slate-400 font-normal"> flat — all in</span></p>
+              <ul className="space-y-2.5 mt-5 text-sm">
+                <Feature label="One flat invoice" sub="Hosting + all APIs on a single monthly bill" />
+                <Feature label="Zero vendor accounts" sub="Nothing to set up, monitor, or reconcile" />
+                <Feature label="SJ owns the API accounts" sub="We absorb usage spikes within the flat rate" />
+                <Feature label="Best for zero overhead" sub="Just log in and use it — nothing else to think about" />
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* MONTHLY COST TABLE */}
+      <section className="px-6 lg:px-16 py-12">
+        <div className="max-w-6xl mx-auto">
+          <SectionTitle eyebrow="Running Costs" title="Monthly cost summary" />
           <div className="pf-card mt-8 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b pf-divider">
                   <th className="px-5 py-3 font-medium">What</th>
-                  <th className="px-5 py-3 font-medium">Who Pays</th>
+                  <th className="px-5 py-3 font-medium">Details</th>
                   <th className="px-5 py-3 font-medium text-right">Cost / Month</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#232a44]">
-                <CostRow what="Supabase Database Hosting" who="X-Cap Realty" cost="$19.00" />
-                <CostRow what="Batch Leads API" who="X-Cap Realty" cost="$3.95" />
-                <CostRow what="Mojo Triple Dialer" who="Already paying — no new cost" cost="$0 *" />
+                <CostRow what="Platform Hosting & Management" who="Hosted, monitored, maintained by SJ Innovation. You never touch the tech." cost="$99.00" />
+                <CostRow what="Batch Leads API" who="35,000 leads/month · 3,100 counties · flat fee" cost="$3.95" />
+                <CostRow what="AI + SMS APIs" who="OpenAI, Gemini, Twilio — see Option A or B above" cost="See options" />
+                <CostRow what="Mojo Triple Dialer" who="Billed under your existing Mojo subscription" cost="$0 *" />
                 <CostRow what="Meta / Facebook Ads API" who="No extra cost — free API" cost="$0" />
-                <CostRow what="Platform API Buffer (AI scoring, processing)" who="X-Cap Realty" cost="~$100" />
-                <tr className="bg-[#101427]">
-                  <td className="px-5 py-4 font-bold text-slate-100">Total Estimated Monthly</td>
-                  <td className="px-5 py-4" />
-                  <td className="px-5 py-4 text-right font-bold text-blue-400 text-lg">~$125 / mo</td>
-                </tr>
               </tbody>
             </table>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+            <div className="rounded-xl p-5 border border-blue-500/30 bg-blue-500/5">
+              <p className="text-xs uppercase tracking-wider text-blue-400 font-bold mb-1">Option A Total</p>
+              <p className="text-xl font-bold text-slate-100">~$118 – $133 / mo</p>
+              <p className="text-xs text-slate-400 mt-1">$103 base + your API costs (~$15–30)</p>
+            </div>
+            <div className="rounded-xl p-5 border border-orange-500/30 bg-orange-500/5">
+              <p className="text-xs uppercase tracking-wider pf-orange font-bold mb-1">Option B Total</p>
+              <p className="text-xl font-bold text-slate-100">~$125 – $135 / mo flat</p>
+              <p className="text-xs text-slate-400 mt-1">One invoice · zero overhead · all APIs included</p>
+            </div>
           </div>
 
           <div className="mt-6 rounded-xl p-5 border border-orange-500/30 bg-orange-500/5">
             <p className="text-sm text-slate-200 leading-relaxed">
               <span className="pf-orange font-bold">Compare this to what you pay now:</span> At <strong>$0.80/lead</strong> manually,
               35,000 leads/month = <strong>$28,000/mo</strong> in manual cost.
-              At <strong className="pf-orange">$125/mo flat</strong>, you get all 35K leads processed and scored automatically.
+              At <strong className="pf-orange">~$125/mo</strong>, you get all 35K leads processed and scored automatically.
             </p>
           </div>
         </div>
@@ -153,7 +202,7 @@ export default function Proposal() {
           <SectionTitle eyebrow="Ownership" title="What you own at the end" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-8">
             <OwnCard icon={<Lock size={22} />} title="100% Your Platform" body="Code, data, leads — all yours. No lock-in." />
-            <OwnCard icon={<Database size={22} />} title="Your Data, Your Database" body="Supabase account in your name. SJ manages it." />
+            <OwnCard icon={<Database size={22} />} title="Your Data, Your Platform" body="All leads, calls, and history belong to you. Exportable any time." />
             <OwnCard icon={<Wrench size={22} />} title="SJ Manages It All" body="Hosting, updates, bug fixes included." />
           </div>
         </div>
