@@ -152,9 +152,9 @@ export default function DataSources() {
           <Stat label="Match accuracy" value="98.4%" sub="address + APN" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-          <OverlapRow a="Batch Leads" b="ATTOM" pct={62} />
-          <OverlapRow a="Batch Leads" b="Scraper" pct={41} />
-          <OverlapRow a="ATTOM" b="Scraper" pct={28} />
+          <OverlapRow a="Batch Leads" b="Meta Ads" pct={18} />
+          <OverlapRow a="Batch Leads" b="Mojo (re-dial)" pct={9} />
+          <OverlapRow a="Meta Ads" b="Mojo (re-dial)" pct={4} />
         </div>
       </div>
 
@@ -162,7 +162,7 @@ export default function DataSources() {
       <div className="metric-card">
         <h3 className="font-bold text-foreground mb-4">Data Pipeline Flow</h3>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <PipeStep icon={<Database size={14} />} label="4 Sources" sub="Batch · ATTOM · Meta · Scraper" />
+          <PipeStep icon={<Database size={14} />} label="3 Live Sources" sub="Batch · Mojo · Meta · (ATTOM Ph 2)" />
           <Arrow />
           <PipeStep icon={<Activity size={14} />} label="Dedup Engine" sub="address + APN match" highlight />
           <Arrow />
