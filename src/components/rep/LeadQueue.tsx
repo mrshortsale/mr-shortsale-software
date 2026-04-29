@@ -3,7 +3,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { Lead } from '@/data/leads';
 import { getPriorContact } from '@/data/activity';
-import { Phone, MessageSquare, MapPin, AlertTriangle, Sparkles, Clock, Filter, ArrowUpDown, Target } from 'lucide-react';
+import { getAttomIntelForLead } from '@/integrations/attom';
+import { Phone, MessageSquare, MapPin, AlertTriangle, Sparkles, Clock, Filter, ArrowUpDown, Target, TrendingUp } from 'lucide-react';
 import LeadDetailDrawer from '@/components/shared/LeadDetailDrawer';
 
 type SortKey = 'urgency' | 'auction' | 'equity' | 'name';
@@ -141,6 +142,8 @@ const auctionColor = (days: number) => days < 30 ? 'text-destructive' : days < 6
 
 function LeadCard({ lead, onSelect, onCall, onSMS }: { lead: Lead; onSelect: () => void; onCall: () => void; onSMS: () => void }) {
   const prior = getPriorContact(lead.id);
+  const attom = getAttomIntelForLead(lead.id, { value: lead.estimated_value, equity: lead.equity_pct, owner: lead.homeowner_name, purchaseDate: lead.purchase_date });
+  const sourceLabel = lead.data_source_primary === 'BatchLeads' ? 'Batch Leads API' : 'Realie.ai';
 
   return (
     <div onClick={onSelect} className="metric-card cursor-pointer hover:shadow-md hover:border-secondary/40 transition-all">
@@ -175,7 +178,17 @@ function LeadCard({ lead, onSelect, onCall, onSMS }: { lead: Lead; onSelect: () 
             <Clock size={9} /> Prior contact
           </span>
         )}
-        <span className="text-[10px] text-muted-foreground ml-auto">{lead.data_source_primary}</span>
+        {attom.highEquity && (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent text-accent-foreground">
+            <TrendingUp size={9} /> High Equity
+          </span>
+        )}
+        {attom.taxDelinquent && (
+          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-destructive text-destructive-foreground">
+            Tax Delinquent
+          </span>
+        )}
+        <span className="text-[10px] text-muted-foreground ml-auto">{sourceLabel}</span>
       </div>
 
       <div className="flex items-center gap-2 mb-3">

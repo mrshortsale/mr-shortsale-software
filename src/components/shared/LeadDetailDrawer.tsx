@@ -86,7 +86,17 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
               </div>
             </Section>
 
-            {/* Verification */}
+            {/* ATTOM Property Intel */}
+            <Section title={<><Layers size={12} className="inline mr-1 text-secondary" />ATTOM Property Intel</>}>
+              <div className="rounded-lg border bg-secondary/5 p-3 space-y-1.5">
+                <Info label="Estimated Value (AVM)" value={`$${attom.estimatedValue.toLocaleString()}`} />
+                <Info label="Equity %" value={`${attom.equityPct}%${attom.highEquity ? ' · HIGH' : ''}`} />
+                <Info label="Owner Name" value={attom.ownerName} />
+                <Info label="Last Sale Date" value={attom.lastSaleDate} />
+                <Info label="Tax Delinquent" value={attom.taxDelinquent ? 'Yes — flagged' : 'No'} />
+              </div>
+            </Section>
+
             <Section title="Data Verification">
               <div className="space-y-2">
                 <VerifyRow source={lead.data_source_primary === 'BatchLeads' ? 'Batch Leads API' : 'Realie.ai'} verified ts="6:02 AM today" />
