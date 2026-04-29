@@ -39,7 +39,7 @@ export default function Proposal() {
           <SummaryStat value="API Flexible" label="Pay direct or let SJ manage" />
           <SummaryStat value="6 Weeks" label="Build Timeline" />
           <SummaryStat value="35,000" label="Leads/mo · 3,100 Counties" />
-          <SummaryStat value="You Own It" label="100% Your Platform" highlight />
+          <SummaryStat value="You Own It" label="No licensing fees. Ever." highlight />
         </div>
       </section>
 
