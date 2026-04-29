@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, Activity, Zap, Database, Facebook, FileText, Settings, Layers } from 'lucide-react';
+import { CheckCircle, Activity, Zap, Database, Facebook, PhoneCall, Layers, Settings } from 'lucide-react';
 import { getBatchLeadsHealth } from '@/integrations/batchLeads';
-import { getAttomHealth } from '@/integrations/attom';
 import { getMetaHealth } from '@/integrations/metaAds';
+import { getMojoStatus } from '@/integrations/mojoDialer';
+
+type DotColor = 'green' | 'orange' | 'gray';
 
 interface SourceCard {
   id: string;
@@ -14,58 +16,74 @@ interface SourceCard {
   lastSync: string;
   records: string;
   detail: string;
+  dot: DotColor;
+  statusLabel: string;
 }
+
+const dotStyles: Record<DotColor, { bg: string; text: string }> = {
+  green:  { bg: 'bg-accent',          text: 'text-accent' },
+  orange: { bg: 'bg-speed',           text: 'text-speed' },
+  gray:   { bg: 'bg-muted-foreground',text: 'text-muted-foreground' },
+};
 
 export default function DataSources() {
   const [sources, setSources] = useState<SourceCard[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [b, a, m] = await Promise.all([getBatchLeadsHealth(), getAttomHealth(), getMetaHealth()]);
+      const [b, m, mojo] = await Promise.all([getBatchLeadsHealth(), getMetaHealth(), getMojoStatus()]);
       setSources([
         {
           id: 'batch',
           name: 'Batch Leads API',
-          badge: 'Primary — 3,100 Counties',
+          badge: 'Primary · 35,000 leads/month · 3,100 Counties',
           badgeColor: 'bg-accent/15 text-accent',
           icon: <Database size={18} />,
-          description: '$3.95/mo flat — 35,000 distressed property leads/mo nationwide',
+          description: '$3.95/mo flat — distressed property leads nationwide',
           lastSync: b.lastSync,
           records: `${b.recordsThisWeek.toLocaleString()} this week`,
           detail: `${b.monthlyQuotaUsed}% of monthly quota used`,
+          dot: 'green',
+          statusLabel: 'Active',
         },
         {
-          id: 'attom',
-          name: 'ATTOM Property Data',
-          badge: 'Cross-Verification',
-          badgeColor: 'bg-secondary/15 text-secondary',
-          icon: <Layers size={18} />,
-          description: 'AVM, equity %, owner name, last sale, tax delinquency',
-          lastSync: a.lastSync,
-          records: `${a.recordsThisWeek.toLocaleString()} verified this week`,
-          detail: '158M property records nationwide',
+          id: 'mojo',
+          name: 'Mojo Triple Dialer',
+          badge: 'Auto-feed active · Call outcomes syncing',
+          badgeColor: 'bg-accent/15 text-accent',
+          icon: <PhoneCall size={18} />,
+          description: 'Bulk push leads, sync answered/voicemail/DNC outcomes back',
+          lastSync: mojo.lastSync,
+          records: `${mojo.callsToday} calls today`,
+          detail: `${mojo.queued} in queue · ${mojo.connectRate}% connect rate`,
+          dot: 'green',
+          statusLabel: 'Active',
         },
         {
           id: 'meta',
           name: 'Meta / Facebook Ads',
-          badge: 'Speed-to-Lead',
+          badge: 'Speed-to-Lead feed active',
           badgeColor: 'bg-speed/15 text-speed',
           icon: <Facebook size={18} />,
           description: 'Live form-fill webhook — instant alert + dialer routing',
           lastSync: `Last lead: ${m.lastEvent}`,
           records: `${m.weeklyRecords} this week · ${m.leadsToday} today`,
           detail: `Avg response: ${Math.floor(m.avgResponseSec / 60)}m ${m.avgResponseSec % 60}s · ${m.conversionPct}% conversion`,
+          dot: 'orange',
+          statusLabel: 'Live',
         },
         {
-          id: 'scraper',
-          name: 'County Filings Scraper',
-          badge: 'Nationwide — 3,100 Counties',
-          badgeColor: 'bg-warning/15 text-warning',
-          icon: <FileText size={18} />,
-          description: 'Daily scrape of NOD, NTS, Lis Pendens public records',
-          lastSync: 'Today 5:48 AM',
-          records: '619 filings this week',
-          detail: 'Fallback for counties without API coverage',
+          id: 'attom',
+          name: 'ATTOM Property Data',
+          badge: 'Phase 2 · Not yet active',
+          badgeColor: 'bg-muted text-muted-foreground',
+          icon: <Layers size={18} />,
+          description: 'AVM, equity %, owner name, last sale, tax delinquency',
+          lastSync: '—',
+          records: 'Activates in Phase 2',
+          detail: '158M property records nationwide',
+          dot: 'gray',
+          statusLabel: 'Not active',
         },
       ]);
     })();
@@ -75,43 +93,47 @@ export default function DataSources() {
     <div className="space-y-6">
       {/* Status cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sources.map(s => (
-          <div key={s.id} className="metric-card">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-foreground shrink-0">
-                {s.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-foreground">{s.name}</h3>
-                  <span className="flex items-center gap-1 text-xs">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
-                    </span>
-                    <span className="text-accent font-medium">Active</span>
-                  </span>
+        {sources.map(s => {
+          const ds = dotStyles[s.dot];
+          const live = s.dot !== 'gray';
+          return (
+            <div key={s.id} className="metric-card">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-foreground shrink-0">
+                  {s.icon}
                 </div>
-                <span className={`inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded ${s.badgeColor}`}>{s.badge}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-foreground">{s.name}</h3>
+                    <span className="flex items-center gap-1 text-xs">
+                      <span className="relative flex h-2 w-2">
+                        {live && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${ds.bg}`} />}
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${ds.bg}`} />
+                      </span>
+                      <span className={`${ds.text} font-medium`}>{s.statusLabel}</span>
+                    </span>
+                  </div>
+                  <span className={`inline-block mt-1 text-[10px] font-medium px-2 py-0.5 rounded ${s.badgeColor}`}>{s.badge}</span>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground mb-3">{s.description}</p>
+              <div className="space-y-1.5 text-sm border-t pt-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground text-xs">Last sync</span>
+                  <span className="text-foreground text-xs font-medium">{s.lastSync}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground text-xs">Records</span>
+                  <span className="text-foreground text-xs font-medium">{s.records}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground italic pt-1">{s.detail}</p>
+              </div>
+              <button className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 border rounded-md text-xs font-medium text-muted-foreground hover:bg-muted">
+                <Settings size={12} /> Configure
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">{s.description}</p>
-            <div className="space-y-1.5 text-sm border-t pt-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground text-xs">Last sync</span>
-                <span className="text-foreground text-xs font-medium">{s.lastSync}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground text-xs">Records</span>
-                <span className="text-foreground text-xs font-medium">{s.records}</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground italic pt-1">{s.detail}</p>
-            </div>
-            <button className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 border rounded-md text-xs font-medium text-muted-foreground hover:bg-muted">
-              <Settings size={12} /> Configure
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Dedup Engine card */}
@@ -130,9 +152,9 @@ export default function DataSources() {
           <Stat label="Match accuracy" value="98.4%" sub="address + APN" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-          <OverlapRow a="Batch Leads" b="ATTOM" pct={62} />
-          <OverlapRow a="Batch Leads" b="Scraper" pct={41} />
-          <OverlapRow a="ATTOM" b="Scraper" pct={28} />
+          <OverlapRow a="Batch Leads" b="Meta Ads" pct={18} />
+          <OverlapRow a="Batch Leads" b="Mojo (re-dial)" pct={9} />
+          <OverlapRow a="Meta Ads" b="Mojo (re-dial)" pct={4} />
         </div>
       </div>
 
@@ -140,7 +162,7 @@ export default function DataSources() {
       <div className="metric-card">
         <h3 className="font-bold text-foreground mb-4">Data Pipeline Flow</h3>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <PipeStep icon={<Database size={14} />} label="4 Sources" sub="Batch · ATTOM · Meta · Scraper" />
+          <PipeStep icon={<Database size={14} />} label="3 Live Sources" sub="Batch · Mojo · Meta · (ATTOM Ph 2)" />
           <Arrow />
           <PipeStep icon={<Activity size={14} />} label="Dedup Engine" sub="address + APN match" highlight />
           <Arrow />

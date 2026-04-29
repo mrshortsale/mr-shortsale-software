@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
@@ -26,6 +26,7 @@ const navItems = [
   { id: 'data', label: 'Data Sources', icon: Database },
   { id: 'roadmap', label: 'Roadmap', icon: Map },
   { id: 'presentation', label: 'Presentation', icon: Sparkles },
+  { id: 'proposal', label: 'View Proposal', icon: FileText, external: '/proposal' as const },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -68,16 +69,33 @@ export default function CEODashboard() {
         </div>
 
         <nav className="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === item.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'}`}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
+          {navItems.map(item => {
+            if ('external' in item && item.external) {
+              return (
+                <a
+                  key={item.id}
+                  href={item.external}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                >
+                  <item.icon size={18} />
+                  <span className="flex-1">{item.label}</span>
+                  <ExternalLink size={12} className="opacity-60" />
+                </a>
+              );
+            }
+            return (
+              <button
+                key={item.id}
+                onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === item.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'}`}
+              >
+                <item.icon size={18} />
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
