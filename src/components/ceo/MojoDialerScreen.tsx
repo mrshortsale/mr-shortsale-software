@@ -36,6 +36,13 @@ export default function MojoDialerScreen() {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 flex items-start gap-2 text-xs text-foreground">
+        <Phone size={14} className="text-primary mt-0.5 shrink-0" />
+        <div>
+          <strong>How this screen works:</strong> Mr. Short Sale pushes leads into Mojo via the Mojo Triple Dialer API. <strong>Calls are placed by Mojo</strong> on your reps' headsets — not by this app. Outcomes sync back here after each call.
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Metric label="In Queue" value={status?.queued ?? '—'} sub="ready to dial" icon={<Phone size={18} />} accent="primary" />
         <Metric label="Calls Today" value={status?.callsToday ?? '—'} sub="across all agents" icon={<Activity size={18} />} accent="secondary" />

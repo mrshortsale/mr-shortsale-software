@@ -7,9 +7,11 @@ import {
   relativeTime,
 } from '@/data/realtorLeads';
 import {
-  Building2, Calendar, TrendingDown, Phone, Mail, ExternalLink,
+  Building2, Calendar, TrendingDown, ArrowUpToLine, Mail, ExternalLink,
   Flame, RefreshCw, Filter, ArrowUpDown, Globe,
 } from 'lucide-react';
+import { sendToMojo } from '@/integrations/mojoDialer';
+import { toast } from 'sonner';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
 
 type SortKey = 'days' | 'newest' | 'drops';
@@ -121,12 +123,13 @@ export default function RealtorQueue() {
             </button>
 
             <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-              <a
-                href={`tel:${lead.agentPhone}`}
+              <button
+                onClick={() => sendToMojo([lead.id]).then(() => toast.success(`${lead.agentName} queued in Mojo`, { description: 'Mojo will dial from your headset on next pickup' }))}
                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-accent text-accent-foreground text-xs font-bold hover:opacity-90"
+                title="Push agent's number into Mojo Triple Dialer queue"
               >
-                <Phone size={12} /> Call
-              </a>
+                <ArrowUpToLine size={12} /> Push to Mojo
+              </button>
               <a
                 href={`mailto:${lead.agentEmail}`}
                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-secondary text-secondary-foreground text-xs font-bold hover:opacity-90"

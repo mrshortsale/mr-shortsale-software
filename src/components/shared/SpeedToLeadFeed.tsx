@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { generateMetaLead, MetaLead, seedMetaLeads } from '@/integrations/metaAds';
-import { Zap, Phone, Volume2, VolumeX, Clock, Facebook } from 'lucide-react';
+import { Zap, ArrowUpToLine, Volume2, VolumeX, Clock, Facebook, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 function fmtAge(ms: number) {
@@ -51,8 +51,8 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
   }, [soundOn]);
 
   const handleCallNow = (lead: MetaLead) => {
-    toast.success(`Routing ${lead.name} to top of dialer queue`, {
-      description: 'Mojo Triple Dialer paused · You are connected first',
+    toast.success(`${lead.name} pushed to top of Mojo queue`, {
+      description: 'Mojo Triple Dialer will dial this lead on your next pickup',
     });
     setLeads(prev => prev.filter(l => l.id !== lead.id));
   };
@@ -71,6 +71,10 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
             Live
           </span>
         </span>
+      </div>
+      <div className="px-4 py-1.5 bg-speed/5 border-b border-speed/20 text-[10.5px] text-muted-foreground flex items-center gap-1.5">
+        <Info size={10} className="text-speed shrink-0" />
+        <span>App pushes leads to Mojo via API — Mojo dials from your headset.</span>
       </div>
       <div className={`p-3 space-y-2 ${compact ? 'max-h-72 overflow-y-auto' : ''}`}>
         {leads.length === 0 && (
@@ -101,8 +105,9 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
               <button
                 onClick={() => handleCallNow(lead)}
                 className="shrink-0 px-3 py-2 bg-speed text-speed-foreground rounded-lg text-xs font-bold flex items-center gap-1 hover:opacity-90"
+                title="Insert this lead at position 1 in the Mojo dialer queue"
               >
-                <Phone size={12} /> Call Now
+                <ArrowUpToLine size={12} /> Push to Top
               </button>
             </div>
           );
