@@ -10,6 +10,9 @@ export default function SpeedToLeadScreen() {
 
   return (
     <div className="space-y-6">
+      <SourceProvenance
+        chips={[{ source: 'Meta', count: `${m?.leadsToday ?? 0} today`, lastSync: 'live webhook', status: 'live' }]}
+      />
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Metric label="Leads Today" value={m?.leadsToday ?? '—'} icon={<Facebook size={18} className="text-speed" />} />
         <Metric label="Avg Response" value={m ? `${Math.floor(m.avgResponseSec / 60)}m ${m.avgResponseSec % 60}s` : '—'} icon={<Clock size={18} className="text-secondary" />} />
