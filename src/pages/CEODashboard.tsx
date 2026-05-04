@@ -25,21 +25,24 @@ const navItems = [
   { id: 'speed', label: 'Speed-to-Lead', icon: Zap },
   { id: 'dialer', label: 'Mojo Dialer', icon: PhoneCall },
   { id: 'team', label: 'Team Performance', icon: BarChart3 },
-  { id: 'ai-calls', label: 'AI Inbound Calls', icon: Phone },
-  { id: 'ai-agents', label: 'AI Agents', icon: Bot },
   { id: 'data', label: 'Data Sources', icon: Database },
-  { id: 'divider-realtor', label: 'Realtor Short Sale', divider: true as const },
-  { id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2 },
-  { id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users },
-  { id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare },
-  { id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp },
   { id: 'divider-other', label: 'Other', divider: true as const },
-  { id: 'roadmap', label: 'Roadmap', icon: Map },
+  { id: 'roadmap', label: 'Roadmap & Previews', icon: Map },
   { id: 'presentation', label: 'Presentation', icon: Sparkles },
   { id: 'proposal', label: 'View Proposal', icon: FileText, external: '/proposal' as const },
   { id: 'costs', label: 'Cost Transparency', icon: FileText, external: '/costs' as const },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
+
+// Phase 2 preview screens — accessible only via Roadmap
+const previewLabels: Record<string, string> = {
+  'ai-calls': 'AI Inbound Calls (Preview)',
+  'ai-agents': 'AI Agents (Preview)',
+  'realtor-pipeline': 'Realtor Pipeline (Preview)',
+  'realtor-queue': 'Realtor Lead Queue (Preview)',
+  'realtor-scripts': 'Realtor Scripts (Preview)',
+  'realtor-reports': 'Realtor Reports (Preview)',
+};
 
 export default function CEODashboard() {
   const { user, logout } = useAuth();
