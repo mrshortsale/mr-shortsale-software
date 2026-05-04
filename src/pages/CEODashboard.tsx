@@ -18,10 +18,12 @@ import RealtorPipeline from '@/components/ceo/RealtorPipeline';
 import RealtorLeadQueue from '@/components/ceo/RealtorLeadQueue';
 import RealtorScripts from '@/components/ceo/RealtorScripts';
 import RealtorReports from '@/components/ceo/RealtorReports';
+import LeadInventory from '@/components/ceo/LeadInventory';
 
 const navItems = [
   { id: 'briefing', label: 'Morning Briefing', icon: Home },
-  { id: 'pipeline', label: 'Short Sale Pipeline', icon: Kanban },
+  { id: 'inventory', label: 'Lead Inventory', icon: List },
+  { id: 'pipeline', label: 'Active Pipeline', icon: Kanban },
   { id: 'speed', label: 'Speed-to-Lead', icon: Zap },
   { id: 'dialer', label: 'Mojo Dialer', icon: PhoneCall },
   { id: 'team', label: 'Team Performance', icon: BarChart3 },
