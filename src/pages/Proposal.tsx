@@ -302,16 +302,18 @@ export default function Proposal() {
           {/* Combined checklist callout */}
           <div className="mt-6 rounded-xl p-5 border border-blue-500/30 bg-blue-500/5">
             <p className="text-xs uppercase tracking-wider text-blue-400 font-bold mb-3">Full Checklist</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
               {[
                 ['①', 'Upfront payment'],
                 ['②', 'Lead CSV export'],
                 ['③', 'Mojo credentials'],
                 ['④', 'Facebook admin'],
-                ['⑤', 'ICP call'],
-                ['⑥', 'Team list'],
-                ['⑦', 'Logo + colors'],
-                ['⑧', 'API option'],
+                ['⑤', 'Batch key ✓'],
+                ['⑥', 'Zillow + ATOM keys'],
+                ['⑦', 'ICP call'],
+                ['⑧', 'Team list'],
+                ['⑨', 'Logo + colors'],
+                ['⑩', 'API option'],
               ].map(([n, label]) => (
                 <div key={n} className="flex items-center gap-2 text-slate-200">
                   <span className="text-blue-400 font-bold text-base">{n}</span>
@@ -320,7 +322,7 @@ export default function Proposal() {
               ))}
             </div>
             <p className="text-xs text-slate-400 mt-4 italic">
-              Items ①–④ needed before Week 1. Items ⑤–⑧ collected in a 30-min onboarding call after signing.
+              Items ①–⑥ needed before Week 1. Items ⑦–⑩ collected in a 30-min onboarding call after signing.
             </p>
           </div>
         </div>
