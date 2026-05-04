@@ -2,18 +2,16 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import logo from '@/assets/logo.png';
-import { List, Clock, BarChart3, Phone, LogOut, Menu, X, Building2 } from 'lucide-react';
+import { List, Clock, BarChart3, LogOut, Menu, X } from 'lucide-react';
 
 import LeadQueue from '@/components/rep/LeadQueue';
 import CallHistory from '@/components/rep/CallHistory';
 import RepStats from '@/components/rep/RepStats';
 import ActiveCall from '@/components/rep/ActiveCall';
 import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
-import RealtorQueue from '@/components/rep/RealtorQueue';
 
 const navItems = [
   { id: 'queue', label: 'Foreclosure Queue', icon: List },
-  { id: 'realtor', label: 'Realtor Queue', icon: Building2 },
   { id: 'history', label: 'Call History', icon: Clock },
   { id: 'stats', label: 'My Stats', icon: BarChart3 },
 ];
