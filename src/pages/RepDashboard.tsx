@@ -29,7 +29,6 @@ export default function RepDashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case 'queue': return <LeadQueue />;
-      case 'realtor': return <RealtorQueue />;
       case 'history': return <CallHistory />;
       case 'stats': return <RepStats />;
       default: return <LeadQueue />;
