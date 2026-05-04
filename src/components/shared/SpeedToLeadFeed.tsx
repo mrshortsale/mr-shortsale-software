@@ -51,8 +51,8 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
   }, [soundOn]);
 
   const handleCallNow = (lead: MetaLead) => {
-    toast.success(`Routing ${lead.name} to top of dialer queue`, {
-      description: 'Mojo Triple Dialer paused · You are connected first',
+    toast.success(`${lead.name} pushed to top of Mojo queue`, {
+      description: 'Mojo Triple Dialer will dial this lead on your next pickup',
     });
     setLeads(prev => prev.filter(l => l.id !== lead.id));
   };
