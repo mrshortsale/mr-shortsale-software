@@ -80,8 +80,9 @@ export default function Proposal() {
               </div>
               <ul className="space-y-3 text-sm text-slate-300">
                 <Pending label="AI Inbound + Outbound Voice Calls" sub="ElevenLabs + Twilio — NOT in Phase 1" />
-                <Pending label="ATTOM Property Data cross-verification" sub="Verify equity, AVM, tax delinquency" />
-                <Pending label="County Filings Scraper" sub="3,100 counties direct" />
+                <Pending label="ATTOM Property Data cross-verification" sub="Pay-as-you-go comparison source — auto-pick freshest provider per county" />
+                <Pending label="Direct county-records ingestion" sub="Pilot 5 FL counties → 20 → 50 (bypass 3-day vendor lag)" />
+                <Pending label="Source performance scoring" sub="Auto-learn which source produces the best leads per county" />
                 <Pending label="ICP Learning Loop" sub="AI scoring improves from every closed deal" />
               </ul>
             </div>
