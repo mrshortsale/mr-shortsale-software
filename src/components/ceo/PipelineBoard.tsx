@@ -18,7 +18,20 @@ export default function PipelineBoard() {
   const selected = pipelineCases.find(c => c.id === selectedId) || null;
 
   return (
-    <div>
+    <div className="space-y-4">
+      <SourceProvenance
+        chips={[
+          { source: 'Batch', count: '34,812', lastSync: '2h ago', status: 'pending' },
+          { source: 'Zillow', count: '1,420', lastSync: '12m ago', status: 'pending' },
+        ]}
+      />
+      <div className="rounded-xl bg-primary/5 border border-primary/20 px-3 py-2 flex flex-wrap items-center gap-3 text-xs">
+        <span className="font-bold text-foreground">Active Pipeline</span>
+        <span className="text-muted-foreground">12 active cases · 0 denials · avg close 67d</span>
+        <span className="ml-auto inline-flex items-center gap-1 text-accent font-bold">
+          <ArrowRightCircle size={12} /> 3 promoted from Inventory today
+        </span>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {stages.map(stage => (
           <div key={stage}>
