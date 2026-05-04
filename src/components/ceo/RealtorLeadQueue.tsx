@@ -209,14 +209,13 @@ export default function RealtorLeadQueue() {
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                <a
-                  href={`tel:${lead.agentPhone}`}
-                  onClick={e => e.stopPropagation()}
+                <button
+                  onClick={e => { e.stopPropagation(); sendToMojo([lead.id]).then(() => toast.success(`${lead.agentName} queued in Mojo`)); }}
                   className="w-8 h-8 rounded-md bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground flex items-center justify-center"
-                  title="Call agent"
+                  title="Push agent to Mojo dialer queue"
                 >
-                  <Phone size={13} />
-                </a>
+                  <ArrowUpToLine size={13} />
+                </button>
                 <a
                   href={`mailto:${lead.agentEmail}`}
                   onClick={e => e.stopPropagation()}
