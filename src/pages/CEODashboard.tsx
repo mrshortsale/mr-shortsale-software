@@ -26,6 +26,11 @@ const navItems = [
   { id: 'dialer', label: 'Mojo Dialer', icon: PhoneCall },
   { id: 'team', label: 'Team Performance', icon: BarChart3 },
   { id: 'data', label: 'Data Sources', icon: Database },
+  { id: 'divider-realtor', label: 'Realtor Short Sale', divider: true as const },
+  { id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2 },
+  { id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users },
+  { id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare },
+  { id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp },
   { id: 'divider-other', label: 'Other', divider: true as const },
   { id: 'roadmap', label: 'Roadmap & Previews', icon: Map },
   { id: 'presentation', label: 'Presentation', icon: Sparkles },
@@ -38,10 +43,6 @@ const navItems = [
 const previewLabels: Record<string, string> = {
   'ai-calls': 'AI Inbound Calls (Preview)',
   'ai-agents': 'AI Agents (Preview)',
-  'realtor-pipeline': 'Realtor Pipeline (Preview)',
-  'realtor-queue': 'Realtor Lead Queue (Preview)',
-  'realtor-scripts': 'Realtor Scripts (Preview)',
-  'realtor-reports': 'Realtor Reports (Preview)',
 };
 
 export default function CEODashboard() {
