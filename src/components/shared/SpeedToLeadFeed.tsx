@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { generateMetaLead, MetaLead, seedMetaLeads } from '@/integrations/metaAds';
-import { Zap, Phone, Volume2, VolumeX, Clock, Facebook } from 'lucide-react';
+import { Zap, ArrowUpToLine, Volume2, VolumeX, Clock, Facebook, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 function fmtAge(ms: number) {
