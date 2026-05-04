@@ -57,3 +57,29 @@ export const realtorPipelineStages: RealtorLeadStatus[] = ['New', 'Contacted', '
 export function getRealtorLeadsByStatus(status: RealtorLeadStatus) {
   return realtorLeads.filter(l => l.status === status);
 }
+
+// "Hot" listing-agent lead = motivated to partner.
+//   - 2+ price drops (already cut twice, willing to consider unconventional help), OR
+//   - 90+ days on market (listing stale, agent under pressure).
+export function isHotRealtorLead(lead: RealtorLead): boolean {
+  return lead.priceDrops.length >= 2 || lead.daysOnMarket >= 90;
+}
+
+export function relativeTime(iso: string | null, now = new Date('2026-05-04T11:30:00')): string {
+  if (!iso) return 'Never';
+  const then = new Date(iso.replace(' ', 'T'));
+  const diffMin = Math.round((now.getTime() - then.getTime()) / 60000);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffD = Math.round(diffHr / 24);
+  return `${diffD}d ago`;
+}
+
+export const realtorQueueStats = {
+  total: realtorLeads.length,
+  newToday: realtorLeads.filter(l => l.status === 'New').length,
+  awaitingFollowup: realtorLeads.filter(l => l.status === 'Contacted').length,
+  partneredThisWeek: realtorLeads.filter(l => l.status === 'Partnered').length,
+};
+
