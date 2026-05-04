@@ -1,8 +1,9 @@
 import { pipelineCases, PipelineStage } from '@/data/pipeline';
 import { useState } from 'react';
-import { Calendar, User } from 'lucide-react';
+import { Calendar, User, ArrowRightCircle } from 'lucide-react';
 import CaseDetailDrawer from './CaseDetailDrawer';
 import { getCaseDetails } from '@/data/caseDetails';
+import SourceProvenance from '@/components/shared/SourceProvenance';
 
 const stages: PipelineStage[] = ['Initial Contact', 'Docs Collected', 'Bank Submitted', 'Pending Approval'];
 const stageColors: Record<PipelineStage, string> = {
