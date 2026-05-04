@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { realtorLeads, realtorPipelineStages, RealtorLead, RealtorLeadStatus } from '@/data/realtorLeads';
 import { Building2, Phone, Calendar, Home, ExternalLink } from 'lucide-react';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
+import SourceProvenance from '@/components/shared/SourceProvenance';
 
 const stageColor: Record<RealtorLeadStatus, string> = {
   'New':         'border-l-secondary',
@@ -24,6 +25,7 @@ export default function RealtorPipeline() {
 
   return (
     <div className="space-y-4">
+      <SourceProvenance chips={[{ source: 'Zillow', count: `${realtorLeads.length} listings`, lastSync: '12m ago', status: 'pending' }]} />
       <div className="rounded-xl bg-gradient-to-r from-secondary/10 to-accent/10 border border-secondary/20 p-4">
         <div className="flex items-start gap-3">
           <Building2 className="text-secondary mt-0.5" size={20} />

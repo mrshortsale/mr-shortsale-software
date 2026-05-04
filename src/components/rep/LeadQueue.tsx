@@ -64,6 +64,11 @@ export default function LeadQueue() {
         </span>
       </div>
 
+      <div className="rounded-lg bg-muted/60 border px-3 py-2 text-[11px] text-muted-foreground flex items-center gap-2">
+        <Filter size={12} className="text-primary" />
+        <span>You're seeing <strong className="text-foreground">{agentLeads.length}</strong> of <strong className="text-foreground">34,812</strong> Batch leads — auto-assigned by AI score + territory.</span>
+      </div>
+
       {/* Filters/Sort */}
       <div className="flex flex-wrap items-center gap-2 metric-card py-3">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink, Building2, Users, MessageSquare, TrendingUp } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink, Building2, Users, MessageSquare, TrendingUp, List } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
@@ -18,10 +18,12 @@ import RealtorPipeline from '@/components/ceo/RealtorPipeline';
 import RealtorLeadQueue from '@/components/ceo/RealtorLeadQueue';
 import RealtorScripts from '@/components/ceo/RealtorScripts';
 import RealtorReports from '@/components/ceo/RealtorReports';
+import LeadInventory from '@/components/ceo/LeadInventory';
 
 const navItems = [
   { id: 'briefing', label: 'Morning Briefing', icon: Home },
-  { id: 'pipeline', label: 'Short Sale Pipeline', icon: Kanban },
+  { id: 'inventory', label: 'Lead Inventory', icon: List },
+  { id: 'pipeline', label: 'Active Pipeline', icon: Kanban },
   { id: 'speed', label: 'Speed-to-Lead', icon: Zap },
   { id: 'dialer', label: 'Mojo Dialer', icon: PhoneCall },
   { id: 'team', label: 'Team Performance', icon: BarChart3 },
@@ -53,6 +55,7 @@ export default function CEODashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case 'briefing': return <MorningBriefing />;
+      case 'inventory': return <LeadInventory />;
       case 'pipeline': return <PipelineBoard />;
       case 'team': return <TeamPerformance />;
       case 'ai-calls': return <AIInboundCalls />;

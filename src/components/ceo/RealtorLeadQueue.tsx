@@ -14,6 +14,7 @@ import {
 import { sendToMojo } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
+import SourceProvenance from '@/components/shared/SourceProvenance';
 
 type SortKey = 'days' | 'price' | 'drops' | 'newest';
 
@@ -79,11 +80,9 @@ export default function RealtorLeadQueue() {
         <Stat icon={<Users size={14} />}     label="Partnered" value={realtorQueueStats.partneredThisWeek} accent="accent" />
       </div>
 
-      <div className="rounded-xl bg-secondary/5 border border-secondary/20 px-3 py-2 flex items-center gap-2 text-xs text-foreground">
-        <RefreshCw size={12} className="text-secondary" />
-        <span><strong>Source: Zillow</strong> · synced 12 min ago · keyword "short sale" · 3 states</span>
-        <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">backend wiring pending</span>
-      </div>
+      <SourceProvenance
+        chips={[{ source: 'Zillow', count: `${realtorQueueStats.total} listings`, lastSync: '12m ago', status: 'pending' }]}
+      />
 
       {/* Filter bar */}
       <div className="metric-card flex flex-wrap items-center gap-3">
