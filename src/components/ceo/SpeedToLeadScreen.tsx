@@ -18,14 +18,17 @@ export default function SpeedToLeadScreen() {
 
       <SpeedToLeadFeed />
 
-      <div className="metric-card">
-        <h3 className="font-bold text-foreground mb-2">How Speed-to-Lead works</h3>
+      <div className="metric-card border-l-4 border-l-speed">
+        <h3 className="font-bold text-foreground mb-1">How Speed-to-Lead works</h3>
+        <p className="text-[11px] text-muted-foreground mb-2 italic">
+          Note: Mr. Short Sale app does not place calls. All dialing happens inside Mojo Triple Dialer — we just push leads to it via API.
+        </p>
         <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal pl-5">
           <li>Meta Ads form-fill triggers webhook in &lt; 1 second</li>
           <li>Lead drops into this feed — orange alert + optional sound</li>
           <li>Timer counts up: turns red after 5 min (industry kill zone)</li>
-          <li>One-click <strong>Call Now</strong> pauses Mojo queue and routes lead to top</li>
-          <li>After call, rep logs outcome → lead enters normal pipeline</li>
+          <li>One-click <strong>Push to Top</strong> moves the lead to position 1 in your Mojo queue — Mojo dials it on your next pickup</li>
+          <li>After call, rep logs outcome in Mojo → outcome syncs back into the pipeline</li>
         </ol>
       </div>
     </div>
