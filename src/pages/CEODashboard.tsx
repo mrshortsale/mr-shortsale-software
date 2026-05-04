@@ -59,7 +59,7 @@ export default function CEODashboard() {
       case 'data': return <DataSources />;
       case 'speed': return <SpeedToLeadScreen />;
       case 'dialer': return <MojoDialerScreen />;
-      case 'roadmap': return <RoadmapView />;
+      case 'roadmap': return <RoadmapView onOpenPreview={(id) => setActiveTab(id)} />;
       case 'presentation': return <Presentation />;
       case 'realtor-pipeline': return <RealtorPipeline />;
       case 'realtor-queue': return <RealtorLeadQueue />;
@@ -69,6 +69,8 @@ export default function CEODashboard() {
       default: return <MorningBriefing />;
     }
   };
+
+  const headerLabel = navItems.find(n => n.id === activeTab)?.label ?? previewLabels[activeTab] ?? '';
 
   return (
     <div className="flex h-screen overflow-hidden">
