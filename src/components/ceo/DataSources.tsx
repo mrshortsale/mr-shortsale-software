@@ -105,6 +105,21 @@ export default function DataSources() {
 
   return (
     <div className="space-y-6">
+      {/* Source-freshness banner (May 4 client meeting takeaway) */}
+      <div className="rounded-xl border-l-4 border-l-speed bg-speed/5 p-4 flex items-start gap-3">
+        <AlertTriangle size={18} className="text-speed mt-0.5 shrink-0" />
+        <div className="text-sm">
+          <p className="font-bold text-foreground">Source freshness — known limitation</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Batch Leads API has a <strong>~72-hour lag</strong> from county filing. Phase 2 plan: pilot direct county-records ingestion (5 FL counties → 20 → 50) and add ATOM as a parallel comparison source so the platform can pick the freshest provider per county.
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <KeyRound size={12} className="text-accent" />
+            <span className="text-[11px] text-accent font-medium">Batch Leads API key received from Cristina · backend wiring in next sprint</span>
+          </div>
+        </div>
+      </div>
+
       {/* Status cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sources.map(s => {
