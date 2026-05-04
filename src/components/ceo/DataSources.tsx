@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, Activity, Zap, Database, Facebook, PhoneCall, Layers, Settings } from 'lucide-react';
+import { CheckCircle, Activity, Zap, Database, Facebook, PhoneCall, Layers, Settings, Building2, AlertTriangle, KeyRound } from 'lucide-react';
 import { getBatchLeadsHealth } from '@/integrations/batchLeads';
 import { getMetaHealth } from '@/integrations/metaAds';
 import { getMojoStatus } from '@/integrations/mojoDialer';
+import { getZillowHealth } from '@/integrations/zillow';
 
 type DotColor = 'green' | 'orange' | 'gray';
 
@@ -31,20 +32,46 @@ export default function DataSources() {
 
   useEffect(() => {
     (async () => {
-      const [b, m, mojo] = await Promise.all([getBatchLeadsHealth(), getMetaHealth(), getMojoStatus()]);
+      const [b, m, mojo, z] = await Promise.all([getBatchLeadsHealth(), getMetaHealth(), getMojoStatus(), getZillowHealth()]);
       setSources([
         {
           id: 'batch',
           name: 'Batch Leads API',
-          badge: 'Primary · 35,000 leads/month · 3,100 Counties',
+          badge: 'Primary · 35,000 leads/mo · 3,100 counties · ~72hr lag',
           badgeColor: 'bg-accent/15 text-accent',
           icon: <Database size={18} />,
-          description: '$3.95/mo flat — distressed property leads nationwide',
+          description: '$3.95/mo flat — distressed property leads nationwide. Key received ✓ — backend wiring pending.',
           lastSync: b.lastSync,
           records: `${b.recordsThisWeek.toLocaleString()} this week`,
-          detail: `${b.monthlyQuotaUsed}% of monthly quota used`,
+          detail: `${b.monthlyQuotaUsed}% of monthly quota used · acknowledged 3-day data lag from county filings`,
           dot: 'green',
-          statusLabel: 'Active',
+          statusLabel: 'Connected',
+        },
+        {
+          id: 'zillow',
+          name: 'Zillow Listings (Realtor Chain)',
+          badge: 'Realtor leads · keyword: "short sale" · nationwide',
+          badgeColor: 'bg-secondary/15 text-secondary',
+          icon: <Building2 size={18} />,
+          description: 'Pulls listings already on Zillow as short sales. Feeds the Realtor Short Sale chain — pitch listing agents directly.',
+          lastSync: z.lastSync,
+          records: `${z.totalActive} active listings · ${z.newToday} new today`,
+          detail: `${z.statesCovered} states tracked · keyword filters: ${z.keywordsTracked.join(', ')}`,
+          dot: 'orange',
+          statusLabel: 'API key pending',
+        },
+        {
+          id: 'attom',
+          name: 'ATTOM Property Data',
+          badge: 'Comparison source · pay-as-you-go · pilot: FL counties',
+          badgeColor: 'bg-secondary/15 text-secondary',
+          icon: <Layers size={18} />,
+          description: 'Running parallel to Batch to validate freshness. AVM, equity %, owner name, last sale, tax delinquency.',
+          lastSync: 'Pilot mode — sample pulls',
+          records: '158M property records nationwide',
+          detail: 'Phase 2: per-county source scoring will pick the freshest provider per market',
+          dot: 'orange',
+          statusLabel: 'Pilot',
         },
         {
           id: 'mojo',
@@ -72,25 +99,27 @@ export default function DataSources() {
           dot: 'orange',
           statusLabel: 'Live',
         },
-        {
-          id: 'attom',
-          name: 'ATTOM Property Data',
-          badge: 'Phase 2 · Not yet active',
-          badgeColor: 'bg-muted text-muted-foreground',
-          icon: <Layers size={18} />,
-          description: 'AVM, equity %, owner name, last sale, tax delinquency',
-          lastSync: '—',
-          records: 'Activates in Phase 2',
-          detail: '158M property records nationwide',
-          dot: 'gray',
-          statusLabel: 'Not active',
-        },
       ]);
     })();
   }, []);
 
   return (
     <div className="space-y-6">
+      {/* Source-freshness banner (May 4 client meeting takeaway) */}
+      <div className="rounded-xl border-l-4 border-l-speed bg-speed/5 p-4 flex items-start gap-3">
+        <AlertTriangle size={18} className="text-speed mt-0.5 shrink-0" />
+        <div className="text-sm">
+          <p className="font-bold text-foreground">Source freshness — known limitation</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Batch Leads API has a <strong>~72-hour lag</strong> from county filing. Phase 2 plan: pilot direct county-records ingestion (5 FL counties → 20 → 50) and add ATOM as a parallel comparison source so the platform can pick the freshest provider per county.
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <KeyRound size={12} className="text-accent" />
+            <span className="text-[11px] text-accent font-medium">Batch Leads API key received from Cristina · backend wiring in next sprint</span>
+          </div>
+        </div>
+      </div>
+
       {/* Status cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sources.map(s => {
@@ -162,7 +191,7 @@ export default function DataSources() {
       <div className="metric-card">
         <h3 className="font-bold text-foreground mb-4">Data Pipeline Flow</h3>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <PipeStep icon={<Database size={14} />} label="3 Live Sources" sub="Batch · Mojo · Meta · (ATTOM Ph 2)" />
+          <PipeStep icon={<Database size={14} />} label="5 Sources" sub="Batch · Zillow · ATOM · Mojo · Meta" />
           <Arrow />
           <PipeStep icon={<Activity size={14} />} label="Dedup Engine" sub="address + APN match" highlight />
           <Arrow />

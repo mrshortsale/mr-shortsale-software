@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink, Building2, Users, MessageSquare, TrendingUp } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
@@ -14,6 +14,10 @@ import SpeedToLeadScreen from '@/components/ceo/SpeedToLeadScreen';
 import MojoDialerScreen from '@/components/ceo/MojoDialerScreen';
 import RoadmapView from '@/components/ceo/RoadmapView';
 import Presentation from '@/components/ceo/Presentation';
+import RealtorPipeline from '@/components/ceo/RealtorPipeline';
+import RealtorLeadQueue from '@/components/ceo/RealtorLeadQueue';
+import RealtorScripts from '@/components/ceo/RealtorScripts';
+import RealtorReports from '@/components/ceo/RealtorReports';
 
 const navItems = [
   { id: 'briefing', label: 'Morning Briefing', icon: Home },
@@ -24,6 +28,12 @@ const navItems = [
   { id: 'ai-calls', label: 'AI Inbound Calls', icon: Phone },
   { id: 'ai-agents', label: 'AI Agents', icon: Bot },
   { id: 'data', label: 'Data Sources', icon: Database },
+  { id: 'divider-realtor', label: 'Realtor Short Sale', divider: true as const },
+  { id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2 },
+  { id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users },
+  { id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare },
+  { id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp },
+  { id: 'divider-other', label: 'Other', divider: true as const },
   { id: 'roadmap', label: 'Roadmap', icon: Map },
   { id: 'presentation', label: 'Presentation', icon: Sparkles },
   { id: 'proposal', label: 'View Proposal', icon: FileText, external: '/proposal' as const },
@@ -48,6 +58,10 @@ export default function CEODashboard() {
       case 'dialer': return <MojoDialerScreen />;
       case 'roadmap': return <RoadmapView />;
       case 'presentation': return <Presentation />;
+      case 'realtor-pipeline': return <RealtorPipeline />;
+      case 'realtor-queue': return <RealtorLeadQueue />;
+      case 'realtor-scripts': return <RealtorScripts />;
+      case 'realtor-reports': return <RealtorReports />;
       case 'settings': return <div className="p-8"><h2 className="text-2xl font-bold text-foreground">Settings</h2><p className="text-muted-foreground mt-2">Account and platform settings coming soon.</p></div>;
       default: return <MorningBriefing />;
     }
@@ -71,6 +85,13 @@ export default function CEODashboard() {
 
         <nav className="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
           {navItems.map(item => {
+            if ('divider' in item && item.divider) {
+              return (
+                <div key={item.id} className="pt-3 pb-1 px-3 text-[10px] uppercase tracking-wider text-sidebar-foreground opacity-50 font-bold">
+                  {item.label}
+                </div>
+              );
+            }
             if ('external' in item && item.external) {
               return (
                 <a

@@ -67,7 +67,8 @@ export default function Proposal() {
                 <Feature label="AI Lead Scoring" sub="Equity, motivation, property signals" />
                 <Feature label="Mojo Triple Dialer API" sub="Auto-push leads, call outcomes sync back" />
                 <Feature label="Meta / Facebook Ads Speed-to-Lead" sub="Real-time feed, 5-min alert timer" />
-                <Feature label="Bilingual EN / ES" sub="Full interface in English and Spanish" />
+                <Feature label="Realtor Short Sale chain (NEW)" sub="Zillow listing-agent leads — separate pipeline, scripts, and reports. Pitch realtor-to-realtor: they keep the commission, we close the file." />
+                <Feature label="Bilingual EN / ES" sub="Full interface and scripts in English and Spanish" />
                 <Feature label="SJ Innovation manages platform" sub="Hosting, updates, support included" />
               </ul>
             </div>
@@ -79,8 +80,9 @@ export default function Proposal() {
               </div>
               <ul className="space-y-3 text-sm text-slate-300">
                 <Pending label="AI Inbound + Outbound Voice Calls" sub="ElevenLabs + Twilio — NOT in Phase 1" />
-                <Pending label="ATTOM Property Data cross-verification" sub="Verify equity, AVM, tax delinquency" />
-                <Pending label="County Filings Scraper" sub="3,100 counties direct" />
+                <Pending label="ATTOM Property Data cross-verification" sub="Pay-as-you-go comparison source — auto-pick freshest provider per county" />
+                <Pending label="Direct county-records ingestion" sub="Pilot 5 FL counties → 20 → 50 (bypass 3-day vendor lag)" />
+                <Pending label="Source performance scoring" sub="Auto-learn which source produces the best leads per county" />
                 <Pending label="ICP Learning Loop" sub="AI scoring improves from every closed deal" />
               </ul>
             </div>
@@ -279,6 +281,8 @@ export default function Proposal() {
                 <NeedItem n="②" label="Lead Excel/CSV export" sub="Columns: name, address, phone, lead source, status — for demo build" accent="orange" />
                 <NeedItem n="③" label="Mojo Dialer credentials or API key" sub="Needed in Week 4 to wire up the dialer" accent="orange" />
                 <NeedItem n="④" label="Facebook Business Manager admin access" sub="Required for the Speed-to-Lead webhook" accent="orange" />
+                <NeedItem n="⑤" label="Batch Leads API key ✓ received" sub="Generated live during May 4 call — backend wiring in Week 1" accent="orange" />
+                <NeedItem n="⑥" label="Zillow + ATOM API keys" sub="From your @mrshortsale.net email — Zillow powers Realtor chain, ATOM is comparison source" accent="orange" />
               </ul>
             </div>
 
@@ -289,10 +293,10 @@ export default function Proposal() {
                 <span className="text-xs text-slate-400 uppercase tracking-wider">30 min after signing</span>
               </div>
               <ul className="space-y-3 text-sm">
-                <NeedItem n="⑤" label="ICP definition call with George (15 min)" sub="Equity %, property types, target zip codes, distress signals" accent="green" />
-                <NeedItem n="⑥" label="Team list" sub="Names, emails, language preference EN or ES per user" accent="green" />
-                <NeedItem n="⑦" label="Logo + brand colors (optional)" sub="X-Cap Realty or Mr. Short Sale branding" accent="green" />
-                <NeedItem n="⑧" label="API option choice" sub="Option A (your card · ~$15–30/mo) or Option B (SJ manages · ~$125–135/mo flat)" accent="green" />
+                <NeedItem n="⑦" label="ICP definition call with George (15 min)" sub="Equity %, property types, target zip codes, distress signals" accent="green" />
+                <NeedItem n="⑧" label="Team list" sub="Names, emails, language preference EN or ES per user" accent="green" />
+                <NeedItem n="⑨" label="Logo + brand colors (optional)" sub="X-Cap Realty or Mr. Short Sale branding" accent="green" />
+                <NeedItem n="⑩" label="API option choice" sub="Option A (your card · ~$15–30/mo) or Option B (SJ manages · ~$125–135/mo flat)" accent="green" />
               </ul>
             </div>
           </div>
@@ -300,16 +304,18 @@ export default function Proposal() {
           {/* Combined checklist callout */}
           <div className="mt-6 rounded-xl p-5 border border-blue-500/30 bg-blue-500/5">
             <p className="text-xs uppercase tracking-wider text-blue-400 font-bold mb-3">Full Checklist</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
               {[
                 ['①', 'Upfront payment'],
                 ['②', 'Lead CSV export'],
                 ['③', 'Mojo credentials'],
                 ['④', 'Facebook admin'],
-                ['⑤', 'ICP call'],
-                ['⑥', 'Team list'],
-                ['⑦', 'Logo + colors'],
-                ['⑧', 'API option'],
+                ['⑤', 'Batch key ✓'],
+                ['⑥', 'Zillow + ATOM keys'],
+                ['⑦', 'ICP call'],
+                ['⑧', 'Team list'],
+                ['⑨', 'Logo + colors'],
+                ['⑩', 'API option'],
               ].map(([n, label]) => (
                 <div key={n} className="flex items-center gap-2 text-slate-200">
                   <span className="text-blue-400 font-bold text-base">{n}</span>
@@ -318,7 +324,7 @@ export default function Proposal() {
               ))}
             </div>
             <p className="text-xs text-slate-400 mt-4 italic">
-              Items ①–④ needed before Week 1. Items ⑤–⑧ collected in a 30-min onboarding call after signing.
+              Items ①–⑥ needed before Week 1. Items ⑦–⑩ collected in a 30-min onboarding call after signing.
             </p>
           </div>
         </div>
