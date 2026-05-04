@@ -191,7 +191,7 @@ export default function DataSources() {
       <div className="metric-card">
         <h3 className="font-bold text-foreground mb-4">Data Pipeline Flow</h3>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <PipeStep icon={<Database size={14} />} label="3 Live Sources" sub="Batch · Mojo · Meta · (ATTOM Ph 2)" />
+          <PipeStep icon={<Database size={14} />} label="5 Sources" sub="Batch · Zillow · ATOM · Mojo · Meta" />
           <Arrow />
           <PipeStep icon={<Activity size={14} />} label="Dedup Engine" sub="address + APN match" highlight />
           <Arrow />
