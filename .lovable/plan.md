@@ -1,74 +1,105 @@
-## Goal
+## Part A — SOW vs `/proposal` page: gap analysis
 
-Cristina wants the **Realtor Short Sale chain promoted into Phase 1** (live in the demo, visible in the sidebar). Also re-check the meeting transcript for anything else that should be Phase 1 instead of Phase 2.
+The signed-Friday SOW is **Phase 1 only, no realtor chain**. Today's meeting added the Realtor Short Sale chain. Here's where the live `/proposal` page already aligns and where it drifts.
 
-## Changes
+### ✅ Already matching
 
-### 1. Promote Realtor Short Sale to Phase 1 (live)
+| SOW item | Proposal page |
+|---|---|
+| $4,500 Phase 1 build fee, 50/50 split | ✅ matches |
+| $99/mo managed hosting | ✅ matches |
+| 6-week timeline (Discovery → Foundation → AI Scoring → Mojo+Meta → Testing → Launch) | ✅ matches |
+| Batch Leads API · 35K leads · 3,100 counties · $3.95/mo | ✅ matches |
+| Mojo Triple Dialer billed under client's existing sub | ✅ matches |
+| Meta/Facebook Speed-to-Lead, 5-min timer | ✅ matches |
+| Bilingual EN/ES interface | ✅ matches |
+| AI Lead Scoring (equity, motivation, property signals) | ✅ matches |
+| Ownership: code, data, no licensing fees | ✅ matches |
 
-**`src/pages/CEODashboard.tsx`** — restore the Realtor Short Sale sidebar group between Data Sources and the "Other" divider:
+### ⚠️ Gaps to close
 
-- Realtor Pipeline
-- Realtor Lead Queue
-- Realtor Scripts
-- Realtor Reports
+1. **Realtor Short Sale chain is NOT in the SOW.** It's only on the proposal page. The signed SOW must be amended (or a SOW addendum issued) to add a new section "2.x Realtor Short Sale Chain" describing: Zillow listing-agent lead ingestion, dedicated pipeline + queue + scripts + reports, realtor-to-realtor outreach model, bilingual scripts. Today's meeting promoted this into Phase 1 — the SOW needs to follow.
 
-Remove `realtor-*` entries from `previewLabels` (no longer preview-only).
+2. **Phase 2 list mismatch.** SOW lists 4 Phase 2 items (AI Voice, ATTOM, County scraper, ICP Learning Loop). Proposal page lists 5 (adds "Source performance scoring"). Either add it to the SOW or drop it from the proposal page. Recommend keeping it on proposal + amending SOW.
 
-**`src/pages/RepDashboard.tsx`** — restore the "Realtor Queue" tab next to "Foreclosure Queue" so reps can work both chains.
+3. **Client Responsibilities count drifted.** SOW = 8 items (4 before Week 1, 4 in onboarding). Proposal page = 10 items (added ⑤ Batch key receipt, ⑥ Zillow + ATOM keys). The two new keys are correct given today's meeting — SOW must be updated to match.
 
-**`src/components/ceo/RoadmapView.tsx`** — move all realtor deliverables out of Phase 2 and into Phase 1:
+4. **Zillow + ATOM data sources** mentioned on proposal page but not in SOW. Add ATOM to Section 2.x as a "comparison source" and Zillow as the realtor-chain source. Note ATOM is pay-as-you-go.
 
-Phase 1 deliverables become:
-- Realie.ai + Batch Leads API integration
-- Equity filter pipeline (≤25%)
-- Mojo Dialer API connection
-- CEO dashboard v1
-- Sales rep lead queue (foreclosure)
-- **Realtor Short Sale chain — Zillow listing-agent leads, dedicated pipeline, queue, scripts, reports**
-- **Bilingual (EN/ES) realtor-to-realtor script library**
-- SMS auto-follow-up (Twilio)
-- Parallel run with current vendor
+5. **AI + SMS APIs (OpenAI, Gemini, Twilio)** appear in proposal cost table with Option A / Option B model, but the SOW's Section 5 cost table is leaner. Confirm Section 5 lists these line items and the A/B model. (Could not verify from the PDF parse pages I have — flagging for George to double-check.)
 
-Phase 1 status stays "Live in Demo." Phase 2 keeps only AI Agents, AI Inbound Calls, ATTOM cross-check, urgency scoring, duplicate detection, Meta Ads.
+6. **`@mrshortsale.net` email domain** mentioned on proposal page (item ⑥ sub-text). Not in SOW. Minor — add to onboarding section.
 
-### 2. Other items from the meeting that belong in Phase 1
+7. **Phase 1 build fee may need re-pricing.** Adding a parallel realtor chain (Zillow integration, separate pipeline screens, separate scripts, separate reports) is real scope. Recommend either: (a) SJ absorbs it as a goodwill addition since the meeting committed verbally, or (b) issue a small change-order ($500–$1,500). Flagging for George/Shahed; no UI change either way.
 
-Re-reading the transcript, these were called out as "we need this from day one," so move them into Phase 1 visibility:
+### 🟡 Watch-outs (not gaps, but worth noting)
 
-- **Source freshness banner** on Data Sources (Batch ~72hr lag warning) — already built, just confirm it shows on the live Data Sources screen.
-- **ATOM as a parallel comparison source card** on Data Sources — already built, keep visible (Cristina wants A/B from the start, even if pay-as-you-go).
-- **Zillow source card** on Data Sources — keep visible, since realtor chain is now Phase 1.
-- **Onboarding checklist on `/proposal`** already lists realtor-chain items; verify it reads as Phase-1 scope (no "Phase 2" labels next to realtor lines).
-- **`@mrshortsale.net` email domain** for team accounts — confirm any seeded user emails in `src/data/users.ts` use this domain.
+- SOW says "**up to** 35,000 leads/month" — proposal page reads "35,000 leads/month" without the qualifier. Minor copy tightening.
+- SOW Section 2.7 says "Cloud-hosted on a reliable platform" without naming the host. Proposal page doesn't say either. Good — keep it that way (deliberately vendor-agnostic per earlier direction to never say "Supabase").
+- SOW Section 2.9 AI/ML disclaimer is not surfaced anywhere on the proposal page. Acceptable — disclaimer lives in the contract, not the marketing page.
 
-### 3. Update memory
+---
 
-Update `mem://index.md` Core to drop "(Phase 2)" framing — realtor chain is now part of the live Phase 1 product.
+## Part B — Build: Realtor Lead Queue (the user-requested work)
 
-## Stays in Phase 2 (preview only via Roadmap)
+The user said: *"only exception is the realtor lead queue ... go ahead and work on it."*
 
-- AI Agents Roster
-- AI Inbound Calls (Vapi voice handling)
-- ATTOM equity cross-check automation
-- Urgency scoring 1–10
-- Duplicate detection
-- Meta Ads / PPC
+There are currently **two** realtor queue surfaces, both thin first-pass implementations:
 
-## Stays in Phase 3
+- `src/components/rep/RealtorQueue.tsx` — Sales Rep view, basic card list with name/brokerage/address/price/DOM. No filtering, no sorting, no priority signals.
+- `src/components/ceo/RealtorLeadQueue.tsx` — CEO view (haven't deeply audited yet, but likely similar).
 
-- 24/7 Vapi inbound voice
-- Outbound AI dialer
-- Direct county-records ingestion
-- Per-county source scoring
+### Polish & feature additions (both surfaces)
 
-## Out of scope
+1. **Top filter bar**
+   - State chip filter (FL, TX, CA, etc. — pulled from data)
+   - Status filter (New / Contacted / Partnered / Declined)
+   - "Bilingual ES" toggle
+   - Sort dropdown: Newest listing · Most price drops · Longest DOM · Highest list price
 
-- No new components — all realtor screens already exist.
-- No backend wiring (Batch/Zillow/ATOM keys still held).
+2. **Lead card upgrades**
+   - Status pill colored by stage (New = teal, Contacted = amber, Partnered = green, Declined = muted)
+   - "Hot" badge when ≥2 price drops OR DOM ≥ 90 days (motivated listing)
+   - MLS# shown
+   - Last-contact-at relative time ("Last touched 3d ago")
+   - Inline "Open Zillow listing" button → `lead.listingUrl`
+   - Inline "Call agent" + "Email agent" quick actions
+   - Language flag (🇺🇸 / 🇪🇸)
 
-## Quick confirm
+3. **Queue header strip**
+   - Total realtor leads · New today · Awaiting follow-up · Partnered this week
+   - "Source: Zillow · synced 12 min ago" freshness indicator (matches the Batch ~72hr lag pattern we use elsewhere)
 
-1. Move **all four** realtor screens (Pipeline, Queue, Scripts, Reports) into Phase 1 sidebar — yes?
-2. Keep **AI Agents + AI Inbound Calls** in Phase 2 preview (not Phase 1) — yes? Cristina mentioned Vapi but framed it as future-state, so I'm keeping it preview unless you say otherwise.
-3. Anything else from the meeting you remember her saying "I need this now"? E.g. SMS templates, specific report, user invites — let me know and I'll fold it in.
+4. **Empty + loading states**
+   - Friendly empty state if filters return zero
+   - Skeleton rows on initial load
+
+5. **CEO-only additions on `RealtorLeadQueue.tsx`**
+   - Assign-to-rep dropdown per row
+   - Bulk select + bulk assign
+
+6. **Drawer integration**
+   - Continue using `RealtorLeadDetailDrawer` on row click — add a "Suggested opener (EN/ES)" panel that pulls from the realtor scripts library based on agent's language.
+
+### Data needs
+
+- Confirm `realtorLeads.ts` carries: `mlsNumber`, `listingUrl`, `language`, `lastContactAt`, `priceDrops[]`, `daysOnMarket`, `status`. If any field is missing, extend the seed data — no backend change.
+
+### Out of scope this pass
+
+- Real Zillow API wiring (still held)
+- Realtor Pipeline kanban polish (separate ticket)
+- Realtor scripts library polish (separate ticket)
+
+---
+
+## Recommendation / next steps for the team
+
+1. **Approve this plan** → I implement the realtor-queue polish (rep + CEO surfaces) with filtering, sorting, hot-lead signals, status colors, freshness banner, drawer enhancement. ~6 file edits, no new dependencies.
+2. **Separately**, George/Shahed should issue a **SOW Addendum #1** covering: realtor chain Section 2.x, Zillow + ATOM under data sources, updated 10-item client-responsibility list, Phase 2 source-scoring line. I can draft the addendum as a `.docx` artifact in `/mnt/documents/` if you want — just say the word.
+
+## Quick confirm before I build
+
+1. Build the realtor-queue polish on **both** rep and CEO surfaces, or rep only this pass?
+2. Want me to also draft the **SOW Addendum #1 .docx** so George can send it tomorrow alongside the contract?
+3. Any specific filter/sort she asked for in the meeting that I should prioritize? (I picked the obvious ones; let me know if she called out something specific.)
