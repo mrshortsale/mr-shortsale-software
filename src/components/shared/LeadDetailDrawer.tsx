@@ -3,7 +3,7 @@ import { Lead, getAICallScript } from '@/data/leads';
 import { getPriorContact, getUrgencyReason } from '@/data/activity';
 import { getSMSThread } from '@/data/sms';
 import { getAttomIntelForLead } from '@/integrations/attom';
-import { Phone, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot, Layers, TrendingUp } from 'lucide-react';
+import { Phone, ArrowUpToLine, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot, Layers, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import SMSThread from './SMSThread';
 
