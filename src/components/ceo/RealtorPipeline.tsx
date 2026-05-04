@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { realtorLeads, realtorPipelineStages, RealtorLead, RealtorLeadStatus } from '@/data/realtorLeads';
 import { Building2, Phone, Calendar, Home, ExternalLink } from 'lucide-react';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
+import SourceProvenance from '@/components/shared/SourceProvenance';
 
 const stageColor: Record<RealtorLeadStatus, string> = {
   'New':         'border-l-secondary',
