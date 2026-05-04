@@ -279,6 +279,8 @@ export default function Proposal() {
                 <NeedItem n="②" label="Lead Excel/CSV export" sub="Columns: name, address, phone, lead source, status — for demo build" accent="orange" />
                 <NeedItem n="③" label="Mojo Dialer credentials or API key" sub="Needed in Week 4 to wire up the dialer" accent="orange" />
                 <NeedItem n="④" label="Facebook Business Manager admin access" sub="Required for the Speed-to-Lead webhook" accent="orange" />
+                <NeedItem n="⑤" label="Batch Leads API key ✓ received" sub="Generated live during May 4 call — backend wiring in Week 1" accent="orange" />
+                <NeedItem n="⑥" label="Zillow + ATOM API keys" sub="From your @mrshortsale.net email — Zillow powers Realtor chain, ATOM is comparison source" accent="orange" />
               </ul>
             </div>
 
@@ -289,10 +291,10 @@ export default function Proposal() {
                 <span className="text-xs text-slate-400 uppercase tracking-wider">30 min after signing</span>
               </div>
               <ul className="space-y-3 text-sm">
-                <NeedItem n="⑤" label="ICP definition call with George (15 min)" sub="Equity %, property types, target zip codes, distress signals" accent="green" />
-                <NeedItem n="⑥" label="Team list" sub="Names, emails, language preference EN or ES per user" accent="green" />
-                <NeedItem n="⑦" label="Logo + brand colors (optional)" sub="X-Cap Realty or Mr. Short Sale branding" accent="green" />
-                <NeedItem n="⑧" label="API option choice" sub="Option A (your card · ~$15–30/mo) or Option B (SJ manages · ~$125–135/mo flat)" accent="green" />
+                <NeedItem n="⑦" label="ICP definition call with George (15 min)" sub="Equity %, property types, target zip codes, distress signals" accent="green" />
+                <NeedItem n="⑧" label="Team list" sub="Names, emails, language preference EN or ES per user" accent="green" />
+                <NeedItem n="⑨" label="Logo + brand colors (optional)" sub="X-Cap Realty or Mr. Short Sale branding" accent="green" />
+                <NeedItem n="⑩" label="API option choice" sub="Option A (your card · ~$15–30/mo) or Option B (SJ manages · ~$125–135/mo flat)" accent="green" />
               </ul>
             </div>
           </div>
