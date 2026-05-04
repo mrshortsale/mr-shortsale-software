@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { CheckCircle, Clock, Circle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { CheckCircle, Clock, Circle, ChevronDown, ChevronUp, Sparkles, ExternalLink } from 'lucide-react';
+
+interface RoadmapViewProps {
+  onOpenPreview?: (screenId: string) => void;
+}
 
 interface Phase {
   phase: string;
