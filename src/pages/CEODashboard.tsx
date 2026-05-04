@@ -55,6 +55,7 @@ export default function CEODashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case 'briefing': return <MorningBriefing />;
+      case 'inventory': return <LeadInventory />;
       case 'pipeline': return <PipelineBoard />;
       case 'team': return <TeamPerformance />;
       case 'ai-calls': return <AIInboundCalls />;
