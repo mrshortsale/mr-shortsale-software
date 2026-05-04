@@ -14,6 +14,7 @@ import {
 import { sendToMojo } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
+import SourceProvenance from '@/components/shared/SourceProvenance';
 
 type SortKey = 'days' | 'price' | 'drops' | 'newest';
 
