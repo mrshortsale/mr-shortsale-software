@@ -1,95 +1,45 @@
+## Goal
 
-# Post-meeting update plan (May 4 call with Cristina)
+Cristina found Phase 2 features mixed into the live demo confusing. She should experience the Phase 1 product cleanly, and only see Phase 2 when she explicitly opens the Roadmap.
 
-Based on what changed in the meeting and your answers:
-- **Realtor leads** = new top-level sidebar section, separate pipeline
-- **Source scoring** = skip for now (Phase 2)
-- **Batch API key** = hold the key, ship UI only (no backend wiring this pass)
-- **County rollout map** = not yet — single roadmap callout only
+## What changes
 
----
+### 1. Hide Phase 2 surfaces from the CEO sidebar
 
-## 1. New "Realtor Short Sale" chain (the big one)
+In `src/pages/CEODashboard.tsx`, remove (or gate behind a "Show Phase 2 preview" toggle, off by default) these sidebar items, since they are Phase 2 deliverables:
 
-A second, parallel lead pipeline targeting **listing agents** of properties already on Zillow as short sales. The dialer pitches realtor-to-realtor: *"We can close this short sale for you at no cost."*
+- AI Agents Roster
+- AI Inbound Calls
+- AI Activity Ticker
+- Realtor Short Sale section (Realtor Pipeline, Realtor Lead Queue, Realtor Scripts, Realtor Reports)
+- Data Sources cards for ATOM and Zillow (keep Batch Leads + Realie only)
 
-**New CEO sidebar group** "Realtor Short Sale" with 4 items:
-- Realtor Pipeline (Kanban: New → Contacted → Partnered → Closed / Declined)
-- Realtor Lead Queue
-- Realtor Scripts (separate bilingual script library — realtor-to-realtor tone)
-- Realtor Reports (deals closed via partnered realtor vs. direct homeowner)
+Phase 1 items that stay visible: Morning Briefing, Pipeline, Lead Queue / Mojo Dialer, Speed-to-Lead, Team Performance, Case details, SMS, Roadmap, Proposal, Costs.
 
-**New Rep view**: a "Realtor Queue" tab next to the existing foreclosure queue, with a different lead card layout (listing agent name, brokerage, MLS#, days on market, list price, price-drop history, listing URL).
+### 2. Hide Phase 2 from the Rep dashboard
 
-**New data shape** in `src/data/realtorLeads.ts`:
-```ts
-RealtorLead { id, agentName, brokerage, agentPhone, agentEmail, mlsNumber,
-  propertyAddress, listPrice, daysOnMarket, priceDrops, listingUrl,
-  state, status, lastContactAt, source: 'zillow' }
-```
-Seeded with ~20 realistic mock listings across FL/NY/CA.
+In `src/pages/RepDashboard.tsx`, remove the "Realtor Queue" tab. Rep sees only the foreclosure lead queue, active call, call history, stats.
 
-**New integration stub** `src/integrations/zillow.ts` — mock keyword-search endpoint (`searchShortSaleListings(state, keyword)`), returns the seed data. Real Zillow API wiring deferred.
+### 3. Keep everything browsable from Roadmap
 
-## 2. Data Sources screen updates
+`src/components/ceo/RoadmapView.tsx` already lists all three phases with deliverables. Update it so Phase 2 and Phase 3 are the place she goes to preview what's coming:
 
-Add two cards alongside Batch Leads API:
-- **ATOM Property API** — status: "Comparison source · pay-as-you-go · pulling sample counties (FL)". Tooltip explains it's running in parallel to validate freshness vs. Batch.
-- **Zillow Listings** — status: "Realtor lead source · keyword: 'short sale' · nationwide". Links to the new Realtor section.
+- Change Phase 2 status from "Live in Demo" to "Preview" (new badge style, amber).
+- Collapse Phase 2 and Phase 3 by default; only Phase 1 expanded.
+- Inside each Phase 2 deliverable that has a working screen (Realtor Pipeline, AI Agents, ATOM/Zillow sources), add a small "Preview screen" link that opens that screen in a modal/drawer or routes to a `/preview/...` path. This way she can still see what we built without it polluting her main nav.
+- Update the top callout from "Phases 1 & 2 are live in this prototype" to "Phase 1 is live. Click Phase 2 below to preview what's coming in Weeks 5–8."
 
-Update **Batch Leads API card** to honestly show "Source freshness: ~72 hr lag" (Cristina's exact concern) and a small "API key received ✓ — backend wiring pending" badge.
+### 4. Routing
 
-## 3. Roadmap update
+In `src/App.tsx`, keep the Phase 2 components mounted but only reachable via roadmap-triggered preview routes (e.g. `/preview/realtor-pipeline`, `/preview/ai-agents`). They are not linked from the sidebar.
 
-On `RoadmapView.tsx`, add Phase 2 callout:
-- "Direct county-records ingestion — pilot 5 FL counties → 20 → 50"
-- "Meta Ads / PPC integration (deferred until Phase 1 ships)"
+## Out of scope
 
-## 4. Proposal page (`/proposal`)
+- No deletion of Phase 2 code — everything stays in the repo, just gated.
+- No data model changes.
+- Proposal and Costs pages unchanged (they already correctly describe phases).
 
-Two small additions:
-- New bullet under "What we need from you": **API keys for Zillow + ATOM** (Cristina's email, same flow as Batch)
-- New line in scope: **"Realtor Short Sale chain — separate pipeline, scripts, and reports"**
+## Confirm before I build
 
-## 5. Memory updates
-
-Update `mem://architecture/data-strategy` to add the realtor chain and ATOM-as-comparison model. Update core index to mention the two parallel chains.
-
----
-
-## Technical notes
-
-**Files new:**
-- `src/data/realtorLeads.ts` — seed data + types
-- `src/integrations/zillow.ts` — mock search
-- `src/components/ceo/RealtorPipeline.tsx`
-- `src/components/ceo/RealtorLeadQueue.tsx`
-- `src/components/ceo/RealtorScripts.tsx`
-- `src/components/ceo/RealtorReports.tsx`
-- `src/components/rep/RealtorQueue.tsx`
-- `src/components/shared/RealtorLeadDetailDrawer.tsx`
-
-**Files edited:**
-- `src/pages/CEODashboard.tsx` — new sidebar group + 4 route cases
-- `src/pages/RepDashboard.tsx` — add Realtor Queue tab
-- `src/components/ceo/DataSources.tsx` — add ATOM + Zillow cards, update Batch card
-- `src/components/ceo/RoadmapView.tsx` — Phase 2 callout
-- `src/pages/Proposal.tsx` — Zillow/ATOM key request + realtor chain scope line
-- `mem://index.md`, `mem://architecture/data-strategy`
-
-**Out of scope this pass** (per your answers):
-- Real Batch/Zillow/ATOM backend calls
-- Source performance scoreboard
-- Counties coverage map
-- Meta Ads integration
-
----
-
-## What I'm NOT doing yet — confirm before I build
-
-If any of these are wrong, tell me before approving:
-1. Realtor pipeline stages are: **New → Contacted → Partnered → Closed Won / Declined** — OK?
-2. Realtor leads use the **same dialer / Vapi voice agent** but with a different script library (not a separate dialer integration).
-3. We keep the Batch API key Cristina sent **stored only as a note in the proposal**, not as a Lovable Cloud secret yet.
-
-Approve and I'll implement in one pass.
+1. "Hide" = remove from sidebar entirely, with previews accessible only via Roadmap. OK? (Alternative: add a CEO toggle "Show Phase 2 preview in sidebar" defaulted off.)
+2. Should the Realtor Short Sale chain be treated as Phase 2 (hidden) or kept visible since Cristina specifically asked for it in the last meeting? My read: hide it, surface via Roadmap preview, because she also said the realtor chain is a future workflow she does not run today.

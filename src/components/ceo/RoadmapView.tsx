@@ -1,12 +1,21 @@
 import { useState } from 'react';
-import { CheckCircle, Clock, Circle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { CheckCircle, Clock, Circle, ChevronDown, ChevronUp, Sparkles, ExternalLink } from 'lucide-react';
+
+interface RoadmapViewProps {
+  onOpenPreview?: (screenId: string) => void;
+}
+
+interface Deliverable {
+  label: string;
+  previewScreenId?: string;
+}
 
 interface Phase {
   phase: string;
   timeline: string;
   title: string;
-  status: 'Live in Demo' | 'In Progress' | 'Planned';
-  deliverables: string[];
+  status: 'Live in Demo' | 'Preview' | 'In Progress' | 'Planned';
+  deliverables: (string | Deliverable)[];
   eliminates: string;
   timeSaved: string;
 }
@@ -33,12 +42,15 @@ const phases: Phase[] = [
     phase: 'Phase 2',
     timeline: 'Weeks 5-8',
     title: 'AI Research Layer',
-    status: 'Live in Demo',
+    status: 'Preview',
     deliverables: [
-      'AI pre-researches every lead before call',
+      { label: 'AI pre-researches every lead before call', previewScreenId: 'ai-agents' },
+      { label: 'AI inbound call handling (English + Spanish)', previewScreenId: 'ai-calls' },
       'Cross-check Realie + Batch Leads API + ATTOM',
-      'Realtor Short Sale chain (Zillow listing-agent leads)',
-      'Bilingual realtor-to-realtor script library',
+      { label: 'Realtor Short Sale pipeline (Zillow listing-agent leads)', previewScreenId: 'realtor-pipeline' },
+      { label: 'Realtor lead queue', previewScreenId: 'realtor-queue' },
+      { label: 'Bilingual realtor-to-realtor script library', previewScreenId: 'realtor-scripts' },
+      { label: 'Realtor reports', previewScreenId: 'realtor-reports' },
       'Prior contact history check',
       'Personalized script generation per lead',
       'Lead urgency scoring 1–10',
@@ -71,17 +83,19 @@ const phases: Phase[] = [
 
 const statusBadge = (s: Phase['status']) => {
   if (s === 'Live in Demo') return 'bg-accent/15 text-accent';
+  if (s === 'Preview') return 'bg-amber-100 text-amber-700';
   if (s === 'In Progress') return 'bg-secondary/10 text-secondary';
   return 'bg-muted text-muted-foreground';
 };
 
 const statusIcon = (s: Phase['status']) => {
   if (s === 'Live in Demo') return <div className="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center"><Sparkles size={20} className="text-accent" /></div>;
+  if (s === 'Preview') return <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center"><Clock size={20} className="text-amber-700" /></div>;
   if (s === 'In Progress') return <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center"><Clock size={20} className="text-secondary" /></div>;
   return <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><Circle size={20} className="text-muted-foreground" /></div>;
 };
 
-export default function RoadmapView() {
+export default function RoadmapView({ onOpenPreview }: RoadmapViewProps) {
   const [expandedPhase, setExpandedPhase] = useState<string | null>('Phase 1');
 
   return (
@@ -89,7 +103,7 @@ export default function RoadmapView() {
       <div className="rounded-xl bg-gradient-to-r from-accent/10 to-secondary/10 border border-accent/20 p-4">
         <p className="text-sm text-foreground">
           <Sparkles size={14} className="inline mr-1.5 text-accent" />
-          <span className="font-bold">Phases 1 & 2 are live in this prototype.</span> Click through Morning Briefing, Lead Queue, and Pipeline to experience what your operation will look like 8 weeks from kickoff.
+          <span className="font-bold">Phase 1 is live in this prototype.</span> Click Phase 2 below to preview screens we've built for Weeks 5–8 — they are not yet wired into your daily workflow.
         </p>
       </div>
 
@@ -116,16 +130,29 @@ export default function RoadmapView() {
                 <div>
                   <h4 className="text-sm font-bold text-foreground mb-2">Deliverables</h4>
                   <div className="space-y-2">
-                    {phase.deliverables.map((d, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        {phase.status === 'Live in Demo' ? (
-                          <CheckCircle size={14} className="text-accent shrink-0" />
-                        ) : (
-                          <Circle size={14} className="text-muted-foreground shrink-0" />
-                        )}
-                        <span className="text-foreground">{d}</span>
-                      </div>
-                    ))}
+                    {phase.deliverables.map((d, i) => {
+                      const item: Deliverable = typeof d === 'string' ? { label: d } : d;
+                      return (
+                        <div key={i} className="flex items-center gap-2 text-sm">
+                          {phase.status === 'Live in Demo' ? (
+                            <CheckCircle size={14} className="text-accent shrink-0" />
+                          ) : phase.status === 'Preview' ? (
+                            <Clock size={14} className="text-amber-700 shrink-0" />
+                          ) : (
+                            <Circle size={14} className="text-muted-foreground shrink-0" />
+                          )}
+                          <span className="text-foreground">{item.label}</span>
+                          {item.previewScreenId && onOpenPreview && (
+                            <button
+                              onClick={() => onOpenPreview(item.previewScreenId!)}
+                              className="ml-auto inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            >
+                              Preview screen <ExternalLink size={10} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
