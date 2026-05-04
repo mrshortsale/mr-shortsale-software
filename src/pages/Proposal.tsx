@@ -67,7 +67,8 @@ export default function Proposal() {
                 <Feature label="AI Lead Scoring" sub="Equity, motivation, property signals" />
                 <Feature label="Mojo Triple Dialer API" sub="Auto-push leads, call outcomes sync back" />
                 <Feature label="Meta / Facebook Ads Speed-to-Lead" sub="Real-time feed, 5-min alert timer" />
-                <Feature label="Bilingual EN / ES" sub="Full interface in English and Spanish" />
+                <Feature label="Realtor Short Sale chain (NEW)" sub="Zillow listing-agent leads — separate pipeline, scripts, and reports. Pitch realtor-to-realtor: they keep the commission, we close the file." />
+                <Feature label="Bilingual EN / ES" sub="Full interface and scripts in English and Spanish" />
                 <Feature label="SJ Innovation manages platform" sub="Hosting, updates, support included" />
               </ul>
             </div>
