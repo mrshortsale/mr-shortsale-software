@@ -2,6 +2,7 @@ import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 import { useEffect, useState } from 'react';
 import { getMetaHealth, MetaHealth } from '@/integrations/metaAds';
 import { Facebook, Zap, Clock, TrendingUp } from 'lucide-react';
+import SourceProvenance from '@/components/shared/SourceProvenance';
 
 export default function SpeedToLeadScreen() {
   const [m, setM] = useState<MetaHealth | null>(null);
