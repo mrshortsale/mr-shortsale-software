@@ -72,6 +72,10 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
           </span>
         </span>
       </div>
+      <div className="px-4 py-1.5 bg-speed/5 border-b border-speed/20 text-[10.5px] text-muted-foreground flex items-center gap-1.5">
+        <Info size={10} className="text-speed shrink-0" />
+        <span>App pushes leads to Mojo via API — Mojo dials from your headset.</span>
+      </div>
       <div className={`p-3 space-y-2 ${compact ? 'max-h-72 overflow-y-auto' : ''}`}>
         {leads.length === 0 && (
           <div className="text-center py-6 text-xs text-muted-foreground">Waiting for next Meta lead…</div>
