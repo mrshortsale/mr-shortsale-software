@@ -180,8 +180,12 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
                 </button>
               )}
               {onCall && (
-                <button onClick={() => { onCall(lead.id); onOpenChange(false); }} className="flex-1 py-2.5 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm">
-                  <Phone size={16} /> Call Now
+                <button
+                  onClick={() => { onCall(lead.id); onOpenChange(false); }}
+                  className="flex-1 py-2.5 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
+                  title="Insert this lead at top of Mojo Triple Dialer queue"
+                >
+                  <ArrowUpToLine size={16} /> Push to Mojo
                 </button>
               )}
             </div>
