@@ -145,7 +145,7 @@ export default function CEODashboard() {
       <main className="flex-1 overflow-y-auto">
         <header className="sticky top-0 z-30 bg-card border-b px-4 lg:px-6 py-3 flex items-center gap-3">
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}><Menu size={24} /></button>
-          <h1 className="text-lg font-bold text-foreground">{navItems.find(n => n.id === activeTab)?.label}</h1>
+          <h1 className="text-lg font-bold text-foreground">{headerLabel}</h1>
           <span className="ml-auto text-xs text-muted-foreground">April 9, 2026 · 8:15 AM</span>
         </header>
         <div className="p-4 lg:p-6">
