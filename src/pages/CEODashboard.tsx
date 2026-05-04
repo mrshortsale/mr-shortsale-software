@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
-import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink, Building2, Users, MessageSquare, TrendingUp } from 'lucide-react';
+import { Home, Kanban, BarChart3, Phone, Database, Map, Settings, LogOut, Menu, X, Sparkles, Bot, Zap, PhoneCall, FileText, ExternalLink, Building2, Users, MessageSquare, TrendingUp, List } from 'lucide-react';
 
 // CEO Screens
 import MorningBriefing from '@/components/ceo/MorningBriefing';
