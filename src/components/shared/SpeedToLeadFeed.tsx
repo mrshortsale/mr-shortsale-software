@@ -105,8 +105,9 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
               <button
                 onClick={() => handleCallNow(lead)}
                 className="shrink-0 px-3 py-2 bg-speed text-speed-foreground rounded-lg text-xs font-bold flex items-center gap-1 hover:opacity-90"
+                title="Insert this lead at position 1 in the Mojo dialer queue"
               >
-                <Phone size={12} /> Call Now
+                <ArrowUpToLine size={12} /> Push to Top
               </button>
             </div>
           );
