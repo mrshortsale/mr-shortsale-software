@@ -102,7 +102,7 @@ function CreateUserDialog({ open, onClose, onCreated }: { open: boolean; onClose
 
   const onSubmit = async (values: CreateUserValues) => {
     setServerError('');
-    const result = await adminCreateUser(values);
+    const result = await adminCreateUser(values as Required<CreateUserValues>);
     if (result.error) {
       setServerError(result.error);
       return;
