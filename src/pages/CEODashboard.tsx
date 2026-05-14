@@ -12,6 +12,7 @@ import {
   Map,
   MessageSquare,
   PhoneCall,
+  Plug,
   Settings,
   Sparkles,
   TrendingUp,
@@ -37,6 +38,7 @@ import RealtorScripts from '@/components/ceo/RealtorScripts';
 import RealtorReports from '@/components/ceo/RealtorReports';
 import LeadInventory from '@/components/ceo/LeadInventory';
 import UserManagement from '@/components/ceo/UserManagement';
+import IntegrationsPage from '@/components/integrations/IntegrationsPage';
 
 const navItems: SidebarNavItem[] = [
   { kind: 'item', id: 'briefing', label: 'Morning Briefing', icon: Home },
@@ -89,6 +91,7 @@ const navItems: SidebarNavItem[] = [
     icon: Settings,
     children: [
       { kind: 'item', id: 'users', label: 'User Management', icon: Users },
+      { kind: 'item', id: 'integrations', label: 'Integrations', icon: Plug },
       { kind: 'item', id: 'data', label: 'Data Sources', icon: Database },
       { kind: 'item', id: 'settings', label: 'Settings', icon: Settings },
     ],
@@ -141,6 +144,7 @@ export default function CEODashboard() {
       case 'realtor-scripts': return <RealtorScripts />;
       case 'realtor-reports': return <RealtorReports />;
       case 'users': return <UserManagement />;
+      case 'integrations': return <IntegrationsPage />;
       case 'settings':
         return (
           <div className="rounded-xl border bg-card p-8 shadow-soft">
