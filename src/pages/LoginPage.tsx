@@ -2,11 +2,29 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Crown, Briefcase, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  Brain,
+  Briefcase,
+  Crown,
+  Eye,
+  EyeOff,
+  Loader2,
+  Moon,
+  Sparkles,
+  Sun,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import logo from '@/assets/logo.png';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -45,11 +63,61 @@ type SignUpValues = z.infer<typeof signUpSchema>;
 // ─── Demo quick-login accounts ────────────────────────────────────────────────
 
 const DEMO_ACCOUNTS = [
-  { email: 'cristina@mrshortsale.net', password: 'demo2026', name: 'Cristina Gaspar', role: 'CEO', icon: Crown, color: 'from-primary to-blue-700' },
-  { email: 'maria@mrshortsale.net', password: 'demo2026', name: 'Maria Santos', role: 'Sales Rep', icon: Briefcase, color: 'from-teal-600 to-emerald-700' },
-  { email: 'james@mrshortsale.net', password: 'demo2026', name: 'James Rivera', role: 'Sales Rep', icon: Briefcase, color: 'from-blue-500 to-indigo-600' },
-  { email: 'luis@mrshortsale.net', password: 'demo2026', name: 'Luis Ortega', role: 'Sales Rep', icon: Briefcase, color: 'from-amber-600 to-orange-700' },
+  {
+    email: 'cristina@mrshortsale.net',
+    password: 'demo2026',
+    name: 'Cristina Gaspar',
+    role: 'CEO / Owner',
+    icon: Crown,
+  },
+  {
+    email: 'maria@mrshortsale.net',
+    password: 'demo2026',
+    name: 'Maria Santos',
+    role: 'Sales Rep',
+    icon: Briefcase,
+  },
+  {
+    email: 'james@mrshortsale.net',
+    password: 'demo2026',
+    name: 'James Rivera',
+    role: 'Sales Rep',
+    icon: Briefcase,
+  },
+  {
+    email: 'luis@mrshortsale.net',
+    password: 'demo2026',
+    name: 'Luis Ortega',
+    role: 'Sales Rep',
+    icon: Briefcase,
+  },
 ];
+
+// ─── Password input with toggle ──────────────────────────────────────────────
+
+interface PasswordInputProps extends React.ComponentPropsWithoutRef<typeof Input> {}
+
+function PasswordInput({ className, ...props }: PasswordInputProps) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        {...props}
+        type={show ? 'text' : 'password'}
+        className={`pr-10 ${className ?? ''}`}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+        aria-label={show ? 'Hide password' : 'Show password'}
+        tabIndex={-1}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 // ─── Sign In form ─────────────────────────────────────────────────────────────
 
@@ -64,6 +132,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   });
 
   const isSubmitting = form.formState.isSubmitting;
+  const disabledAll = isSubmitting || loadingDemo !== null;
 
   const onSubmit = async (values: SignInValues) => {
     setServerError('');
@@ -84,91 +153,99 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   };
 
   return (
-    <>
-      {serverError && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-5">
-          <AlertCircle size={16} className="shrink-0 mt-0.5" />
-          <span>{serverError}</span>
-        </div>
-      )}
+    <div className="space-y-6">
+      <Card className="shadow-premium">
+        <CardHeader>
+          <CardTitle className="text-xl">Welcome back</CardTitle>
+          <CardDescription>Sign in to your account to continue</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {serverError && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{serverError}</span>
+            </div>
+          )}
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="you@mrshortsale.net" type="email" autoComplete="email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="you@example.com"
+                        type="email"
+                        autoComplete="email"
+                        className="h-10"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input placeholder="••••••••" type="password" autoComplete="current-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-sm font-medium">Password</FormLabel>
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                    <FormControl>
+                      <PasswordInput
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        className="h-10"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-            Sign In
-          </Button>
-        </form>
-      </Form>
-
-      {/* Demo accounts */}
-      <div className="mt-6">
-        <p className="text-xs text-muted-foreground text-center mb-3">Or try a demo account</p>
-        <div className="space-y-2">
-          {DEMO_ACCOUNTS.map((account) => {
-            const Icon = account.icon;
-            const isLoading = loadingDemo === account.email;
-            return (
-              <button
-                key={account.email}
-                onClick={() => handleQuickLogin(account.email, account.password)}
-                disabled={isSubmitting || loadingDemo !== null}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200/80 bg-white hover:border-primary/30 hover:shadow-md transition-all duration-200 group text-left disabled:opacity-60 disabled:cursor-not-allowed"
+              <Button
+                type="submit"
+                className="h-10 w-full font-medium"
+                disabled={disabledAll}
               >
-                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${account.color} flex items-center justify-center shrink-0`}>
-                  {isLoading
-                    ? <Loader2 size={14} className="text-white animate-spin" />
-                    : <Icon className="w-4 h-4 text-white" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground text-xs">{account.name}</p>
-                  <p className="text-muted-foreground text-[11px] truncate">{account.email}</p>
-                </div>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 shrink-0">
-                  {account.role}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </Button>
+            </form>
+          </Form>
 
-      <p className="text-center text-xs text-muted-foreground mt-6">
-        Don't have an account?{' '}
-        <button onClick={onSwitch} className="text-primary font-semibold hover:underline">
-          Sign up
-        </button>
-      </p>
-    </>
+          <p className="text-center text-xs text-muted-foreground">
+            Don't have an account?{' '}
+            <button
+              type="button"
+              onClick={onSwitch}
+              className="font-semibold text-primary hover:underline"
+            >
+              Sign up
+            </button>
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -194,90 +271,141 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   };
 
   return (
-    <>
-      {serverError && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive mb-5">
-          <AlertCircle size={16} className="shrink-0 mt-0.5" />
-          <span>{serverError}</span>
-        </div>
-      )}
+    <Card className="shadow-premium">
+      <CardHeader>
+        <CardTitle className="text-xl">Create your account</CardTitle>
+        <CardDescription>Join the AI operations platform</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {serverError && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{serverError}</span>
+          </div>
+        )}
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Jane Smith" autoComplete="name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Full name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Jane Smith"
+                      autoComplete="name"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="you@mrshortsale.net" type="email" autoComplete="email" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="you@mrshortsale.net"
+                      type="email"
+                      autoComplete="email"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input placeholder="Min 8 chars, 1 uppercase, 1 number" type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Password</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder="Min 8 chars, 1 uppercase, 1 number"
+                      autoComplete="new-password"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
-                <FormControl>
-                  <Input placeholder="••••••••" type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">Confirm password</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder="Re-enter your password"
+                      autoComplete="new-password"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <p className="text-xs text-muted-foreground">
-            New accounts are created as <span className="font-semibold">Sales Rep</span>. A CEO can change your role later.
-          </p>
+            <p className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              New accounts are created as <span className="font-semibold text-foreground">Sales Rep</span>.
+              A CEO can change your role later.
+            </p>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-            Create Account
-          </Button>
-        </form>
-      </Form>
+            <Button type="submit" className="h-10 w-full font-medium" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                'Create account'
+              )}
+            </Button>
+          </form>
+        </Form>
 
-      <p className="text-center text-xs text-muted-foreground mt-6">
-        Already have an account?{' '}
-        <button onClick={onSwitch} className="text-primary font-semibold hover:underline">
-          Sign in
-        </button>
-      </p>
-    </>
+        <p className="text-center text-xs text-muted-foreground">
+          Already have an account?{' '}
+          <button
+            type="button"
+            onClick={onSwitch}
+            className="font-semibold text-primary hover:underline"
+          >
+            Sign in
+          </button>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Google icon ──────────────────────────────────────────────────────────────
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#EA4335"
+        d="M12 11v3.2h5.4c-.2 1.4-1.6 4-5.4 4-3.2 0-5.9-2.7-5.9-6S8.8 6.2 12 6.2c1.8 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.7 14.7 2.7 12 2.7 6.9 2.7 2.7 6.9 2.7 12s4.2 9.3 9.3 9.3c5.4 0 8.9-3.8 8.9-9.1 0-.6-.1-1.1-.2-1.6H12z"
+      />
+    </svg>
   );
 }
 
@@ -285,35 +413,50 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+    <div className="relative min-h-screen bg-background">
+      <div className="bg-ai-mesh absolute inset-0 pointer-events-none" aria-hidden />
+
+      <div className="absolute right-4 top-4 z-20">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="h-9 w-9"
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+          {theme === 'light' ? (
+            <Moon className="h-[18px] w-[18px]" />
+          ) : (
+            <Sun className="h-[18px] w-[18px]" />
+          )}
+        </Button>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-primary/10 border border-white/60 p-8">
-          <div className="flex flex-col items-center mb-7">
-            <div className="bg-primary/5 p-3 rounded-2xl mb-4">
-              <img src={logo} alt="Mr. Short Sale" className="h-14" />
-            </div>
-            <h1 className="text-2xl font-bold text-primary tracking-tight">AI Operations Platform</h1>
-            <p className="text-muted-foreground text-sm mt-1.5">
-              {mode === 'signin' ? 'Sign in to your account' : 'Create your account'}
-            </p>
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center px-4 py-10">
+        <div className="mb-6 flex flex-col items-center">
+          <div className="ai-gradient flex h-12 w-12 items-center justify-center rounded-xl text-primary-foreground shadow-ai">
+            <Brain className="h-6 w-6" />
           </div>
-
-          {mode === 'signin'
-            ? <SignInForm onSwitch={() => setMode('signup')} />
-            : <SignUpForm onSwitch={() => setMode('signin')} />
-          }
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            Mr. Short Sale · SJ Innovation · 2026
-          </p>
+          <h1 className="mt-3 text-xl font-semibold tracking-tight text-foreground">
+            Mr. Short Sale
+          </h1>
+          <p className="text-xs text-muted-foreground">AI Operations Platform</p>
         </div>
+
+        <div className="w-full space-y-6">
+          {mode === 'signin' ? (
+            <SignInForm onSwitch={() => setMode('signup')} />
+          ) : (
+            <SignUpForm onSwitch={() => setMode('signin')} />
+          )}
+        </div>
+
+        <p className="mt-8 text-center text-[11px] text-muted-foreground">
+          Protected by enterprise-grade security. · Mr. Short Sale · 2026
+        </p>
       </div>
     </div>
   );

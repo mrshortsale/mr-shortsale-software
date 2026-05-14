@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Activity, BarChart3, Briefcase, Building2, Clock, List } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
-import logo from '@/assets/logo.png';
-import { List, Clock, BarChart3, LogOut, Menu, X, Building2 } from 'lucide-react';
+import AppSidebar, { type SidebarNavItem } from '@/components/AppSidebar';
+import TopNav from '@/components/TopNav';
 
 import LeadQueue from '@/components/rep/LeadQueue';
 import CallHistory from '@/components/rep/CallHistory';
@@ -11,18 +11,50 @@ import ActiveCall from '@/components/rep/ActiveCall';
 import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 import RealtorQueue from '@/components/rep/RealtorQueue';
 
-const navItems = [
-  { id: 'queue', label: 'Foreclosure Queue', icon: List },
-  { id: 'realtor', label: 'Realtor Queue', icon: Building2 },
-  { id: 'history', label: 'Call History', icon: Clock },
-  { id: 'stats', label: 'My Stats', icon: BarChart3 },
+const navItems: SidebarNavItem[] = [
+  {
+    kind: 'section',
+    id: 'sec-my-day',
+    label: 'My Day',
+    icon: Briefcase,
+    defaultOpen: true,
+    children: [
+      { kind: 'item', id: 'queue', label: 'Foreclosure Queue', icon: List },
+      { kind: 'item', id: 'realtor', label: 'Realtor Queue', icon: Building2 },
+    ],
+  },
+  {
+    kind: 'section',
+    id: 'sec-activity',
+    label: 'Activity',
+    icon: Activity,
+    defaultOpen: true,
+    children: [
+      { kind: 'item', id: 'history', label: 'Call History', icon: Clock },
+      { kind: 'item', id: 'stats', label: 'My Stats', icon: BarChart3 },
+    ],
+  },
 ];
 
+function findItemLabel(items: SidebarNavItem[], id: string): string | null {
+  for (const item of items) {
+    if (item.kind === 'item' && item.id === id) return item.label;
+    if (item.kind === 'section') {
+      const nested = findItemLabel(item.children, id);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function getLabel(id: string): string {
+  return findItemLabel(navItems, id) ?? 'Dashboard';
+}
+
 export default function RepDashboard() {
-  const { user, logout } = useAuth();
   const { activeCallLeadId } = useApp();
   const [activeTab, setActiveTab] = useState('queue');
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (activeCallLeadId) {
     return <ActiveCall />;
@@ -30,7 +62,13 @@ export default function RepDashboard() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'queue': return <LeadQueue />;
+      case 'queue':
+        return (
+          <div className="space-y-4">
+            <SpeedToLeadFeed compact />
+            <LeadQueue />
+          </div>
+        );
       case 'realtor': return <RealtorQueue />;
       case 'history': return <CallHistory />;
       case 'stats': return <RepStats />;
@@ -40,44 +78,25 @@ export default function RepDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top nav */}
-      <header className="sticky top-0 z-50 bg-primary text-primary-foreground">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <button className="lg:hidden" onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-            <img src={logo} alt="Mr. Short Sale" className="h-8 rounded bg-card p-0.5" />
-            <span className="font-bold text-sm hidden sm:block">Mr. Short Sale</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: user?.avatarColor }}>
-                {user?.name?.charAt(0)}
-              </div>
-              <span className="text-sm hidden sm:block">{user?.name}</span>
-            </div>
-            <button onClick={logout} className="p-1.5 rounded hover:bg-sidebar-accent/30"><LogOut size={16} /></button>
-          </div>
-        </div>
-        
-        {/* Tab navigation */}
-        <div className={`flex border-t border-sidebar-border ${menuOpen ? '' : ''}`}>
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { setActiveTab(item.id); setMenuOpen(false); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${activeTab === item.id ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent/30'}`}
-            >
-              <item.icon size={16} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </header>
+      <AppSidebar
+        navItems={navItems}
+        activeId={activeTab}
+        onSelect={setActiveTab}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        appName="Mr. Short Sale"
+        appSubLabel="Sales Workspace"
+        versionLabel="Workspace"
+        versionSubLabel="v1.0.0 · Sales Rep"
+      />
 
-      <main className="p-4 lg:p-6 space-y-4">
-        {activeTab === 'queue' && <SpeedToLeadFeed compact />}
+      <TopNav
+        onOpenSidebar={() => setSidebarOpen(true)}
+        pageTitle={getLabel(activeTab)}
+        pageMeta="Rep Console"
+      />
+
+      <main className="mt-16 min-h-[calc(100vh-4rem)] p-4 lg:ml-64 lg:p-8">
         {renderContent()}
       </main>
     </div>

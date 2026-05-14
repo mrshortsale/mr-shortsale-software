@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { AppProvider } from '@/contexts/AppContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import LoginPage from '@/pages/LoginPage';
 import CEODashboard from '@/pages/CEODashboard';
 import RepDashboard from '@/pages/RepDashboard';
@@ -29,18 +30,20 @@ function AppShell() {
 
 const App = () => (
   <BrowserRouter>
-    <AuthProvider>
-      <AppProvider>
-        <Routes>
-          <Route path="/proposal" element={<Proposal />} />
-          <Route path="/costs" element={<Costs />} />
-          <Route path="/" element={<AppShell />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-        <SonnerToaster position="bottom-right" theme="light" richColors closeButton />
-      </AppProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppProvider>
+          <Routes>
+            <Route path="/proposal" element={<Proposal />} />
+            <Route path="/costs" element={<Costs />} />
+            <Route path="/" element={<AppShell />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <SonnerToaster position="bottom-right" richColors closeButton />
+        </AppProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </BrowserRouter>
 );
 
