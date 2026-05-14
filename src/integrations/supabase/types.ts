@@ -16,54 +16,52 @@ export type Database = {
     Tables: {
       users: {
         Row: {
-          id: string
-          email: string
-          name: string
-          password_hash: string
-          role: 'ceo' | 'rep'
           avatar_color: string
+          created_at: string
+          email: string
+          id: string
           is_active: boolean
           last_login_at: string | null
-          created_at: string
+          name: string
+          password_hash: string
+          role: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          email: string
-          name: string
-          password_hash: string
-          role?: 'ceo' | 'rep'
           avatar_color?: string
+          created_at?: string
+          email: string
+          id?: string
           is_active?: boolean
           last_login_at?: string | null
-          created_at?: string
+          name: string
+          password_hash: string
+          role?: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          email?: string
-          name?: string
-          password_hash?: string
-          role?: 'ceo' | 'rep'
           avatar_color?: string
+          created_at?: string
+          email?: string
+          id?: string
           is_active?: boolean
           last_login_at?: string | null
-          created_at?: string
+          name?: string
+          password_hash?: string
+          role?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      hash_password: { Args: { input_password: string }; Returns: string }
       verify_password: {
         Args: { input_password: string; stored_hash: string }
         Returns: boolean
-      }
-      hash_password: {
-        Args: { input_password: string }
-        Returns: string
       }
     }
     Enums: {
