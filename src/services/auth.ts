@@ -1,5 +1,7 @@
-const BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
+
+const BASE_URL = `${SUPABASE_URL}/functions/v1`;
+const ANON_KEY = SUPABASE_ANON_KEY;
 const TOKEN_KEY = 'mrs_token';
 
 export interface AuthUser {
