@@ -19,6 +19,7 @@ import RealtorLeadQueue from '@/components/ceo/RealtorLeadQueue';
 import RealtorScripts from '@/components/ceo/RealtorScripts';
 import RealtorReports from '@/components/ceo/RealtorReports';
 import LeadInventory from '@/components/ceo/LeadInventory';
+import UserManagement from '@/components/ceo/UserManagement';
 
 const navItems = [
   { id: 'briefing', label: 'Morning Briefing', icon: Home },
@@ -39,6 +40,7 @@ const navItems = [
   { id: 'proposal', label: 'View Proposal', icon: FileText, external: '/proposal' as const },
   { id: 'costs', label: 'Cost Transparency', icon: FileText, external: '/costs' as const },
   { id: 'divider-admin', label: 'Admin', divider: true as const },
+  { id: 'users', label: 'User Management', icon: Users },
   { id: 'data', label: 'Data Sources', icon: Database },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -71,6 +73,7 @@ export default function CEODashboard() {
       case 'realtor-queue': return <RealtorLeadQueue />;
       case 'realtor-scripts': return <RealtorScripts />;
       case 'realtor-reports': return <RealtorReports />;
+      case 'users': return <UserManagement />;
       case 'settings': return <div className="p-8"><h2 className="text-2xl font-bold text-foreground">Settings</h2><p className="text-muted-foreground mt-2">Account and platform settings coming soon.</p></div>;
       default: return <MorningBriefing />;
     }

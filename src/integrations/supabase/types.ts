@@ -14,13 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      users: {
+        Row: {
+          id: string
+          email: string
+          name: string
+          password_hash: string
+          role: 'ceo' | 'rep'
+          avatar_color: string
+          is_active: boolean
+          last_login_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          name: string
+          password_hash: string
+          role?: 'ceo' | 'rep'
+          avatar_color?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          name?: string
+          password_hash?: string
+          role?: 'ceo' | 'rep'
+          avatar_color?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      verify_password: {
+        Args: { input_password: string; stored_hash: string }
+        Returns: boolean
+      }
+      hash_password: {
+        Args: { input_password: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { AppProvider } from '@/contexts/AppContext';
 import LoginPage from '@/pages/LoginPage';
@@ -11,7 +12,16 @@ import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
 
 function AppShell() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 size={36} className="animate-spin text-primary/40" />
+      </div>
+    );
+  }
+
   if (!user) return <LoginPage />;
   if (user.role === 'ceo') return <CEODashboard />;
   return <RepDashboard />;
