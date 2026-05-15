@@ -7,6 +7,7 @@ import {
   FileText,
   Home,
   Kanban,
+  History,
   List,
   Map,
   MessageSquare,
@@ -33,6 +34,7 @@ export const ceoNavItems: SidebarNavItem[] = [
     defaultOpen: true,
     children: [
       { kind: 'item', id: 'inventory', label: 'Lead Inventory', icon: List, path: `${CEO_BASE}/inventory` },
+      { kind: 'item', id: 'sync-runs', label: 'Sync History', icon: History, path: `${CEO_BASE}/sync-runs` },
       { kind: 'item', id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users, path: `${CEO_BASE}/realtor-queue` },
       { kind: 'item', id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2, path: `${CEO_BASE}/realtor-pipeline` },
       { kind: 'item', id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare, path: `${CEO_BASE}/realtor-scripts` },

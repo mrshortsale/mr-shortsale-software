@@ -16,11 +16,31 @@ function authedHeaders(): Record<string, string> {
   };
 }
 
+export interface InventorySyncRun {
+  id: string;
+  source: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  updated_at?: string;
+  leads_upserted: number;
+  lists_processed: number;
+  error_message?: string | null;
+  metadata?: {
+    completed?: boolean;
+    nextPage?: number | null;
+    totalAvailable?: number;
+    lastPage?: number;
+  };
+}
+
 export interface InventorySyncStatus {
   batchConnected: boolean;
   batchLeadCount: number;
   syncInProgress?: boolean;
+  canPause?: boolean;
   canResume?: boolean;
+  canStop?: boolean;
   progress?: {
     completed: boolean;
     nextPage: number | null;
@@ -117,16 +137,69 @@ export async function syncBatchLeads(options?: {
   }
 }
 
-export async function resumeBatchLeads(): Promise<{ result?: InventorySyncResult; error?: string }> {
+export async function resumeBatchLeads(runId?: string): Promise<{ result?: InventorySyncResult; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/batchleads-sync`, {
       method: 'POST',
       headers: authedHeaders(),
-      body: JSON.stringify({ action: 'resume', background: true }),
+      body: JSON.stringify({ action: 'resume', background: true, runId }),
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error ?? 'Resume failed' };
     return { result: data };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function pauseBatchSync(runId?: string): Promise<{ ok?: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/batchleads-sync`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ action: 'pause', runId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Pause failed' };
+    return { ok: true };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function stopBatchSync(runId?: string): Promise<{ ok?: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/batchleads-sync`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ action: 'stop', runId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Stop failed' };
+    return { ok: true };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function listInventorySyncRuns(params?: {
+  limit?: number;
+  offset?: number;
+  source?: string;
+}): Promise<{ runs?: InventorySyncRun[]; total?: number; error?: string }> {
+  try {
+    const query = new URLSearchParams({ list: '1' });
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    if (params?.source) query.set('source', params.source);
+
+    const res = await fetch(`${BASE_URL}/batchleads-sync?${query}`, {
+      method: 'GET',
+      headers: authedHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to load sync runs' };
+    return { runs: data.runs, total: data.total };
   } catch {
     return { error: 'Network error' };
   }
@@ -164,6 +237,22 @@ export async function waitForBatchSyncComplete(
       };
     }
 
+    if (run.status === 'stopped') {
+      return {
+        totalUpserted: data.batchLeadCount,
+        completed: false,
+        error: run.error_message ?? 'Sync stopped',
+      };
+    }
+
+    if (run.status === 'paused' && !data.syncInProgress) {
+      return {
+        totalUpserted: data.batchLeadCount,
+        completed: false,
+        error: 'Sync paused',
+      };
+    }
+
     if (run.status === 'partial' && !data.syncInProgress) {
       const total = data.progress?.totalAvailable;
       const msg = total != null && data.batchLeadCount < total
@@ -182,13 +271,15 @@ export async function waitForBatchSyncComplete(
 
 export async function syncBatchLeadsUntilComplete(
   onProgress?: (result: InventorySyncResult) => void,
+  options?: { force?: boolean },
 ): Promise<{ totalUpserted: number; completed: boolean; error?: string }> {
   const { data: status } = await getBatchSyncStatus();
-  const action = status?.canResume ? 'resume' : 'sync';
+  const shouldResume = status?.canResume && status.lastRun?.status !== 'stopped' && !options?.force;
+  const action = shouldResume ? 'resume' : 'sync';
 
   const { result, error } = action === 'resume'
-    ? await resumeBatchLeads()
-    : await syncBatchLeads({ action: 'sync', force: !status?.canResume });
+    ? await resumeBatchLeads(status?.lastRun?.id)
+    : await syncBatchLeads({ action: 'sync', force: options?.force ?? !shouldResume });
 
   if (error || !result) {
     return { totalUpserted: status?.batchLeadCount ?? 0, completed: false, error: error ?? 'Sync failed' };
@@ -282,8 +373,38 @@ export function formatSyncProgress(status: InventorySyncStatus | undefined): str
     if (total != null) return `Syncing… ${n.toLocaleString()} / ~${total.toLocaleString()}`;
     return `Syncing… ${n.toLocaleString()} leads`;
   }
+  if (lastRun.status === 'paused') {
+    const total = progress?.totalAvailable;
+    const n = progress?.leadsInDb ?? status.batchLeadCount;
+    if (total != null) return `Paused at ${n.toLocaleString()} / ~${total.toLocaleString()} leads`;
+    return `Paused at ${n.toLocaleString()} leads`;
+  }
   if (lastRun.status === 'partial') {
-    return `Paused at ${status.batchLeadCount.toLocaleString()} leads — continue sync`;
+    return `Interrupted at ${status.batchLeadCount.toLocaleString()} leads — resume to continue`;
+  }
+  if (lastRun.status === 'stopped') {
+    return `Stopped at ${status.batchLeadCount.toLocaleString()} leads`;
   }
   return null;
+}
+
+export function syncStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    running: 'Running',
+    success: 'Complete',
+    failed: 'Failed',
+    partial: 'Interrupted',
+    paused: 'Paused',
+    stopped: 'Stopped',
+  };
+  return labels[status] ?? status;
+}
+
+export function syncStatusTone(status: string): 'ok' | 'pending' | 'error' | 'muted' {
+  if (status === 'success') return 'ok';
+  if (status === 'running') return 'pending';
+  if (status === 'failed') return 'error';
+  if (status === 'paused' || status === 'partial') return 'pending';
+  if (status === 'stopped') return 'muted';
+  return 'muted';
 }

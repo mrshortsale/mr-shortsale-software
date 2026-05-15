@@ -30,6 +30,7 @@ import UserManagement from '@/components/ceo/UserManagement';
 import IntegrationsPage from '@/components/integrations/IntegrationsPage';
 import DataSources from '@/components/ceo/DataSources';
 import CEOSettingsPage from '@/pages/ceo/CEOSettingsPage';
+import SyncRunsPage from '@/pages/ceo/SyncRunsPage';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
 import AIAgentsRoster from '@/components/ceo/AIAgentsRoster';
 
@@ -70,6 +71,7 @@ const App = () => (
               <Route index element={<Navigate to="briefing" replace />} />
               <Route path="briefing" element={<MorningBriefing />} />
               <Route path="inventory" element={<LeadInventory />} />
+              <Route path="sync-runs" element={<SyncRunsPage />} />
               <Route path="realtor-queue" element={<RealtorLeadQueue />} />
               <Route path="realtor-pipeline" element={<RealtorPipeline />} />
               <Route path="realtor-scripts" element={<RealtorScripts />} />

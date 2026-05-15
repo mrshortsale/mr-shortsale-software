@@ -17,7 +17,10 @@ const supabase = createClient(
 );
 
 const STALE_RUN_MS = 3 * 60 * 1000;
-const RESUMABLE_STATUSES = new Set(["running", "partial"]);
+const RESUMABLE_STATUSES = new Set(["running", "partial", "paused"]);
+const CONTROLLABLE_STATUSES = new Set(["running", "partial", "paused"]);
+
+type RunStatus = string;
 
 async function requireCeo(req: Request): Promise<string | null> {
   const authHeader = req.headers.get("x-auth-token") || req.headers.get("authorization");
@@ -57,6 +60,37 @@ async function countBatchLeads(): Promise<number> {
     .select("*", { count: "exact", head: true })
     .eq("source", "Batch");
   return count ?? 0;
+}
+
+async function getRunStatus(runId: string): Promise<RunStatus | null> {
+  const { data } = await supabase
+    .from("inventory_sync_runs")
+    .select("status")
+    .eq("id", runId)
+    .maybeSingle();
+  return data?.status ?? null;
+}
+
+async function findControllableRun(runId?: string): Promise<Record<string, unknown> | null> {
+  if (runId) {
+    const { data } = await supabase
+      .from("inventory_sync_runs")
+      .select("*")
+      .eq("id", runId)
+      .maybeSingle();
+    return data && CONTROLLABLE_STATUSES.has(String(data.status)) ? data : null;
+  }
+
+  const { data } = await supabase
+    .from("inventory_sync_runs")
+    .select("*")
+    .eq("source", "Batch")
+    .in("status", ["running", "partial", "paused"])
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data;
 }
 
 async function reconcileStaleRun(
@@ -118,9 +152,91 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function runFlags(lastRun: Record<string, unknown> | null, batchLeadCount: number) {
+  const status = lastRun ? String(lastRun.status) : "";
+  const meta = (lastRun?.metadata ?? {}) as {
+    completed?: boolean;
+    nextPage?: number | null;
+    totalAvailable?: number;
+  };
+
+  return {
+    batchLeadCount,
+    syncInProgress: status === "running",
+    canPause: status === "running",
+    canResume: (status === "paused" || status === "partial"),
+    canStop: CONTROLLABLE_STATUSES.has(status),
+    progress: lastRun
+      ? {
+          completed: meta.completed === true || status === "success",
+          nextPage: meta.nextPage ?? null,
+          totalAvailable: meta.totalAvailable ?? null,
+          leadsInDb: batchLeadCount,
+        }
+      : null,
+  };
+}
+
+async function handlePause(runId?: string) {
+  const run = await findControllableRun(runId);
+  if (!run || run.status !== "running") {
+    return jsonResponse({ error: "No active sync to pause" }, 400);
+  }
+
+  const leadsInDb = await countBatchLeads();
+  const { data } = await supabase
+    .from("inventory_sync_runs")
+    .update({
+      status: "paused",
+      leads_upserted: leadsInDb,
+      error_message: "Paused by user",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", run.id)
+    .eq("status", "running")
+    .select("*")
+    .single();
+
+  if (!data) {
+    return jsonResponse({ error: "Sync already finished or paused" }, 409);
+  }
+
+  return jsonResponse({ ok: true, run: data, leadsUpserted: leadsInDb });
+}
+
+async function handleStop(runId?: string) {
+  const run = await findControllableRun(runId);
+  if (!run) {
+    return jsonResponse({ error: "No sync run to stop" }, 400);
+  }
+
+  const leadsInDb = await countBatchLeads();
+  const { data } = await supabase
+    .from("inventory_sync_runs")
+    .update({
+      status: "stopped",
+      completed_at: new Date().toISOString(),
+      leads_upserted: leadsInDb,
+      error_message: "Stopped by user",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", run.id)
+    .in("status", ["running", "partial", "paused"])
+    .select("*")
+    .single();
+
+  if (!data) {
+    return jsonResponse({ error: "Could not stop sync" }, 409);
+  }
+
+  return jsonResponse({ ok: true, run: data, leadsUpserted: leadsInDb });
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
+
+  const url = new URL(req.url);
 
   let body: {
     action?: string;
@@ -149,6 +265,26 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === "GET") {
+    if (url.searchParams.get("list") === "1") {
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 20)));
+      const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0));
+      const source = url.searchParams.get("source") ?? "Batch";
+
+      const { data: runs, count } = await supabase
+        .from("inventory_sync_runs")
+        .select("*", { count: "exact" })
+        .eq("source", source)
+        .order("started_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      return jsonResponse({
+        runs: runs ?? [],
+        total: count ?? 0,
+        limit,
+        offset,
+      });
+    }
+
     let { data: lastRun } = await supabase
       .from("inventory_sync_runs")
       .select("*")
@@ -158,7 +294,6 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     lastRun = await reconcileStaleRun(lastRun);
-
     const batchLeadCount = await countBatchLeads();
 
     let batchConnected = false;
@@ -169,26 +304,10 @@ Deno.serve(async (req) => {
       batchConnected = false;
     }
 
-    const meta = (lastRun?.metadata ?? {}) as {
-      completed?: boolean;
-      nextPage?: number | null;
-      totalAvailable?: number;
-    };
-
     return jsonResponse({
       batchConnected,
       lastRun,
-      batchLeadCount,
-      syncInProgress: lastRun?.status === "running",
-      canResume: lastRun != null && RESUMABLE_STATUSES.has(String(lastRun.status)),
-      progress: lastRun
-        ? {
-            completed: meta.completed === true || lastRun.status === "success",
-            nextPage: meta.nextPage ?? null,
-            totalAvailable: meta.totalAvailable ?? null,
-            leadsInDb: batchLeadCount,
-          }
-        : null,
+      ...runFlags(lastRun, batchLeadCount),
     });
   }
 
@@ -196,7 +315,23 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  if (body.action && body.action !== "sync" && body.action !== "resume") {
+  if (internal) {
+    const status = await getRunStatus(String(body.runId));
+    if (status !== "running") {
+      return jsonResponse({ skipped: true, reason: status ?? "not_found" });
+    }
+  }
+
+  if (body.action === "pause") {
+    return handlePause(body.runId);
+  }
+
+  if (body.action === "stop") {
+    return handleStop(body.runId);
+  }
+
+  const controlActions = new Set(["sync", "resume"]);
+  if (body.action && !controlActions.has(body.action)) {
     return jsonResponse({ error: "Unknown action" }, 400);
   }
 
@@ -213,7 +348,7 @@ Deno.serve(async (req) => {
         .from("inventory_sync_runs")
         .select("*")
         .eq("source", "Batch")
-        .in("status", ["running", "partial"])
+        .in("status", ["running", "partial", "paused"])
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -234,6 +369,8 @@ Deno.serve(async (req) => {
       }
       runRow = null;
       runId = undefined;
+    } else if (runRow.status === "stopped") {
+      return jsonResponse({ error: "This sync was stopped. Start a new sync instead." }, 400);
     } else {
       const meta = (runRow.metadata ?? {}) as { nextPage?: number };
       if (meta.nextPage) startPage = meta.nextPage;
@@ -260,6 +397,24 @@ Deno.serve(async (req) => {
       runId = active.id;
       if (meta.nextPage) startPage = meta.nextPage;
     } else {
+      const { data: blocked } = await supabase
+        .from("inventory_sync_runs")
+        .select("id, status")
+        .eq("source", "Batch")
+        .in("status", ["running", "paused"])
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (blocked && !body.force) {
+        return jsonResponse({
+          error: blocked.status === "paused"
+            ? "A sync is paused. Resume or stop it before starting a new one."
+            : "A sync is already running.",
+          runId: blocked.id,
+        }, 409);
+      }
+
       const { data, error } = await supabase
         .from("inventory_sync_runs")
         .insert({
@@ -309,6 +464,42 @@ Deno.serve(async (req) => {
     let page = startPage;
 
     for (let i = 0; i < maxPages; i++) {
+      const currentStatus = await getRunStatus(runId!);
+      if (currentStatus === "paused") {
+        const leadsInDb = await countBatchLeads();
+        await supabase
+          .from("inventory_sync_runs")
+          .update({
+            leads_upserted: leadsInDb,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", runId);
+        return jsonResponse({
+          runId,
+          paused: true,
+          leadsUpserted: leadsInDb,
+          pagesProcessed,
+          lastPage,
+          totalAvailable,
+          completed: false,
+          nextPage: lastPage + 1,
+          durationMs: Date.now() - started,
+        });
+      }
+      if (currentStatus === "stopped") {
+        const leadsInDb = await countBatchLeads();
+        return jsonResponse({
+          runId,
+          stopped: true,
+          leadsUpserted: leadsInDb,
+          pagesProcessed,
+          durationMs: Date.now() - started,
+        });
+      }
+      if (currentStatus !== "running") {
+        return jsonResponse({ skipped: true, reason: currentStatus });
+      }
+
       const pageResult = await fetchSavedAddressesPage(credentials, {
         page,
         pageSize: DEFAULT_PAGE_SIZE,
@@ -367,6 +558,18 @@ Deno.serve(async (req) => {
       completed,
     };
 
+    const finalStatus = await getRunStatus(runId!);
+    if (finalStatus === "paused" || finalStatus === "stopped") {
+      return jsonResponse({
+        runId,
+        paused: finalStatus === "paused",
+        stopped: finalStatus === "stopped",
+        leadsUpserted: leadsInDb,
+        pagesProcessed,
+        durationMs: Date.now() - started,
+      });
+    }
+
     await supabase
       .from("inventory_sync_runs")
       .update({
@@ -381,7 +584,10 @@ Deno.serve(async (req) => {
       .eq("id", runId);
 
     if (!completed && nextPage != null && continueInBackground) {
-      scheduleBackgroundContinue(runId!, nextPage, maxPages);
+      const afterUpdate = await getRunStatus(runId!);
+      if (afterUpdate === "running") {
+        scheduleBackgroundContinue(runId!, nextPage, maxPages);
+      }
     }
 
     return jsonResponse({
