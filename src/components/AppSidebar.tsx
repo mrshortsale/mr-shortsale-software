@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Brain, ChevronDown, ChevronRight, ExternalLink, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +11,7 @@ export type SidebarNavItem =
       id: string;
       label: string;
       icon: LucideIcon;
+      path: string;
       badge?: string;
       children?: SidebarNavItem[];
     }
@@ -31,8 +33,6 @@ export type SidebarNavItem =
 
 export interface AppSidebarProps {
   navItems: SidebarNavItem[];
-  activeId: string;
-  onSelect: (id: string) => void;
   open: boolean;
   onClose: () => void;
   appName?: string;
@@ -42,6 +42,23 @@ export interface AppSidebarProps {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function resolveActiveId(items: SidebarNavItem[], pathname: string): string {
+  for (const item of items) {
+    if (item.kind === 'item') {
+      if (item.path === pathname) return item.id;
+      if (item.children?.length) {
+        const nested = resolveActiveId(item.children, pathname);
+        if (nested) return nested;
+      }
+    }
+    if (item.kind === 'section') {
+      const nested = resolveActiveId(item.children, pathname);
+      if (nested) return nested;
+    }
+  }
+  return '';
+}
 
 function collectAncestorIds(
   items: SidebarNavItem[],
@@ -72,6 +89,17 @@ function collectDefaultOpen(items: SidebarNavItem[]): string[] {
   return ids;
 }
 
+function navItemClassName(isActive: boolean, depth: number) {
+  return cn(
+    'group flex w-full items-center gap-3 rounded-lg text-sm font-medium transition-colors',
+    depth === 0 ? 'px-3 py-2.5' : 'py-1.5 pr-3',
+    depth === 0 ? '' : depth === 1 ? 'pl-7' : 'pl-11',
+    isActive
+      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+      : 'text-sidebar-foreground hover:bg-sidebar-accent/10 hover:text-sidebar-accent',
+  );
+}
+
 // ─── Section (collapsible group) ─────────────────────────────────────────────
 
 interface SectionNodeProps {
@@ -79,7 +107,6 @@ interface SectionNodeProps {
   expanded: Set<string>;
   toggleExpanded: (id: string) => void;
   activeId: string;
-  onSelect: (id: string) => void;
   onClose: () => void;
   depth: number;
 }
@@ -89,7 +116,6 @@ function SectionNode({
   expanded,
   toggleExpanded,
   activeId,
-  onSelect,
   onClose,
   depth,
 }: SectionNodeProps) {
@@ -125,7 +151,6 @@ function SectionNode({
               expanded={expanded}
               toggleExpanded={toggleExpanded}
               activeId={activeId}
-              onSelect={onSelect}
               onClose={onClose}
               depth={depth + 1}
             />
@@ -143,7 +168,6 @@ interface NavNodeProps {
   expanded: Set<string>;
   toggleExpanded: (id: string) => void;
   activeId: string;
-  onSelect: (id: string) => void;
   onClose: () => void;
   depth: number;
 }
@@ -153,7 +177,6 @@ function NavNode({
   expanded,
   toggleExpanded,
   activeId,
-  onSelect,
   onClose,
   depth,
 }: NavNodeProps) {
@@ -164,7 +187,6 @@ function NavNode({
         expanded={expanded}
         toggleExpanded={toggleExpanded}
         activeId={activeId}
-        onSelect={onSelect}
         onClose={onClose}
         depth={depth}
       />
@@ -173,6 +195,33 @@ function NavNode({
 
   if (item.kind === 'external') {
     const Icon = item.icon;
+    const isInternal = item.href.startsWith('/') && !item.href.startsWith('//');
+
+    if (isInternal) {
+      return (
+        <li>
+          <NavLink
+            to={item.href}
+            onClick={onClose}
+            className={({ isActive }) =>
+              cn(
+                navItemClassName(isActive, depth),
+                depth > 0 && 'ml-2',
+              )
+            }
+          >
+            <Icon
+              className={cn(
+                'shrink-0',
+                depth === 0 ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5',
+              )}
+            />
+            <span className="flex-1 truncate">{item.label}</span>
+          </NavLink>
+        </li>
+      );
+    }
+
     return (
       <li>
         <a
@@ -203,33 +252,54 @@ function NavNode({
   const isOpen = expanded.has(item.id);
   const isActive = activeId === item.id;
 
-  const handleClick = () => {
-    if (hasChildren) {
-      toggleExpanded(item.id);
-    } else {
-      onSelect(item.id);
-      onClose();
-    }
-  };
+  if (hasChildren) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => toggleExpanded(item.id)}
+          aria-expanded={isOpen}
+          className={navItemClassName(isActive, depth)}
+        >
+          <Icon
+            className={cn(
+              'shrink-0',
+              depth === 0 ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5',
+            )}
+          />
+          <span className="flex-1 truncate text-left">{item.label}</span>
+          {isOpen ? (
+            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 opacity-70" />
+          )}
+        </button>
+
+        {isOpen && item.children ? (
+          <ul className="mt-0.5 space-y-0.5">
+            {item.children.map((child) => (
+              <NavNode
+                key={child.id}
+                item={child}
+                expanded={expanded}
+                toggleExpanded={toggleExpanded}
+                activeId={activeId}
+                onClose={onClose}
+                depth={depth + 1}
+              />
+            ))}
+          </ul>
+        ) : null}
+      </li>
+    );
+  }
 
   return (
     <li>
-      <button
-        type="button"
-        onClick={handleClick}
-        aria-expanded={hasChildren ? isOpen : undefined}
-        className={cn(
-          'group flex w-full items-center gap-3 rounded-lg text-sm font-medium transition-colors',
-          depth === 0 ? 'px-3 py-2.5' : 'py-1.5 pr-3',
-          depth === 0
-            ? ''
-            : depth === 1
-              ? 'pl-7'
-              : 'pl-11',
-          isActive
-            ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-            : 'text-sidebar-foreground hover:bg-sidebar-accent/10 hover:text-sidebar-accent',
-        )}
+      <NavLink
+        to={item.path}
+        onClick={onClose}
+        className={({ isActive: linkActive }) => navItemClassName(linkActive || isActive, depth)}
       >
         <Icon
           className={cn(
@@ -250,31 +320,7 @@ function NavNode({
             {item.badge}
           </span>
         ) : null}
-        {hasChildren ? (
-          isOpen ? (
-            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 opacity-70" />
-          )
-        ) : null}
-      </button>
-
-      {hasChildren && isOpen && item.children ? (
-        <ul className="mt-0.5 space-y-0.5">
-          {item.children.map((child) => (
-            <NavNode
-              key={child.id}
-              item={child}
-              expanded={expanded}
-              toggleExpanded={toggleExpanded}
-              activeId={activeId}
-              onSelect={onSelect}
-              onClose={onClose}
-              depth={depth + 1}
-            />
-          ))}
-        </ul>
-      ) : null}
+      </NavLink>
     </li>
   );
 }
@@ -283,8 +329,6 @@ function NavNode({
 
 export default function AppSidebar({
   navItems,
-  activeId,
-  onSelect,
   open,
   onClose,
   appName = 'Mr. Short Sale',
@@ -292,10 +336,12 @@ export default function AppSidebar({
   versionLabel = 'Platform',
   versionSubLabel = 'v1.0.0 · Production',
 }: AppSidebarProps) {
+  const { pathname } = useLocation();
+  const activeId = useMemo(() => resolveActiveId(navItems, pathname), [navItems, pathname]);
+
   const defaultOpenIds = useMemo(() => collectDefaultOpen(navItems), [navItems]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(defaultOpenIds));
 
-  // Ensure ancestors of the active item are auto-expanded when activeId changes
   useEffect(() => {
     const ancestors = collectAncestorIds(navItems, activeId);
     if (!ancestors || ancestors.length === 0) return;
@@ -323,7 +369,6 @@ export default function AppSidebar({
 
   return (
     <>
-      {/* Mobile overlay */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-foreground/40 backdrop-blur-sm lg:hidden"
@@ -338,7 +383,6 @@ export default function AppSidebar({
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Logo block */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Brain className="h-5 w-5" />
@@ -357,7 +401,6 @@ export default function AppSidebar({
           </button>
         </div>
 
-        {/* Nav tree */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="space-y-0.5">
             {navItems.map((item) => (
@@ -367,7 +410,6 @@ export default function AppSidebar({
                 expanded={expanded}
                 toggleExpanded={toggleExpanded}
                 activeId={activeId}
-                onSelect={onSelect}
                 onClose={onClose}
                 depth={0}
               />
@@ -375,7 +417,6 @@ export default function AppSidebar({
           </ul>
         </nav>
 
-        {/* Footer / version */}
         <div className="px-3 pb-4 pt-2">
           <div className="rounded-lg bg-sidebar-accent/10 px-4 py-3">
             <p className="text-xs font-semibold text-sidebar-foreground">{versionLabel}</p>
