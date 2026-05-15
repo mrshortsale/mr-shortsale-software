@@ -8,6 +8,8 @@ export type InventoryStatus = 'New' | 'Triaged' | 'Promoted' | 'Dismissed';
 export interface InventoryLead {
   id: string;
   source: InventorySource;
+  externalId?: string;
+  batchListName?: string | null;
   owner: string;
   address: string;
   city: string;

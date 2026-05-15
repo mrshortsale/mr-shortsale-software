@@ -1,0 +1,315 @@
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+export const BATCH_LEADS_DEFAULT_BASE = "https://app.batchleads.io";
+export const BATCH_LEADS_PROPERTY_PATH = "/api/v1/property";
+export const BATCH_LEADS_LISTS_PATH = "/api/v1/lists";
+export const DEFAULT_PAGE_SIZE = 100;
+export const DEFAULT_MAX_PAGES_PER_RUN = 10;
+
+export interface BatchLeadsCredentials {
+  apiKey: string;
+  baseUrl: string;
+}
+
+export interface BatchPropertyRow {
+  id: number | string;
+  mailing_first_name?: string | null;
+  mailing_last_name?: string | null;
+  property_address?: string | null;
+  property_city?: string | null;
+  property_state?: string | null;
+  property_county?: string | null;
+  property_zip?: string | null;
+  estimated_value?: number | null;
+  equity_current_estimated_balance?: number | null;
+  batchrank_score_category?: string | null;
+  created_date?: string | null;
+  updated_date?: string | null;
+  foreclosure_data?: {
+    auctionDate?: string | null;
+    recordingDate?: string | null;
+  } | null;
+  list_ids?: number[] | null;
+  lists_data?: unknown;
+  [key: string]: unknown;
+}
+
+export interface BatchPropertyPage {
+  rows: BatchPropertyRow[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+export function getApiKey(creds: Record<string, string>): string | undefined {
+  const raw = creds.apiKey || creds.api_key || creds["api-key"];
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  return trimmed || undefined;
+}
+
+export function normalizeBaseUrl(url: string | undefined | null): string {
+  const trimmed = (url || BATCH_LEADS_DEFAULT_BASE).trim().replace(/\/+$/, "");
+  return trimmed.replace(/\/api\/v1\/?.*$/i, "") || BATCH_LEADS_DEFAULT_BASE;
+}
+
+export function buildPropertyRequestBody(options: {
+  page: number;
+  pageSize?: number;
+  listIds?: number[];
+}): Record<string, unknown> {
+  return {
+    list_id: options.listIds ?? [],
+    list_id2: [],
+    lead_status: [1],
+    camp_cond_filter: "includeAny",
+    camp_cond_filter_dontinclude: "dontincludeAny",
+    camp_from: 1,
+    camp_to: 999,
+    mailer1: [],
+    mailer2: [],
+    mailer_cond_filter: "includeAny",
+    mailer_cond_filter_dontinclude: "dontincludeAny",
+    mailer_from: "0",
+    mailer_to: "999",
+    pagesize: options.pageSize ?? DEFAULT_PAGE_SIZE,
+    sort_data: "id",
+    sort_type: "asc",
+    page: options.page,
+    status: 0,
+    ids: [],
+    action: 1,
+    uncheckedids: [],
+    lead_score_from: 0,
+    lead_score_to: 100,
+    is_vacant: "No",
+    is_mailing_vacant: "No",
+    absentee: "No",
+    skiptraced: "",
+    opt_out: "both",
+    self_managed: "both",
+    has_phone_numbers: "1",
+    ui_version: 2,
+  };
+}
+
+export async function batchFetch(
+  baseUrl: string,
+  path: string,
+  apiKey: string,
+  options: { method?: string; body?: Record<string, unknown> } = {},
+): Promise<{ statusCode: number; json: Record<string, unknown>; latencyMs: number }> {
+  const started = Date.now();
+  const url = `${normalizeBaseUrl(baseUrl)}${path}`;
+  const res = await fetch(url, {
+    method: options.method ?? "GET",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "api-key": apiKey,
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const text = await res.text();
+  let json: Record<string, unknown> = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    json = { errors: text || "Invalid JSON response" };
+  }
+  return { statusCode: res.status, json, latencyMs: Date.now() - started };
+}
+
+export async function logBatchApiCall(
+  supabase: SupabaseClient,
+  integrationId: string,
+  credentialId: string | null,
+  method: string,
+  endpoint: string,
+  statusCode: number | null,
+  latencyMs: number,
+  errorMessage?: string | null,
+): Promise<void> {
+  await supabase.from("integration_api_logs").insert({
+    integration_id: integrationId,
+    credential_id: credentialId,
+    method,
+    endpoint,
+    status_code: statusCode,
+    latency_ms: latencyMs,
+    error_message: errorMessage ?? null,
+    direction: "outbound",
+  });
+}
+
+export async function fetchLists(
+  creds: BatchLeadsCredentials,
+): Promise<{ id: number; list_name: string }[]> {
+  const { json } = await batchFetch(creds.baseUrl, BATCH_LEADS_LISTS_PATH, creds.apiKey);
+  if (json.status !== 1) {
+    throw new Error(String(json.errors ?? json.message ?? "Failed to fetch Batch Leads lists"));
+  }
+  const data = json.data;
+  if (!Array.isArray(data)) return [];
+  return data as { id: number; list_name: string }[];
+}
+
+export async function fetchSavedAddressesPage(
+  creds: BatchLeadsCredentials,
+  options: { page: number; pageSize?: number; listIds?: number[] },
+): Promise<BatchPropertyPage> {
+  const body = buildPropertyRequestBody(options);
+  const { statusCode, json } = await batchFetch(
+    creds.baseUrl,
+    BATCH_LEADS_PROPERTY_PATH,
+    creds.apiKey,
+    { method: "POST", body },
+  );
+
+  if (statusCode >= 400 || json.errors) {
+    throw new Error(String(json.errors ?? json.message ?? `Batch Leads property fetch failed (${statusCode})`));
+  }
+
+  const envelope = json.data as Record<string, unknown> | undefined;
+  const rows = Array.isArray(envelope?.data) ? envelope.data as BatchPropertyRow[] : [];
+  const meta = (envelope?.meta ?? {}) as BatchPropertyPage["meta"];
+
+  return {
+    rows,
+    meta: {
+      current_page: Number(meta.current_page ?? options.page),
+      last_page: Number(meta.last_page ?? options.page),
+      per_page: Number(meta.per_page ?? options.pageSize ?? DEFAULT_PAGE_SIZE),
+      total: Number(meta.total ?? rows.length),
+    },
+  };
+}
+
+function parseDateMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+function daysUntil(dateStr: string | null | undefined): number {
+  const ms = parseDateMs(dateStr);
+  if (ms === null) return 999;
+  return Math.max(0, Math.ceil((ms - Date.now()) / (1000 * 60 * 60 * 24)));
+}
+
+function scoreFromCategory(category: string | null | undefined): number {
+  const map: Record<string, number> = {
+    High: 9,
+    Medium: 6,
+    Low: 4,
+    Unknown: 5,
+  };
+  if (!category) return 5;
+  return map[category] ?? 5;
+}
+
+function deriveScore(equityPct: number, daysToAuction: number, category?: string | null): number {
+  const base = scoreFromCategory(category);
+  let score = base;
+  if (equityPct <= 15) score += 1;
+  if (daysToAuction <= 30) score += 2;
+  else if (daysToAuction <= 90) score += 1;
+  return Math.min(10, Math.max(1, score));
+}
+
+function inferLanguage(first?: string | null, last?: string | null): "EN" | "ES" {
+  const name = `${first ?? ""} ${last ?? ""}`.toLowerCase();
+  const esHints = ["maria", "jose", "carlos", "rosa", "miguel", "ana", "luis", "juan", "garcia", "lopez", "martinez", "rodriguez"];
+  return esHints.some((h) => name.includes(h)) ? "ES" : "EN";
+}
+
+export function mapBatchRowToInventoryLead(
+  row: BatchPropertyRow,
+  listMeta?: { batch_list_id?: number | null; batch_list_name?: string | null },
+) {
+  const externalId = String(row.id);
+  const estimated = Number(row.estimated_value ?? 0);
+  const equityBalance = Number(row.equity_current_estimated_balance ?? 0);
+  let equityPct = 0;
+  if (estimated > 0 && equityBalance >= 0) {
+    equityPct = Math.round((equityBalance / estimated) * 100);
+  }
+  equityPct = Math.min(100, Math.max(0, equityPct));
+
+  const auctionDate = row.foreclosure_data?.auctionDate ?? null;
+  const daysToAuction = daysUntil(auctionDate);
+  const score = deriveScore(equityPct, daysToAuction, row.batchrank_score_category as string | undefined);
+  const owner = [row.mailing_first_name, row.mailing_last_name].filter(Boolean).join(" ").trim() || "Unknown Owner";
+  const receivedAt = row.created_date ?? row.updated_date ?? new Date().toISOString();
+
+  return {
+    id: `batch-${externalId}`,
+    source: "Batch",
+    external_id: externalId,
+    batch_list_id: listMeta?.batch_list_id ?? null,
+    batch_list_name: listMeta?.batch_list_name ?? null,
+    owner,
+    address: row.property_address ?? row.property_line_1 ?? "",
+    city: row.property_city ?? "",
+    state: row.property_state ?? "",
+    county: row.property_county ?? "",
+    equity_pct: equityPct,
+    days_to_auction: daysToAuction,
+    score,
+    language: inferLanguage(row.mailing_first_name, row.mailing_last_name),
+    status: "New",
+    received_at: receivedAt,
+    raw_payload: row,
+    synced_at: new Date().toISOString(),
+  };
+}
+
+export async function loadBatchLeadsCredentials(
+  supabase: SupabaseClient,
+  decryptFn: (cipher: string, iv: string) => Promise<string>,
+): Promise<{
+  integrationId: string;
+  credentialId: string;
+  credentials: BatchLeadsCredentials;
+}> {
+  const { data: integration, error: intErr } = await supabase
+    .from("integrations")
+    .select("id, slug, default_base_url")
+    .eq("slug", "batchleads")
+    .single();
+
+  if (intErr || !integration) {
+    throw new Error("Batch Leads integration is not configured");
+  }
+
+  const { data: cred, error: credErr } = await supabase
+    .from("integration_credentials")
+    .select("*")
+    .eq("integration_id", integration.id)
+    .eq("status", "connected")
+    .single();
+
+  if (credErr || !cred) {
+    throw new Error("Batch Leads is not connected. Configure it under Integrations first.");
+  }
+
+  const decrypted = await decryptFn(cred.encrypted_credentials, cred.credentials_iv);
+  const parsed = JSON.parse(decrypted) as Record<string, string>;
+  delete parsed._baseUrl;
+
+  const apiKey = getApiKey(parsed);
+  if (!apiKey) {
+    throw new Error("No Batch Leads API key stored");
+  }
+
+  return {
+    integrationId: integration.id,
+    credentialId: cred.id,
+    credentials: {
+      apiKey,
+      baseUrl: normalizeBaseUrl(cred.base_url || integration.default_base_url),
+    },
+  };
+}
