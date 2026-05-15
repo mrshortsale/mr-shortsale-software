@@ -48,17 +48,17 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
     fetchCredentials();
   }, [integration.id]);
 
-  const fetchCredentials = async () => {
-    setLoading(true);
+  const fetchCredentials = async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     const { data, error } = await getCredentials(integration.id);
     if (error) {
-      if (!error.includes('No credentials')) {
+      if (!error.includes('No credentials') && !options?.silent) {
         toast.error(error);
       }
     } else {
       setCredentials(data || null);
     }
-    setLoading(false);
+    if (!options?.silent) setLoading(false);
   };
 
   const handleTest = async () => {
@@ -76,7 +76,7 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
       } else {
         toast.error(result.error || 'Connection failed');
       }
-      fetchCredentials();
+      fetchCredentials({ silent: true });
     }
   };
 
@@ -89,7 +89,7 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
       toast.error(error);
     } else {
       toast.success(newEnabled ? 'Integration enabled' : 'Integration disabled');
-      fetchCredentials();
+      fetchCredentials({ silent: true });
     }
   };
 
@@ -107,7 +107,12 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
   };
 
   const handleSaveCredentials = async () => {
-    const { error } = await configureIntegration(integration.id, editFields, editFields._baseUrl);
+    const { _baseUrl, ...credentialFields } = editFields;
+    const payload: Record<string, string> = {};
+    for (const [k, v] of Object.entries(credentialFields)) {
+      if (v.trim()) payload[k] = v.trim();
+    }
+    const { error } = await configureIntegration(integration.id, payload, _baseUrl?.trim());
     if (error) {
       toast.error(error);
     } else {
@@ -256,7 +261,13 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                 {!editMode && (
                   <Button size="sm" variant="outline" onClick={() => {
                     setEditMode(true);
-                    setEditFields({});
+                    setEditFields({
+                      _baseUrl:
+                        credentials?.base_url ||
+                        integration.base_url ||
+                        integration.default_base_url ||
+                        '',
+                    });
                   }}>
                     {credentials ? 'Edit Credentials' : 'Add Credentials'}
                   </Button>
@@ -265,16 +276,33 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
             </CardHeader>
             <CardContent>
               {editMode ? (
-                <div className="space-y-4">
+                <form
+                  className="space-y-4"
+                  autoComplete="off"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSaveCredentials();
+                  }}
+                >
                   {integration.auth_method === 'api_key' && (
                     <div className="space-y-1.5">
-                      <Label>API Key</Label>
+                      <Label htmlFor={`${integration.slug}-api-token`}>API Key</Label>
                       <Input
-                        type="password"
-                        placeholder="Enter new API key"
+                        id={`${integration.slug}-api-token`}
+                        name={`integration-${integration.slug}-api-token`}
+                        type="text"
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-form-type="other"
+                        className="font-mono"
+                        placeholder="Leave blank to keep current key"
                         value={editFields.apiKey || ''}
                         onChange={(e) => setEditFields({ ...editFields, apiKey: e.target.value })}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        For security, stored keys are never shown. Leave empty to keep the existing key, or enter a new one to replace it.
+                      </p>
                     </div>
                   )}
                   {integration.auth_method === 'basic_auth' && (
@@ -336,18 +364,33 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                     </>
                   )}
                   <div className="space-y-1.5">
-                    <Label>Base URL</Label>
+                    <Label htmlFor={`${integration.slug}-base-url`}>Base URL</Label>
                     <Input
-                      placeholder="https://api.example.com"
+                      id={`${integration.slug}-base-url`}
+                      name={`integration-${integration.slug}-base-url`}
+                      type="url"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                      placeholder="https://app.batchleads.io"
                       value={editFields._baseUrl || ''}
-                      onChange={(e) => setEditFields({ ...editFields, _baseUrl: e.target.value })}
+                      onChange={(e) =>
+                        setEditFields({
+                          ...editFields,
+                          _baseUrl: e.target.value.replace(/\/+$/, ''),
+                        })
+                      }
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Host only (e.g. https://app.batchleads.io). Do not end with a forward slash or include paths like /api/v1/tags.
+                    </p>
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <Button size="sm" onClick={handleSaveCredentials}>Save</Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
+                    <Button type="submit" size="sm">Save</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
                   </div>
-                </div>
+                </form>
               ) : credentials ? (
                 <div className="space-y-3">
                   {Object.entries(credentials.credentials).map(([key, value]) => (

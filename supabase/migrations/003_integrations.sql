@@ -113,7 +113,7 @@ $$;
 INSERT INTO public.integrations (name, slug, description, category, auth_method, is_builtin, default_base_url, health_check_endpoint)
 VALUES
   ('ATTOM Property Data', 'attom', 'Property valuation, equity calculation, and tax delinquency data from ATTOM.', 'data', 'api_key', true, 'https://api.gateway.attomdata.com', '/property/basicprofile'),
-  ('Batch Leads', 'batchleads', 'Distressed property leads from 3,100+ counties via BatchLeads API.', 'data', 'api_key', true, 'https://api.batchleads.io', '/api/v1/health'),
+  ('Batch Leads', 'batchleads', 'Distressed property leads from 3,100+ counties via BatchLeads API.', 'data', 'api_key', true, 'https://app.batchleads.io', '/api/v1/tags'),
   ('Zillow Listings', 'zillow', 'Short sale listings scraper feeding the realtor chain.', 'data', 'api_key', true, 'https://api.bridgedataoutput.com', '/api/v2/zestimates'),
   ('Meta Lead Ads', 'meta-ads', 'Webhook receiver for Facebook/Meta lead form fills.', 'marketing', 'inbound_webhook', true, NULL, NULL),
   ('Mojo Triple Dialer', 'mojo-dialer', 'Bulk dialing with call outcome sync via Mojo API.', 'communications', 'api_key', true, 'https://app.mojosells.com/api', '/status')

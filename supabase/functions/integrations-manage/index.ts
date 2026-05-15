@@ -35,6 +35,11 @@ function maskCredential(value: string): string {
   return value.slice(0, 4) + "••••" + value.slice(-4);
 }
 
+function sanitizeBaseUrl(url: string | undefined | null): string | null {
+  if (!url?.trim()) return null;
+  return url.trim().replace(/\/+$/, "").replace(/\/api\/v1\/?.*$/i, "") || null;
+}
+
 Deno.serve(async (req) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
@@ -185,7 +190,35 @@ Deno.serve(async (req) => {
 
     if (!integration) return jsonResponse({ error: "Integration not found" }, 404);
 
-    const credsJson = JSON.stringify(creds || {});
+    const { data: existing } = await supabase
+      .from("integration_credentials")
+      .select("id, webhook_secret, encrypted_credentials, credentials_iv")
+      .eq("integration_id", integrationId)
+      .single();
+
+    let mergedCreds: Record<string, string> = { ...(creds || {}) };
+    if (existing?.encrypted_credentials && existing.credentials_iv) {
+      try {
+        const previous = JSON.parse(
+          await decrypt(existing.encrypted_credentials, existing.credentials_iv),
+        ) as Record<string, string>;
+        mergedCreds = { ...previous, ...mergedCreds };
+      } catch {
+        // ignore — will use incoming creds only
+      }
+    }
+
+    delete mergedCreds._baseUrl;
+
+    // Trim sensitive string fields; drop empty api key so merge keeps previous
+    for (const [k, v] of Object.entries(mergedCreds)) {
+      if (typeof v === "string") mergedCreds[k] = v.trim();
+    }
+    if (!mergedCreds.apiKey) delete mergedCreds.apiKey;
+
+    const cleanBaseUrl = sanitizeBaseUrl(baseUrl);
+
+    const credsJson = JSON.stringify(mergedCreds);
     const { ciphertext, iv } = await encrypt(credsJson);
 
     let webhookSecret: string | null = null;
@@ -193,19 +226,13 @@ Deno.serve(async (req) => {
       webhookSecret = crypto.randomUUID() + crypto.randomUUID();
     }
 
-    const { data: existing } = await supabase
-      .from("integration_credentials")
-      .select("id, webhook_secret")
-      .eq("integration_id", integrationId)
-      .single();
-
     if (existing) {
       await supabase
         .from("integration_credentials")
         .update({
           encrypted_credentials: ciphertext,
           credentials_iv: iv,
-          base_url: baseUrl?.trim() || null,
+          base_url: cleanBaseUrl,
           oauth_authorization_url: creds?.authorizationUrl || null,
           oauth_token_url: creds?.tokenUrl || null,
           webhook_secret: existing.webhook_secret || webhookSecret,
@@ -218,7 +245,7 @@ Deno.serve(async (req) => {
         status: "disabled",
         encrypted_credentials: ciphertext,
         credentials_iv: iv,
-        base_url: baseUrl?.trim() || null,
+        base_url: cleanBaseUrl,
         oauth_authorization_url: creds?.authorizationUrl || null,
         oauth_token_url: creds?.tokenUrl || null,
         webhook_secret: webhookSecret,

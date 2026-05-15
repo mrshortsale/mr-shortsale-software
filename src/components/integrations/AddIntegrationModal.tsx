@@ -27,6 +27,9 @@ interface Props {
   onCreated: () => void;
 }
 
+const BASE_URL_HINT =
+  'Host only (e.g. https://app.batchleads.io). Do not end with a forward slash or include API paths.';
+
 const AUTH_METHODS: { value: AuthMethod; label: string }[] = [
   { value: 'api_key', label: 'API Key / Token' },
   { value: 'basic_auth', label: 'Basic Auth' },
@@ -200,9 +203,9 @@ export default function AddIntegrationModal({ open, onClose, onCreated }: Props)
                   id="int-baseurl"
                   placeholder="https://api.example.com"
                   value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
+                  onChange={(e) => setBaseUrl(e.target.value.replace(/\/+$/, ''))}
                 />
-                <p className="text-xs text-muted-foreground">Optional. The base URL for API requests.</p>
+                <p className="text-xs text-muted-foreground">Optional. {BASE_URL_HINT}</p>
               </div>
             </>
           )}
@@ -234,9 +237,9 @@ export default function AddIntegrationModal({ open, onClose, onCreated }: Props)
                   id="int-baseurl-basic"
                   placeholder="https://api.example.com"
                   value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
+                  onChange={(e) => setBaseUrl(e.target.value.replace(/\/+$/, ''))}
                 />
-                <p className="text-xs text-muted-foreground">Optional. The base URL for API requests.</p>
+                <p className="text-xs text-muted-foreground">Optional. {BASE_URL_HINT}</p>
               </div>
             </>
           )}
@@ -302,9 +305,9 @@ export default function AddIntegrationModal({ open, onClose, onCreated }: Props)
                 id="int-baseurl-none"
                 placeholder="https://api.example.com"
                 value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
+                onChange={(e) => setBaseUrl(e.target.value.replace(/\/+$/, ''))}
               />
-              <p className="text-xs text-muted-foreground">Optional. The base URL for API requests.</p>
+              <p className="text-xs text-muted-foreground">Optional. {BASE_URL_HINT}</p>
             </div>
           )}
 
