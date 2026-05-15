@@ -363,6 +363,66 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                       </div>
                     </>
                   )}
+                  {integration.auth_method === 'inbound_webhook' && (
+                    <>
+                      <p className="text-xs text-muted-foreground border rounded-md px-3 py-2 bg-muted/40">
+                        Save these credentials first, then copy the <strong>Webhook URL</strong> shown below and paste it into your Meta App webhook settings along with your Verify Token.
+                      </p>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${integration.slug}-app-id`}>App ID</Label>
+                        <Input
+                          id={`${integration.slug}-app-id`}
+                          placeholder="Meta App ID (numeric)"
+                          value={editFields.appId || ''}
+                          onChange={(e) => setEditFields({ ...editFields, appId: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${integration.slug}-app-secret`}>App Secret</Label>
+                        <Input
+                          id={`${integration.slug}-app-secret`}
+                          type="password"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          placeholder="Leave blank to keep current secret"
+                          value={editFields.appSecret || ''}
+                          onChange={(e) => setEditFields({ ...editFields, appSecret: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Stored as the HMAC key to verify incoming webhook signatures. Never exposed in plain text.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${integration.slug}-verify-token`}>Verify Token</Label>
+                        <Input
+                          id={`${integration.slug}-verify-token`}
+                          placeholder="e.g. mss-meta-verify-2026"
+                          value={editFields.verifyToken || ''}
+                          onChange={(e) => setEditFields({ ...editFields, verifyToken: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Arbitrary string you choose. Must match exactly when registering the webhook in the Meta App dashboard.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`${integration.slug}-page-token`}>Page Access Token</Label>
+                        <Input
+                          id={`${integration.slug}-page-token`}
+                          type="password"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          placeholder="Leave blank to keep current token"
+                          value={editFields.pageAccessToken || ''}
+                          onChange={(e) => setEditFields({ ...editFields, pageAccessToken: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Used to call the Graph API and retrieve lead form field data. Generate in the Graph API Explorer with <code>leads_retrieval</code> + <code>pages_read_engagement</code> permissions.
+                        </p>
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1.5">
                     <Label htmlFor={`${integration.slug}-base-url`}>Base URL</Label>
                     <Input

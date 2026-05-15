@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
 
     delete mergedCreds._baseUrl;
 
-    // Trim sensitive string fields; drop empty api key so merge keeps previous
+    // Trim all string fields; drop empty api key so merge keeps previous
     for (const [k, v] of Object.entries(mergedCreds)) {
       if (typeof v === "string") mergedCreds[k] = v.trim();
     }
@@ -218,13 +218,21 @@ Deno.serve(async (req) => {
 
     const cleanBaseUrl = sanitizeBaseUrl(baseUrl);
 
+    // For inbound_webhook integrations, appSecret is stored as the HMAC key
+    // (webhook_secret column) rather than in the encrypted blob.
+    let webhookSecretValue: string | null = existing?.webhook_secret ?? null;
+    if (integration.auth_method === "inbound_webhook") {
+      if (mergedCreds.appSecret) {
+        webhookSecretValue = mergedCreds.appSecret;
+        delete mergedCreds.appSecret;
+      } else if (!webhookSecretValue) {
+        // First-time setup with no appSecret provided — generate a placeholder
+        webhookSecretValue = crypto.randomUUID() + crypto.randomUUID();
+      }
+    }
+
     const credsJson = JSON.stringify(mergedCreds);
     const { ciphertext, iv } = await encrypt(credsJson);
-
-    let webhookSecret: string | null = null;
-    if (integration.auth_method === "inbound_webhook") {
-      webhookSecret = crypto.randomUUID() + crypto.randomUUID();
-    }
 
     if (existing) {
       await supabase
@@ -235,7 +243,7 @@ Deno.serve(async (req) => {
           base_url: cleanBaseUrl,
           oauth_authorization_url: creds?.authorizationUrl || null,
           oauth_token_url: creds?.tokenUrl || null,
-          webhook_secret: existing.webhook_secret || webhookSecret,
+          webhook_secret: webhookSecretValue,
           configured_by: ceoId,
         })
         .eq("id", existing.id);
@@ -248,7 +256,7 @@ Deno.serve(async (req) => {
         base_url: cleanBaseUrl,
         oauth_authorization_url: creds?.authorizationUrl || null,
         oauth_token_url: creds?.tokenUrl || null,
-        webhook_secret: webhookSecret,
+        webhook_secret: webhookSecretValue,
         configured_by: ceoId,
       });
     }
@@ -324,6 +332,12 @@ Deno.serve(async (req) => {
     const { integrationId } = body as { integrationId?: string };
     if (!integrationId) return jsonResponse({ error: "integrationId is required" }, 400);
 
+    const { data: integration } = await supabase
+      .from("integrations")
+      .select("slug, auth_method")
+      .eq("id", integrationId)
+      .single();
+
     const { data: cred } = await supabase
       .from("integration_credentials")
       .select("*")
@@ -341,14 +355,17 @@ Deno.serve(async (req) => {
         masked[k] = maskCredential(v);
       }
 
+      // Webhook URL uses the integration slug so the webhook-receiver can look it up
+      const webhookUrl = cred.webhook_secret && integration?.slug
+        ? `${Deno.env.get("SUPABASE_URL")}/functions/v1/webhook-receiver/${integration.slug}`
+        : null;
+
       return jsonResponse({
         credentials: masked,
         status: cred.status,
         base_url: cred.base_url,
         webhook_secret: cred.webhook_secret ? maskCredential(cred.webhook_secret) : null,
-        webhook_url: cred.webhook_secret
-          ? `${Deno.env.get("SUPABASE_URL")}/functions/v1/webhook-receiver/${integrationId}`
-          : null,
+        webhook_url: webhookUrl,
         last_tested_at: cred.last_tested_at,
         last_test_status: cred.last_test_status,
         last_test_error: cred.last_test_error,
