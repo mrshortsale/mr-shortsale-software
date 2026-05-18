@@ -515,32 +515,33 @@ export default function LeadInventory() {
       )}
 
       <div className="rounded-xl border bg-card overflow-hidden">
-        <div
-          className="grid gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted font-bold border-b"
-          style={{ gridTemplateColumns: gridTemplate }}
-        >
-          {orderedVisibleColumns.map((c) => {
-            if (c.id === 'select') {
-              return (
-                <input
-                  key={c.id}
-                  type="checkbox"
-                  checked={selected.size === leads.length && leads.length > 0}
-                  onChange={selectAllVisible}
-                  className="cursor-pointer"
-                  aria-label="Select all visible"
-                />
-              );
-            }
-            const align = c.id === 'equity' || c.id === 'auction' || c.id === 'score' || c.id === 'ltv' || c.id === 'attempts'
-              ? 'text-right'
-              : '';
-            return <span key={c.id} className={align}>{c.label}</span>;
-          })}
-        </div>
         <div ref={parentRef} className="overflow-auto relative" style={{ height: 560 }}>
+          <div className="min-w-max w-full">
+            <div
+              className="sticky top-0 z-20 grid gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted font-bold border-b shadow-sm"
+              style={{ gridTemplateColumns: gridTemplate }}
+            >
+              {orderedVisibleColumns.map((c) => {
+                if (c.id === 'select') {
+                  return (
+                    <input
+                      key={c.id}
+                      type="checkbox"
+                      checked={selected.size === leads.length && leads.length > 0}
+                      onChange={selectAllVisible}
+                      className="cursor-pointer"
+                      aria-label="Select all visible"
+                    />
+                  );
+                }
+                const align = c.id === 'equity' || c.id === 'auction' || c.id === 'score' || c.id === 'ltv' || c.id === 'attempts'
+                  ? 'text-right'
+                  : '';
+                return <span key={c.id} className={align}>{c.label}</span>;
+              })}
+            </div>
           {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-30">
               <Loader2 size={28} className="animate-spin text-primary/50" />
             </div>
           )}
@@ -571,7 +572,7 @@ export default function LeadInventory() {
                   style={{
                     gridTemplateColumns: gridTemplate,
                     position: 'absolute',
-                    top: 0, left: 0, right: 0,
+                    top: 0, left: 0, width: '100%',
                     height: vi.size,
                     transform: `translateY(${vi.start}px)`,
                   }}
@@ -740,6 +741,7 @@ export default function LeadInventory() {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
 
