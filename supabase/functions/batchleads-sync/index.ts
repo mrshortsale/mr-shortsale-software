@@ -5,6 +5,7 @@ import { decrypt } from "../_shared/crypto.ts";
 import {
   DEFAULT_MAX_PAGES_PER_RUN,
   DEFAULT_PAGE_SIZE,
+  disqualifyReason,
   fetchSavedAddressesPage,
   loadBatchLeadsCredentials,
   logBatchApiCall,
@@ -38,6 +39,11 @@ interface RunMeta {
   cumulativeNew?: number;
   cumulativeUpdated?: number;
   pagesProcessedTotal?: number;
+  // Ingest-time filter counters (cumulative across the run)
+  filteredEquity?: number;
+  filteredFiling?: number;
+  filteredApn?: number;
+  qualifiedTotal?: number;
 }
 
 async function requireCeo(req: Request): Promise<string | null> {
@@ -539,6 +545,10 @@ Deno.serve(async (req) => {
   let cumulativeNew = prevMeta.cumulativeNew ?? 0;
   let cumulativeUpdated = prevMeta.cumulativeUpdated ?? 0;
   let pagesProcessedTotal = prevMeta.pagesProcessedTotal ?? 0;
+  let filteredEquity = prevMeta.filteredEquity ?? 0;
+  let filteredFiling = prevMeta.filteredFiling ?? 0;
+  let filteredApn = prevMeta.filteredApn ?? 0;
+  let qualifiedTotal = prevMeta.qualifiedTotal ?? 0;
 
   // ─── Sync loop ─────────────────────────────────────────────────────────────
 
@@ -617,13 +627,56 @@ Deno.serve(async (req) => {
       pagesProcessed++;
       pagesProcessedTotal++;
 
-      const rowsToUpsert = [];
+      const qualified: ReturnType<typeof mapBatchRowToInventoryLead>[] = [];
+      const seenApnInPage = new Set<string>();
       for (const row of pageResult.rows) {
         const mapped = mapBatchRowToInventoryLead(row);
         if (seen.has(mapped.external_id)) continue;
         seen.add(mapped.external_id);
-        rowsToUpsert.push(mapped);
+
+        const reason = disqualifyReason(mapped);
+        if (reason === "equity") { filteredEquity++; continue; }
+        if (reason === "filing") { filteredFiling++; continue; }
+
+        // Within-page APN dedup: drop second occurrences of the same APN
+        if (mapped.apn) {
+          if (seenApnInPage.has(mapped.apn)) { filteredApn++; continue; }
+          seenApnInPage.add(mapped.apn);
+        }
+
+        qualified.push(mapped);
       }
+
+      // Cross-batch APN dedup: skip leads whose APN already exists in the
+      // inventory with an active status (different external_id but same APN
+      // = same physical property re-listed under a new Batch row).
+      let rowsToUpsert = qualified;
+      const apnList = qualified.map((r) => r.apn).filter((v): v is string => !!v);
+      if (apnList.length > 0) {
+        const { data: existingApns } = await supabase
+          .from("inventory_leads")
+          .select("apn, external_id")
+          .eq("source", "Batch")
+          .in("apn", apnList)
+          .in("status", ["New", "Contacted", "Promoted"]);
+
+        if (existingApns && existingApns.length > 0) {
+          const existingByApn = new Map<string, string>();
+          for (const r of existingApns as Array<{ apn: string; external_id: string }>) {
+            existingByApn.set(r.apn, r.external_id);
+          }
+          rowsToUpsert = qualified.filter((r) => {
+            if (!r.apn) return true;
+            const owner = existingByApn.get(r.apn);
+            // Allow upsert if the existing row IS this same external_id (regular update).
+            if (!owner || owner === r.external_id) return true;
+            filteredApn++;
+            return false;
+          });
+        }
+      }
+
+      qualifiedTotal += rowsToUpsert.length;
 
       if (rowsToUpsert.length > 0) {
         // Determine which rows are new vs already in the DB
@@ -675,6 +728,10 @@ Deno.serve(async (req) => {
       since: incrementalSince,
       cumulativeNew,
       cumulativeUpdated,
+      filteredEquity,
+      filteredFiling,
+      filteredApn,
+      qualifiedTotal,
     };
 
     const finalStatus = await getRunStatus(runId!);
@@ -720,6 +777,11 @@ Deno.serve(async (req) => {
       // Cumulative counts across all chunks of this run
       cumulativeNew,
       cumulativeUpdated,
+      // Ingest-time filter counters
+      filteredEquity,
+      filteredFiling,
+      filteredApn,
+      qualifiedTotal,
       pagesProcessed,
       pagesProcessedTotal,
       lastPage,
@@ -750,6 +812,10 @@ Deno.serve(async (req) => {
           cumulativeNew,
           cumulativeUpdated,
           pagesProcessedTotal,
+          filteredEquity,
+          filteredFiling,
+          filteredApn,
+          qualifiedTotal,
         },
         updated_at: new Date().toISOString(),
       })

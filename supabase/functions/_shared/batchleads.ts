@@ -25,9 +25,29 @@ export interface BatchPropertyRow {
   batchrank_score_category?: string | null;
   created_date?: string | null;
   updated_date?: string | null;
+  apn?: string | null;
+  assessor_parcel_number?: string | null;
+  phone_numbers?: Array<string | { number?: string | null; phone?: string | null }> | null;
+  phones?: Array<string | { number?: string | null; phone?: string | null }> | null;
+  phone1?: string | null;
+  email?: string | null;
+  emails?: Array<string | { email?: string | null; address?: string | null }> | null;
   foreclosure_data?: {
     auctionDate?: string | null;
     recordingDate?: string | null;
+    defaultDate?: string | null;
+    nodDate?: string | null;
+    nodRecordingDate?: string | null;
+    nodFilingDate?: string | null;
+    noticeOfDefaultDate?: string | null;
+    noticeOfTrusteeSaleDate?: string | null;
+    ntsRecordingDate?: string | null;
+    ntsFilingDate?: string | null;
+    lispendensDate?: string | null;
+    lisPendensDate?: string | null;
+    lisPendensFilingDate?: string | null;
+    filingType?: string | null;
+    documentType?: string | null;
   } | null;
   list_ids?: number[] | null;
   lists_data?: unknown;
@@ -242,6 +262,84 @@ function inferLanguage(first?: string | null, last?: string | null): "EN" | "ES"
   return esHints.some((h) => name.includes(h)) ? "ES" : "EN";
 }
 
+function pickFirstString(values: Array<unknown>): string | null {
+  for (const v of values) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (v && typeof v === "object") {
+      const obj = v as Record<string, unknown>;
+      const candidates = ["number", "phone", "email", "address", "value"];
+      for (const key of candidates) {
+        const inner = obj[key];
+        if (typeof inner === "string" && inner.trim()) return inner.trim();
+      }
+    }
+  }
+  return null;
+}
+
+function extractPhone(row: BatchPropertyRow): string | null {
+  const fromArray = pickFirstString([...(row.phone_numbers ?? []), ...(row.phones ?? [])]);
+  if (fromArray) return fromArray;
+  if (typeof row.phone1 === "string" && row.phone1.trim()) return row.phone1.trim();
+  return null;
+}
+
+function extractEmail(row: BatchPropertyRow): string | null {
+  if (typeof row.email === "string" && row.email.trim()) return row.email.trim();
+  return pickFirstString(row.emails ?? []);
+}
+
+function extractApn(row: BatchPropertyRow): string | null {
+  const candidates = [row.apn, row.assessor_parcel_number, (row as Record<string, unknown>)["parcel_number"]];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+    if (typeof c === "number") return String(c);
+  }
+  return null;
+}
+
+/**
+ * Derive filing type from Batch foreclosure_data. We support multiple field
+ * shapes since Batch's exact payload varies; the spec only requires NOD/NTS/LP
+ * to qualify, so anything else (or null) will be filtered out at ingest.
+ */
+function deriveFilingType(row: BatchPropertyRow): "NOD" | "NTS" | "LP" | "Other" | null {
+  const f = row.foreclosure_data ?? null;
+  if (!f) return null;
+
+  const explicit = (f.filingType || f.documentType || "").toString().toLowerCase();
+  if (explicit) {
+    if (explicit.includes("default") || explicit === "nod") return "NOD";
+    if (explicit.includes("trustee") || explicit.includes("notice of sale") || explicit === "nts") return "NTS";
+    if (explicit.includes("lis pendens") || explicit === "lp") return "LP";
+    return "Other";
+  }
+
+  if (f.nodDate || f.nodRecordingDate || f.nodFilingDate || f.defaultDate || f.noticeOfDefaultDate) {
+    return "NOD";
+  }
+  if (f.noticeOfTrusteeSaleDate || f.ntsRecordingDate || f.ntsFilingDate || f.auctionDate) {
+    return "NTS";
+  }
+  if (f.lispendensDate || f.lisPendensDate || f.lisPendensFilingDate) {
+    return "LP";
+  }
+  return null;
+}
+
+/**
+ * Normalize a property address for cross-source dedup. Uppercases, strips
+ * punctuation/extra whitespace, and appends the 5-digit ZIP when available.
+ * Not used for filtering yet but populated for future use.
+ */
+export function normalizeAddress(address?: string | null, zip?: string | null): string | null {
+  const a = (address ?? "").toString().trim().toUpperCase();
+  if (!a) return null;
+  const cleaned = a.replace(/[.,#]/g, " ").replace(/\s+/g, " ").trim();
+  const zip5 = (zip ?? "").toString().match(/\d{5}/)?.[0] ?? null;
+  return zip5 ? `${cleaned} ${zip5}` : cleaned;
+}
+
 export function mapBatchRowToInventoryLead(
   row: BatchPropertyRow,
   listMeta?: { batch_list_id?: number | null; batch_list_name?: string | null },
@@ -250,8 +348,10 @@ export function mapBatchRowToInventoryLead(
   const estimated = Number(row.estimated_value ?? 0);
   const equityBalance = Number(row.equity_current_estimated_balance ?? 0);
   let equityPct = 0;
+  let ltvPct: number | null = null;
   if (estimated > 0 && equityBalance >= 0) {
     equityPct = Math.round((equityBalance / estimated) * 100);
+    ltvPct = Math.max(0, Math.min(100, Math.round((1 - equityBalance / estimated) * 100)));
   }
   equityPct = Math.min(100, Math.max(0, equityPct));
 
@@ -260,6 +360,8 @@ export function mapBatchRowToInventoryLead(
   const score = deriveScore(equityPct, daysToAuction, row.batchrank_score_category as string | undefined);
   const owner = [row.mailing_first_name, row.mailing_last_name].filter(Boolean).join(" ").trim() || "Unknown Owner";
   const receivedAt = row.created_date ?? row.updated_date ?? new Date().toISOString();
+  const nowIso = new Date().toISOString();
+  const address = (row.property_address ?? (row as Record<string, unknown>)["property_line_1"] ?? "") as string;
 
   return {
     id: `batch-${externalId}`,
@@ -268,7 +370,7 @@ export function mapBatchRowToInventoryLead(
     batch_list_id: listMeta?.batch_list_id ?? null,
     batch_list_name: listMeta?.batch_list_name ?? null,
     owner,
-    address: row.property_address ?? row.property_line_1 ?? "",
+    address,
     city: row.property_city ?? "",
     state: row.property_state ?? "",
     county: row.property_county ?? "",
@@ -279,8 +381,30 @@ export function mapBatchRowToInventoryLead(
     status: "New",
     received_at: receivedAt,
     raw_payload: row,
-    synced_at: new Date().toISOString(),
+    synced_at: nowIso,
+    apn: extractApn(row),
+    phone: extractPhone(row),
+    email: extractEmail(row),
+    filing_type: deriveFilingType(row),
+    lead_type: "Homeowner",
+    ingested_at: nowIso,
+    ltv_pct: ltvPct,
+    contact_attempts: 0,
+    normalized_address: normalizeAddress(address, row.property_zip),
   };
+}
+
+export type MappedInventoryLead = ReturnType<typeof mapBatchRowToInventoryLead>;
+
+/**
+ * Apply ingest-time qualification rules to a mapped Batch lead.
+ * Returns null if the lead passes, otherwise a string describing the reason
+ * it was filtered out (useful for run-level counters).
+ */
+export function disqualifyReason(lead: MappedInventoryLead): "equity" | "filing" | null {
+  if (lead.equity_pct > 25) return "equity";
+  if (!lead.filing_type || !["NOD", "NTS", "LP"].includes(lead.filing_type)) return "filing";
+  return null;
 }
 
 export async function loadBatchLeadsCredentials(

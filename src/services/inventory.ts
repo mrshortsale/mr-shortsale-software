@@ -1,6 +1,11 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { getStoredToken } from './auth';
-import type { InventoryLead, InventorySource } from '@/data/inventoryLeads';
+import type {
+  InventoryLead,
+  InventorySource,
+  InventoryStatus,
+  InventoryFilingType,
+} from '@/data/inventoryLeads';
 
 const BASE_URL = `${SUPABASE_URL}/functions/v1`;
 const SYNC_POLL_MS = 2500;
@@ -108,9 +113,18 @@ export interface InventorySyncResult {
 }
 
 export interface InventoryStats {
-  total: number;
-  hot: number;
-  triage: number;
+  /** Total leads for the active source (used as the funnel banner denominator). */
+  sourceTotal: number;
+  /** Leads with ingested_at >= start of today. */
+  newToday: number;
+  /** Average contact_attempts among New + Contacted leads. */
+  avgAttempts: number;
+  /** Leads with equity_pct >= 75. */
+  hotEquity: number;
+  /** Leads with days_to_auction < 30 (excluding Dismissed). */
+  auctionsLt30: number;
+  /** Leads with score >= 8 (excluding Dismissed). */
+  hotScore: number;
   bySource: Record<InventorySource, number>;
 }
 
@@ -120,9 +134,18 @@ export interface FetchInventoryParams {
   q?: string;
   minScore?: number;
   esOnly?: boolean;
-  triageOnly?: boolean;
+  statuses?: InventoryStatus[];
+  filingTypes?: InventoryFilingType[];
+  assignedRep?: string | 'unassigned' | null;
   limit?: number;
   offset?: number;
+}
+
+export interface InventoryRep {
+  id: string;
+  name: string;
+  email: string;
+  avatar_color: string;
 }
 
 export interface FetchInventoryResult {
@@ -357,7 +380,11 @@ export async function fetchInventoryLeads(
     if (params.q) query.set('q', params.q);
     if (params.minScore !== undefined) query.set('min_score', String(params.minScore));
     if (params.esOnly) query.set('es_only', 'true');
-    if (params.triageOnly) query.set('triage_only', 'true');
+    if (params.statuses && params.statuses.length > 0) query.set('status', params.statuses.join(','));
+    if (params.filingTypes && params.filingTypes.length > 0) query.set('filing_type', params.filingTypes.join(','));
+    if (params.assignedRep !== undefined && params.assignedRep !== null) {
+      query.set('assigned_rep', params.assignedRep);
+    }
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));
 
@@ -454,4 +481,58 @@ export function syncStatusTone(status: string): 'ok' | 'pending' | 'error' | 'mu
   if (status === 'paused' || status === 'partial') return 'pending';
   if (status === 'stopped') return 'muted';
   return 'muted';
+}
+
+// ─── Admin Lead Actions ─────────────────────────────────────────────────────
+
+export async function fetchReps(): Promise<{ reps?: InventoryRep[]; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/admin-leads?action=reps`, {
+      method: 'GET',
+      headers: authedHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to load reps' };
+    return { reps: data.reps };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function assignRep(
+  leadIds: string[],
+  repId: string | null,
+): Promise<{ updated?: number; error?: string }> {
+  if (leadIds.length === 0) return { updated: 0 };
+  try {
+    const res = await fetch(`${BASE_URL}/admin-leads?action=assign`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ leadIds, repId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to assign' };
+    return { updated: data.updated };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function setLeadStatus(
+  leadIds: string[],
+  status: InventoryStatus,
+): Promise<{ updated?: number; error?: string }> {
+  if (leadIds.length === 0) return { updated: 0 };
+  try {
+    const res = await fetch(`${BASE_URL}/admin-leads?action=status`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ leadIds, status }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to update status' };
+    return { updated: data.updated };
+  } catch {
+    return { error: 'Network error' };
+  }
 }
