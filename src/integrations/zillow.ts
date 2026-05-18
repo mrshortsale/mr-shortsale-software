@@ -1,9 +1,6 @@
-// Zillow keyword-listing search (mock).
-// Real plan: scrape Zillow's listing search by keyword="short sale" + state filter,
-// then enrich with the listing agent's contact info from public profile pages.
-// Real wiring deferred — UI uses mock seed data.
-
-import { realtorLeads, RealtorLead } from '@/data/realtorLeads';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
+import { getStoredToken } from '@/services/auth';
+import { realtorLeads, type RealtorLead } from '@/data/realtorLeads';
 
 export interface ZillowHealth {
   status: 'healthy' | 'pending';
@@ -14,21 +11,51 @@ export interface ZillowHealth {
   keywordsTracked: string[];
 }
 
+function authedHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'apikey': SUPABASE_ANON_KEY,
+    ...(token ? { 'x-auth-token': token } : {}),
+  };
+}
+
 export async function getZillowHealth(): Promise<ZillowHealth> {
   return {
     status: 'pending',
-    lastSync: 'API key pending — UI active with sample data',
-    newToday: 7,
-    totalActive: realtorLeads.length,
-    statesCovered: 3,
+    lastSync: 'Configure API key in Integrations to enable live sync',
+    newToday: 0,
+    totalActive: 0,
+    statesCovered: 0,
     keywordsTracked: ['short sale'],
   };
 }
 
-export async function searchShortSaleListings(state?: string, keyword = 'short sale'): Promise<RealtorLead[]> {
-  let list = realtorLeads;
-  if (state) list = list.filter(l => l.state === state);
-  // keyword filter is a no-op in mock; placeholder for real integration
-  void keyword;
-  return list;
+export async function searchShortSaleListings(state?: string): Promise<RealtorLead[]> {
+  try {
+    const url = new URL(`${SUPABASE_URL}/functions/v1/zillow-sync`);
+    if (state) url.searchParams.set('state', state);
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: authedHeaders(),
+    });
+
+    if (!res.ok) {
+      // Integration not configured or not connected — fall back to mock data
+      console.warn('[zillow] sync unavailable, using mock data', { status: res.status });
+      return filterMock(state);
+    }
+
+    const data = await res.json() as { leads?: RealtorLead[] };
+    return data.leads || [];
+  } catch {
+    return filterMock(state);
+  }
+}
+
+function filterMock(state?: string): RealtorLead[] {
+  if (!state) return realtorLeads;
+  return realtorLeads.filter((l) => l.state === state);
 }
