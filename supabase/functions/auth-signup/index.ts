@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { signJwt } from "../_shared/jwt.ts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 
 const supabase = createClient(
@@ -28,7 +27,6 @@ Deno.serve(async (req) => {
 
   const { email, password, name } = body;
 
-  // Server-side validation
   if (!name || name.trim().length < 2) {
     return jsonResponse({ error: "Name must be at least 2 characters" }, 400);
   }
@@ -45,18 +43,27 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Password must contain at least one number" }, 400);
   }
 
-  // Check for existing email
+  // Check for existing email — return specific message based on existing account status
   const { data: existing } = await supabase
     .from("users")
-    .select("id")
+    .select("id, status")
     .filter("email", "ilike", email.trim())
     .limit(1);
 
   if (existing && existing.length > 0) {
+    const existingStatus = existing[0].status as string;
+    if (existingStatus === "pending") {
+      return jsonResponse({ error: "An account with this email is already awaiting approval." }, 409);
+    }
+    if (existingStatus === "rejected") {
+      return jsonResponse(
+        { error: "This email was not approved. Contact your administrator." },
+        409,
+      );
+    }
     return jsonResponse({ error: "Email already registered" }, 409);
   }
 
-  // Hash password via RPC
   const { data: hash, error: hashError } = await supabase.rpc("hash_password", {
     input_password: password,
   });
@@ -66,7 +73,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Internal server error" }, 500);
   }
 
-  // Insert new user (always 'rep' role on signup)
+  // Insert as pending — no JWT issued until CEO approves
   const { data: newUser, error: insertError } = await supabase
     .from("users")
     .insert({
@@ -74,8 +81,10 @@ Deno.serve(async (req) => {
       name: name.trim(),
       password_hash: hash,
       role: "rep",
+      status: "pending",
+      is_active: false,
     })
-    .select("id, email, name, role, avatar_color")
+    .select("id, email, name, role, status")
     .single();
 
   if (insertError || !newUser) {
@@ -83,16 +92,18 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Failed to create account" }, 500);
   }
 
-  const token = await signJwt({ sub: newUser.id, email: newUser.email, role: newUser.role });
-
-  return jsonResponse({
-    token,
-    user: {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role,
-      avatarColor: newUser.avatar_color,
+  return jsonResponse(
+    {
+      message:
+        "Account created. Your signup is pending CEO approval. You can sign in once approved.",
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role,
+        status: newUser.status,
+      },
     },
-  }, 201);
+    201,
+  );
 });

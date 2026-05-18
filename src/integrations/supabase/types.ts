@@ -25,6 +25,7 @@ export type Database = {
           name: string
           password_hash: string
           role: string
+          status: 'pending' | 'active' | 'rejected'
           updated_at: string
         }
         Insert: {
@@ -37,6 +38,7 @@ export type Database = {
           name: string
           password_hash: string
           role?: string
+          status?: 'pending' | 'active' | 'rejected'
           updated_at?: string
         }
         Update: {
@@ -49,6 +51,7 @@ export type Database = {
           name?: string
           password_hash?: string
           role?: string
+          status?: 'pending' | 'active' | 'rejected'
           updated_at?: string
         }
         Relationships: []

@@ -17,6 +17,9 @@ export interface AuthResponse {
   user?: AuthUser;
   token?: string;
   error?: string;
+  /** Set when signup succeeded but account is pending CEO approval (no token issued) */
+  pendingApproval?: boolean;
+  message?: string;
 }
 
 function baseHeaders(): Record<string, string> {
@@ -76,8 +79,8 @@ export async function signup(email: string, password: string, name: string): Pro
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.error ?? 'Sign-up failed' };
 
-    storeToken(data.token);
-    return { success: true, user: data.user, token: data.token };
+    // Signup now always returns pending — no token is issued
+    return { success: true, pendingApproval: true, message: data.message, user: data.user };
   } catch {
     return { success: false, error: 'Network error — please check your connection' };
   }
@@ -96,12 +99,19 @@ export async function getMe(): Promise<AuthResponse> {
       },
     });
 
-    if (res.status === 401 || res.status === 403) {
+    const data = await res.json();
+
+    if (res.status === 401) {
       clearToken();
-      return { success: false, error: 'Session expired' };
+      return { success: false, error: data.error ?? 'Session expired' };
     }
 
-    const data = await res.json();
+    if (res.status === 403) {
+      clearToken();
+      // Pass through the server's specific message (pending, rejected, deactivated)
+      return { success: false, error: data.error ?? 'Access denied' };
+    }
+
     if (!res.ok) return { success: false, error: data.error ?? 'Session restore failed' };
 
     return { success: true, user: data.user };
@@ -118,6 +128,7 @@ export interface AdminUserRow {
   role: 'ceo' | 'rep';
   avatar_color: string;
   is_active: boolean;
+  status: 'pending' | 'active' | 'rejected';
   last_login_at: string | null;
   created_at: string;
 }
@@ -136,8 +147,53 @@ export async function adminListUsers(): Promise<{ users?: AdminUserRow[]; error?
   }
 }
 
+export async function adminListPendingUsers(): Promise<{ users?: AdminUserRow[]; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/admin-users?status=pending`, {
+      method: 'GET',
+      headers: authedHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to fetch pending users' };
+    return { users: data.users };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function adminApproveUser(userId: string): Promise<{ user?: AdminUserRow; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/admin-users`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ action: 'approve', userId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to approve user' };
+    return { user: data.user };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+export async function adminRejectUser(userId: string): Promise<{ user?: AdminUserRow; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/admin-users`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ action: 'reject', userId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to reject user' };
+    return { user: data.user };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
 export async function adminCreateUser(payload: {
-  email: string; name: string; password: string; role: 'ceo' | 'rep'; avatarColor: string;
+  email: string; name: string; password: string; role: 'ceo' | 'rep';
+  avatarColor: string; approveImmediately?: boolean;
 }): Promise<{ user?: AdminUserRow; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/admin-users`, {

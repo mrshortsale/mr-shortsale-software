@@ -3,15 +3,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { Loader2, Plus, Pencil, Trash2, Search, AlertCircle, ShieldCheck, User } from 'lucide-react';
+import {
+  AlertCircle, CheckCircle2, Clock, Loader2, Pencil, Plus, Search,
+  ShieldCheck, Trash2, User, UserX, XCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  adminListUsers, adminCreateUser, adminUpdateUser, adminDeleteUser,
+  adminListUsers, adminListPendingUsers, adminCreateUser,
+  adminUpdateUser, adminDeleteUser, adminApproveUser, adminRejectUser,
   type AdminUserRow,
 } from '@/services/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -44,6 +49,7 @@ const createUserSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['ceo', 'rep'], { required_error: 'Role is required' }),
   avatarColor: z.string(),
+  approveImmediately: z.boolean(),
 });
 
 const editUserSchema = z.object({
@@ -74,6 +80,18 @@ function RoleBadge({ role }: { role: 'ceo' | 'rep' }) {
     : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary/10 text-secondary"><User size={11} /> Rep</span>;
 }
 
+function StatusBadge({ user }: { user: AdminUserRow }) {
+  if (user.status === 'pending') {
+    return <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium"><Clock size={11} />Pending</span>;
+  }
+  if (user.status === 'rejected') {
+    return <span className="inline-flex items-center gap-1.5 text-xs text-destructive font-medium"><UserX size={11} />Rejected</span>;
+  }
+  return user.is_active
+    ? <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />Active</span>
+    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />Inactive</span>;
+}
+
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
     <div className="flex gap-2 flex-wrap">
@@ -92,29 +110,37 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 
 // ─── Create user dialog ───────────────────────────────────────────────────────
 
-function CreateUserDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+function CreateUserDialog({ open, onClose, onCreated }: {
+  open: boolean; onClose: () => void; onCreated: () => void;
+}) {
   const [serverError, setServerError] = useState('');
 
   const form = useForm<CreateUserValues>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { name: '', email: '', password: '', role: 'rep', avatarColor: COLOR_SWATCHES[0] },
+    defaultValues: {
+      name: '', email: '', password: '', role: 'rep',
+      avatarColor: COLOR_SWATCHES[2], approveImmediately: false,
+    },
   });
 
   const onSubmit = async (values: CreateUserValues) => {
     setServerError('');
-    const result = await adminCreateUser(values as Required<CreateUserValues>);
-    if (result.error) {
-      setServerError(result.error);
-      return;
-    }
-    toast.success(`${values.name} has been added.`);
+    const result = await adminCreateUser(values);
+    if (result.error) { setServerError(result.error); return; }
+
+    const approved = values.approveImmediately;
+    toast.success(
+      approved
+        ? `${values.name} added and approved.`
+        : `${values.name} added — pending approval.`
+    );
     form.reset();
     onCreated();
     onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setServerError(''); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
@@ -163,6 +189,24 @@ function CreateUserDialog({ open, onClose, onCreated }: { open: boolean; onClose
               </FormItem>
             )} />
 
+            <FormField control={form.control} name="approveImmediately" render={({ field }) => (
+              <FormItem className="flex items-start gap-3 rounded-lg border p-3">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-0.5"
+                  />
+                </FormControl>
+                <div>
+                  <FormLabel className="mb-0 cursor-pointer">Approve immediately</FormLabel>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    If unchecked, account will be created as pending and must be approved separately.
+                  </p>
+                </div>
+              </FormItem>
+            )} />
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -179,50 +223,40 @@ function CreateUserDialog({ open, onClose, onCreated }: { open: boolean; onClose
 
 // ─── Edit user dialog ─────────────────────────────────────────────────────────
 
-function EditUserDialog({ user, open, onClose, onUpdated }: { user: AdminUserRow; open: boolean; onClose: () => void; onUpdated: () => void }) {
+function EditUserDialog({ user, open, onClose, onUpdated }: {
+  user: AdminUserRow; open: boolean; onClose: () => void; onUpdated: () => void;
+}) {
   const [serverError, setServerError] = useState('');
 
   const form = useForm<EditUserValues>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
-      name: user.name,
-      role: user.role,
-      avatarColor: user.avatar_color,
-      isActive: user.is_active,
-      password: '',
+      name: user.name, role: user.role, avatarColor: user.avatar_color,
+      isActive: user.is_active, password: '',
     },
   });
 
   useEffect(() => {
     form.reset({
-      name: user.name,
-      role: user.role,
-      avatarColor: user.avatar_color,
-      isActive: user.is_active,
-      password: '',
+      name: user.name, role: user.role, avatarColor: user.avatar_color,
+      isActive: user.is_active, password: '',
     });
   }, [user, form]);
 
   const onSubmit = async (values: EditUserValues) => {
     setServerError('');
     const result = await adminUpdateUser(user.id, {
-      name: values.name,
-      role: values.role,
-      avatarColor: values.avatarColor,
-      isActive: values.isActive,
-      password: values.password || undefined,
+      name: values.name, role: values.role, avatarColor: values.avatarColor,
+      isActive: values.isActive, password: values.password || undefined,
     });
-    if (result.error) {
-      setServerError(result.error);
-      return;
-    }
+    if (result.error) { setServerError(result.error); return; }
     toast.success(`${values.name} updated.`);
     onUpdated();
     onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setServerError(''); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
@@ -297,10 +331,159 @@ function EditUserDialog({ user, open, onClose, onUpdated }: { user: AdminUserRow
   );
 }
 
+// ─── Pending users section ────────────────────────────────────────────────────
+
+function PendingSection({ onApproved }: { onApproved: () => void }) {
+  const [pending, setPending] = useState<AdminUserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<AdminUserRow | null>(null);
+
+  const fetchPending = async () => {
+    setLoading(true);
+    setFetchError('');
+    const result = await adminListPendingUsers();
+    if (result.error) setFetchError(result.error);
+    else setPending(result.users ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchPending(); }, []);
+
+  const handleApprove = async (user: AdminUserRow) => {
+    setActionId(user.id);
+    const result = await adminApproveUser(user.id);
+    setActionId(null);
+    if (result.error) { toast.error(result.error); return; }
+    toast.success(`${user.name} approved.`);
+    fetchPending();
+    onApproved();
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget) return;
+    setActionId(rejectTarget.id);
+    const result = await adminRejectUser(rejectTarget.id);
+    setActionId(null);
+    setRejectTarget(null);
+    if (result.error) { toast.error(result.error); return; }
+    toast.success(`${rejectTarget.name}'s request rejected.`);
+    fetchPending();
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Review signup requests from new reps. Approved users can sign in immediately.
+      </p>
+
+      {fetchError && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertCircle size={15} className="shrink-0" />{fetchError}
+        </div>
+      )}
+
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10" />
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Requested</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <Loader2 size={20} className="animate-spin mx-auto" />
+                </TableCell>
+              </TableRow>
+            ) : pending.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                  <CheckCircle2 size={24} className="mx-auto mb-2 text-muted-foreground/40" />
+                  No pending signup requests
+                </TableCell>
+              </TableRow>
+            ) : pending.map((u) => (
+              <TableRow key={u.id}>
+                <TableCell>
+                  <UserAvatar name={u.name} color={u.avatar_color} size="sm" />
+                </TableCell>
+                <TableCell className="font-medium">{u.name}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {format(new Date(u.created_at), 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-xs border-green-500/40 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                      disabled={actionId === u.id}
+                      onClick={() => handleApprove(u)}
+                    >
+                      {actionId === u.id
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : <CheckCircle2 size={12} />}
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-xs border-destructive/40 text-destructive hover:bg-destructive/5"
+                      disabled={actionId === u.id}
+                      onClick={() => setRejectTarget(u)}
+                    >
+                      <XCircle size={12} />
+                      Reject
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog open={!!rejectTarget} onOpenChange={(o) => { if (!o) setRejectTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject {rejectTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Their account will be marked as rejected. They will not be able to sign in and cannot
+              re-register with the same email. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReject}
+              disabled={!!actionId}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {actionId ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+              Reject Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
+
+type Tab = 'all' | 'pending';
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>('all');
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -311,15 +494,18 @@ export default function UserManagement() {
   const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [pendingCount, setPendingCount] = useState(0);
+
   const fetchUsers = async () => {
     setLoading(true);
     setFetchError('');
-    const result = await adminListUsers();
-    if (result.error) {
-      setFetchError(result.error);
-    } else {
-      setUsers(result.users ?? []);
-    }
+    const [mainResult, pendingResult] = await Promise.all([
+      adminListUsers(),
+      adminListPendingUsers(),
+    ]);
+    if (mainResult.error) setFetchError(mainResult.error);
+    else setUsers(mainResult.users ?? []);
+    setPendingCount(pendingResult.users?.length ?? 0);
     setLoading(false);
   };
 
@@ -358,89 +544,123 @@ export default function UserManagement() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-xs">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or email…"
-          className="pl-8 h-9 text-sm"
-        />
+      {/* Tabs */}
+      <div className="flex gap-1 border-b">
+        <button
+          type="button"
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === 'all'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          All users
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px flex items-center gap-2 ${
+            activeTab === 'pending'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Pending approval
+          {pendingCount > 0 && (
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {pendingCount}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* Error state */}
-      {fetchError && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          <AlertCircle size={15} className="shrink-0" />{fetchError}
-        </div>
+      {/* Pending section */}
+      {activeTab === 'pending' && (
+        <PendingSection onApproved={fetchUsers} />
       )}
 
-      {/* Table */}
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10" />
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-20 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  <Loader2 size={20} className="animate-spin mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : filtered.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
-                  No users found.
-                </TableCell>
-              </TableRow>
-            ) : filtered.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell>
-                  <UserAvatar name={u.name} color={u.avatar_color} size="sm" />
-                </TableCell>
-                <TableCell className="font-medium">{u.name}</TableCell>
-                <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
-                <TableCell><RoleBadge role={u.role} /></TableCell>
-                <TableCell>
-                  {u.is_active
-                    ? <span className="inline-flex items-center gap-1.5 text-xs text-accent font-medium"><span className="w-1.5 h-1.5 rounded-full bg-accent" />Active</span>
-                    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />Inactive</span>
-                  }
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {format(new Date(u.created_at), 'MMM d, yyyy')}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTarget(u)}>
-                      <Pencil size={13} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
-                      disabled={u.id === currentUser?.id}
-                      onClick={() => setDeleteTarget(u)}
-                    >
-                      <Trash2 size={13} />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {/* All users section */}
+      {activeTab === 'all' && (
+        <>
+          {/* Search */}
+          <div className="relative max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              className="pl-8 h-9 text-sm"
+            />
+          </div>
+
+          {fetchError && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <AlertCircle size={15} className="shrink-0" />{fetchError}
+            </div>
+          )}
+
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10" />
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="w-20 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                      <Loader2 size={20} className="animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
+                      No users found.
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <UserAvatar name={u.name} color={u.avatar_color} size="sm" />
+                    </TableCell>
+                    <TableCell className="font-medium">{u.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{u.email}</TableCell>
+                    <TableCell><RoleBadge role={u.role} /></TableCell>
+                    <TableCell><StatusBadge user={u} /></TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {format(new Date(u.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTarget(u)}>
+                          <Pencil size={13} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          disabled={u.id === currentUser?.id}
+                          onClick={() => setDeleteTarget(u)}
+                        >
+                          <Trash2 size={13} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
 
       {/* Dialogs */}
       <CreateUserDialog

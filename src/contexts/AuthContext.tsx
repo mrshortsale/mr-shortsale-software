@@ -15,7 +15,12 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, name: string) => Promise<{
+    success: boolean;
+    error?: string;
+    pendingApproval?: boolean;
+    message?: string;
+  }>;
   logout: () => void;
 }
 
@@ -23,7 +28,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   login: async () => ({ success: false }),
-  signup: async () => ({ success: false }),
+  signup: async () => ({ success: false as const }),
   logout: () => {},
 });
 
@@ -63,11 +68,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(async (email: string, password: string, name: string) => {
     const result = await authService.signup(email, password, name);
-    if (result.success && result.user) {
-      setUser(result.user as User);
-      return { success: true };
+    if (!result.success) {
+      return { success: false, error: result.error };
     }
-    return { success: false, error: result.error };
+    // Pending approval — do not log the user in
+    if (result.pendingApproval) {
+      return { success: true, pendingApproval: true, message: result.message };
+    }
+    if (result.user) {
+      setUser(result.user as User);
+    }
+    return { success: true };
   }, []);
 
   const logout = useCallback(() => {

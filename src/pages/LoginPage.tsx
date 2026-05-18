@@ -5,13 +5,11 @@ import { z } from 'zod';
 import {
   AlertCircle,
   Brain,
-  Briefcase,
-  Crown,
+  CheckCircle2,
   Eye,
   EyeOff,
   Loader2,
   Moon,
-  Sparkles,
   Sun,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -221,6 +219,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
 function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   const { signup } = useAuth();
   const [serverError, setServerError] = useState('');
+  const [pendingMessage, setPendingMessage] = useState('');
 
   const form = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
@@ -231,17 +230,51 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
 
   const onSubmit = async (values: SignUpValues) => {
     setServerError('');
+    setPendingMessage('');
     const result = await signup(values.email, values.password, values.name);
     if (!result.success) {
       setServerError(result.error ?? 'Sign-up failed. Please try again.');
+      return;
+    }
+    if (result.pendingApproval) {
+      setPendingMessage(
+        result.message ??
+          'Account created. Your signup is pending CEO approval. You can sign in once approved.'
+      );
+      form.reset();
     }
   };
+
+  if (pendingMessage) {
+    return (
+      <Card className="shadow-premium">
+        <CardContent className="pt-8 pb-8">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Account submitted</p>
+              <p className="mt-1 text-sm text-muted-foreground">{pendingMessage}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onSwitch}
+              className="mt-2 text-sm font-semibold text-primary hover:underline"
+            >
+              Back to Sign in
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-premium">
       <CardHeader>
         <CardTitle className="text-xl">Create your account</CardTitle>
-        <CardDescription>Join the AI operations platform</CardDescription>
+        <CardDescription>New rep accounts require CEO approval before sign-in</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {serverError && (
@@ -329,11 +362,6 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
                 </FormItem>
               )}
             />
-
-            <p className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-              New accounts are created as <span className="font-semibold text-foreground">Sales Rep</span>.
-              A CEO can change your role later.
-            </p>
 
             <Button type="submit" className="h-10 w-full font-medium" disabled={isSubmitting}>
               {isSubmitting ? (

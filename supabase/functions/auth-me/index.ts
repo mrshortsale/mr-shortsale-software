@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
   const { data: user, error } = await supabase
     .from("users")
-    .select("id, email, name, role, avatar_color, is_active")
+    .select("id, email, name, role, avatar_color, is_active, status")
     .eq("id", payload.sub)
     .single();
 
@@ -39,8 +39,22 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "User not found" }, 401);
   }
 
+  if (user.status === "pending") {
+    return jsonResponse(
+      { error: "Your account is pending approval. Please contact your administrator." },
+      403,
+    );
+  }
+
+  if (user.status === "rejected") {
+    return jsonResponse(
+      { error: "Your signup request was not approved. Please contact your administrator." },
+      403,
+    );
+  }
+
   if (!user.is_active) {
-    return jsonResponse({ error: "Account is deactivated" }, 403);
+    return jsonResponse({ error: "Account is deactivated. Contact your administrator." }, 403);
   }
 
   return jsonResponse({
