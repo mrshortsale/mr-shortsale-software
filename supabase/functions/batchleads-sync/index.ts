@@ -9,18 +9,36 @@ import {
   loadBatchLeadsCredentials,
   logBatchApiCall,
   mapBatchRowToInventoryLead,
+  type SyncMode,
 } from "../_shared/batchleads.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+// Clock-skew buffer applied when computing the incremental watermark
+const WATERMARK_BUFFER_MS = 10 * 60 * 1000; // 10 minutes
 const STALE_RUN_MS = 3 * 60 * 1000;
 const RESUMABLE_STATUSES = new Set(["running", "partial", "paused"]);
 const CONTROLLABLE_STATUSES = new Set(["running", "partial", "paused"]);
 
 type RunStatus = string;
+
+interface RunMeta {
+  nextPage?: number;
+  mode?: SyncMode;
+  since?: string;
+  maxPages?: number;
+  startPage?: number;
+  lastPage?: number;
+  totalAvailable?: number;
+  completed?: boolean;
+  // Cumulative across all background chunks of this run
+  cumulativeNew?: number;
+  cumulativeUpdated?: number;
+  pagesProcessedTotal?: number;
+}
 
 async function requireCeo(req: Request): Promise<string | null> {
   const authHeader = req.headers.get("x-auth-token") || req.headers.get("authorization");
@@ -50,7 +68,14 @@ function bearerToken(req: Request): string | null {
 
 function isInternalContinue(req: Request, body: Record<string, unknown>): boolean {
   if (body._internalContinue !== true || !body.runId) return false;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceKey = Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY");
+  return !!serviceKey && bearerToken(req) === serviceKey;
+}
+
+/** True when the request comes from the midnight cron trigger (service role key bearer). */
+function isScheduledTrigger(req: Request, body: Record<string, unknown>): boolean {
+  if (body._scheduledTrigger !== true) return false;
+  const serviceKey = Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY");
   return !!serviceKey && bearerToken(req) === serviceKey;
 }
 
@@ -103,15 +128,15 @@ async function reconcileStaleRun(
     : new Date(String(run.started_at)).getTime();
   if (Date.now() - updatedAt < STALE_RUN_MS) return run;
 
-  const meta = (run.metadata ?? {}) as { nextPage?: number; completed?: boolean };
+  const meta = (run.metadata ?? {}) as RunMeta;
   if (meta.completed || meta.nextPage == null) return run;
 
-  const batchCount = await countBatchLeads();
+  const leadsInDb = await countBatchLeads();
   const { data } = await supabase
     .from("inventory_sync_runs")
     .update({
       status: "partial",
-      leads_upserted: batchCount,
+      leads_upserted: leadsInDb,
       error_message: "Sync paused — resume to fetch remaining leads",
       updated_at: new Date().toISOString(),
     })
@@ -119,7 +144,7 @@ async function reconcileStaleRun(
     .select("*")
     .single();
 
-  return data ?? { ...run, status: "partial", leads_upserted: batchCount };
+  return data ?? { ...run, status: "partial", leads_upserted: leadsInDb };
 }
 
 function scheduleBackgroundContinue(
@@ -128,7 +153,7 @@ function scheduleBackgroundContinue(
   maxPages: number,
 ): void {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/batchleads-sync`;
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const key = Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!;
 
   fetch(url, {
     method: "POST",
@@ -152,29 +177,47 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function runFlags(lastRun: Record<string, unknown> | null, batchLeadCount: number) {
+function runFlags(lastRun: Record<string, unknown> | null, leadsInDb: number) {
   const status = lastRun ? String(lastRun.status) : "";
-  const meta = (lastRun?.metadata ?? {}) as {
-    completed?: boolean;
-    nextPage?: number | null;
-    totalAvailable?: number;
-  };
+  const meta = (lastRun?.metadata ?? {}) as RunMeta;
 
   return {
-    batchLeadCount,
+    leadsInDb,
     syncInProgress: status === "running",
     canPause: status === "running",
     canResume: (status === "paused" || status === "partial"),
     canStop: CONTROLLABLE_STATUSES.has(status),
+    lastRunMode: meta.mode ?? "full",
     progress: lastRun
       ? {
           completed: meta.completed === true || status === "success",
           nextPage: meta.nextPage ?? null,
           totalAvailable: meta.totalAvailable ?? null,
-          leadsInDb: batchLeadCount,
+          leadsInDb,
+          // Cumulative stats across all chunks of the current run
+          cumulativeNew: meta.cumulativeNew ?? 0,
+          cumulativeUpdated: meta.cumulativeUpdated ?? 0,
+          pagesProcessedTotal: meta.pagesProcessedTotal ?? 0,
         }
       : null,
   };
+}
+
+/** Returns the last successful sync's completed_at minus the buffer, as ISO string. */
+async function getIncrementalWatermark(): Promise<string | null> {
+  const { data } = await supabase
+    .from("inventory_sync_runs")
+    .select("completed_at")
+    .eq("source", "Batch")
+    .eq("status", "success")
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data?.completed_at) return null;
+
+  const ms = new Date(data.completed_at).getTime() - WATERMARK_BUFFER_MS;
+  return new Date(ms).toISOString();
 }
 
 async function handlePause(runId?: string) {
@@ -201,7 +244,7 @@ async function handlePause(runId?: string) {
     return jsonResponse({ error: "Sync already finished or paused" }, 409);
   }
 
-  return jsonResponse({ ok: true, run: data, leadsUpserted: leadsInDb });
+  return jsonResponse({ ok: true, run: data, leadsInDb });
 }
 
 async function handleStop(runId?: string) {
@@ -229,7 +272,7 @@ async function handleStop(runId?: string) {
     return jsonResponse({ error: "Could not stop sync" }, 409);
   }
 
-  return jsonResponse({ ok: true, run: data, leadsUpserted: leadsInDb });
+  return jsonResponse({ ok: true, run: data, leadsInDb });
 }
 
 Deno.serve(async (req) => {
@@ -240,6 +283,7 @@ Deno.serve(async (req) => {
 
   let body: {
     action?: string;
+    mode?: SyncMode;
     startPage?: number;
     maxPages?: number;
     runId?: string;
@@ -257,12 +301,15 @@ Deno.serve(async (req) => {
   }
 
   const internal = isInternalContinue(req, body);
-  if (!internal) {
+  const scheduled = isScheduledTrigger(req, body);
+  if (!internal && !scheduled) {
     const ceoId = await requireCeo(req);
     if (!ceoId) {
       return jsonResponse({ error: "Unauthorized — CEO access required" }, 403);
     }
   }
+
+  // ─── GET ───────────────────────────────────────────────────────────────────
 
   if (req.method === "GET") {
     if (url.searchParams.get("list") === "1") {
@@ -294,7 +341,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     lastRun = await reconcileStaleRun(lastRun);
-    const batchLeadCount = await countBatchLeads();
+    const leadsInDb = await countBatchLeads();
 
     let batchConnected = false;
     try {
@@ -304,12 +351,17 @@ Deno.serve(async (req) => {
       batchConnected = false;
     }
 
+    const watermark = await getIncrementalWatermark();
+
     return jsonResponse({
       batchConnected,
       lastRun,
-      ...runFlags(lastRun, batchLeadCount),
+      hasIncrementalBaseline: watermark !== null,
+      ...runFlags(lastRun, leadsInDb),
     });
   }
+
+  // ─── POST ──────────────────────────────────────────────────────────────────
 
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
@@ -335,12 +387,29 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Unknown action" }, 400);
   }
 
+  const requestedMode: SyncMode = body.mode === "incremental" ? "incremental" : "full";
   const maxPages = Math.min(50, Math.max(1, Number(body.maxPages ?? DEFAULT_MAX_PAGES_PER_RUN)));
   const continueInBackground = body.background !== false;
 
   let startPage = Math.max(1, Number(body.startPage ?? 1));
   let runId = body.runId;
   let runRow: Record<string, unknown> | null = null;
+  let syncMode: SyncMode = requestedMode;
+  let incrementalSince: string | null = null;
+
+  // ─── Resolve watermark for incremental ─────────────────────────────────────
+
+  if (requestedMode === "incremental" && body.action !== "resume") {
+    incrementalSince = await getIncrementalWatermark();
+    if (!incrementalSince) {
+      return jsonResponse(
+        { error: "Run a Full refresh first to establish a baseline before using Incremental sync." },
+        400,
+      );
+    }
+  }
+
+  // ─── Resume existing run ────────────────────────────────────────────────────
 
   if (body.action === "resume" || (runId && !body.force)) {
     if (!runId) {
@@ -372,8 +441,12 @@ Deno.serve(async (req) => {
     } else if (runRow.status === "stopped") {
       return jsonResponse({ error: "This sync was stopped. Start a new sync instead." }, 400);
     } else {
-      const meta = (runRow.metadata ?? {}) as { nextPage?: number };
+      const meta = (runRow.metadata ?? {}) as RunMeta;
       if (meta.nextPage) startPage = meta.nextPage;
+      syncMode = meta.mode ?? "full";
+      if (syncMode === "incremental") {
+        incrementalSince = meta.since ?? null;
+      }
       await supabase
         .from("inventory_sync_runs")
         .update({ status: "running", error_message: null, updated_at: new Date().toISOString() })
@@ -381,6 +454,8 @@ Deno.serve(async (req) => {
       runRow.status = "running";
     }
   }
+
+  // ─── Create new run ─────────────────────────────────────────────────────────
 
   if (!runId) {
     const { data: active } = await supabase
@@ -393,7 +468,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (active && !body.force) {
-      const meta = (active.metadata ?? {}) as { nextPage?: number };
+      const meta = (active.metadata ?? {}) as RunMeta;
       runId = active.id;
       if (meta.nextPage) startPage = meta.nextPage;
     } else {
@@ -420,7 +495,15 @@ Deno.serve(async (req) => {
         .insert({
           source: "Batch",
           status: "running",
-          metadata: { startPage, maxPages },
+          metadata: {
+            startPage,
+            maxPages,
+            mode: syncMode,
+            since: incrementalSince,
+            cumulativeNew: 0,
+            cumulativeUpdated: 0,
+            pagesProcessedTotal: 0,
+          },
           updated_at: new Date().toISOString(),
         })
         .select("*")
@@ -444,15 +527,29 @@ Deno.serve(async (req) => {
     if (!runRow || !RESUMABLE_STATUSES.has(String(runRow.status))) {
       return jsonResponse({ error: "Sync run not found or already finished" }, 400);
     }
-    const meta = (runRow.metadata ?? {}) as { nextPage?: number };
+    const meta = (runRow.metadata ?? {}) as RunMeta;
     if (meta.nextPage && !body.startPage) startPage = meta.nextPage;
+    syncMode = meta.mode ?? syncMode;
+    if (syncMode === "incremental" && meta.since) incrementalSince = meta.since;
   }
+
+  // ─── Carry forward cumulative stats from previous chunks ───────────────────
+
+  const prevMeta = (runRow?.metadata ?? {}) as RunMeta;
+  let cumulativeNew = prevMeta.cumulativeNew ?? 0;
+  let cumulativeUpdated = prevMeta.cumulativeUpdated ?? 0;
+  let pagesProcessedTotal = prevMeta.pagesProcessedTotal ?? 0;
+
+  // ─── Sync loop ─────────────────────────────────────────────────────────────
 
   const started = Date.now();
   let pagesProcessed = 0;
   let lastPage = startPage - 1;
   let totalAvailable = 0;
   let completed = false;
+  // Per-chunk counters (reset each background invocation)
+  let chunkNew = 0;
+  let chunkUpdated = 0;
 
   try {
     const { integrationId, credentialId, credentials } = await loadBatchLeadsCredentials(
@@ -469,15 +566,12 @@ Deno.serve(async (req) => {
         const leadsInDb = await countBatchLeads();
         await supabase
           .from("inventory_sync_runs")
-          .update({
-            leads_upserted: leadsInDb,
-            updated_at: new Date().toISOString(),
-          })
+          .update({ leads_upserted: leadsInDb, updated_at: new Date().toISOString() })
           .eq("id", runId);
         return jsonResponse({
           runId,
           paused: true,
-          leadsUpserted: leadsInDb,
+          leadsInDb,
           pagesProcessed,
           lastPage,
           totalAvailable,
@@ -491,7 +585,7 @@ Deno.serve(async (req) => {
         return jsonResponse({
           runId,
           stopped: true,
-          leadsUpserted: leadsInDb,
+          leadsInDb,
           pagesProcessed,
           durationMs: Date.now() - started,
         });
@@ -504,6 +598,8 @@ Deno.serve(async (req) => {
         page,
         pageSize: DEFAULT_PAGE_SIZE,
         listIds: [],
+        mode: syncMode,
+        updatedSince: incrementalSince ?? undefined,
       });
 
       await logBatchApiCall(
@@ -519,19 +615,38 @@ Deno.serve(async (req) => {
       totalAvailable = pageResult.meta.total;
       lastPage = page;
       pagesProcessed++;
+      pagesProcessedTotal++;
 
-      const batchRows = [];
+      const rowsToUpsert = [];
       for (const row of pageResult.rows) {
         const mapped = mapBatchRowToInventoryLead(row);
         if (seen.has(mapped.external_id)) continue;
         seen.add(mapped.external_id);
-        batchRows.push(mapped);
+        rowsToUpsert.push(mapped);
       }
 
-      if (batchRows.length > 0) {
+      if (rowsToUpsert.length > 0) {
+        // Determine which rows are new vs already in the DB
+        const externalIds = rowsToUpsert.map((r) => r.external_id);
+        const { data: existing } = await supabase
+          .from("inventory_leads")
+          .select("external_id")
+          .eq("source", "Batch")
+          .in("external_id", externalIds);
+
+        const existingSet = new Set(
+          (existing ?? []).map((r: { external_id: string }) => r.external_id),
+        );
+        const pageNew = rowsToUpsert.filter((r) => !existingSet.has(r.external_id)).length;
+        const pageUpdated = rowsToUpsert.filter((r) => existingSet.has(r.external_id)).length;
+        chunkNew += pageNew;
+        chunkUpdated += pageUpdated;
+        cumulativeNew += pageNew;
+        cumulativeUpdated += pageUpdated;
+
         const { error: upsertErr } = await supabase
           .from("inventory_leads")
-          .upsert(batchRows, { onConflict: "source,external_id" });
+          .upsert(rowsToUpsert, { onConflict: "source,external_id" });
 
         if (upsertErr) throw new Error(upsertErr.message);
       }
@@ -548,14 +663,18 @@ Deno.serve(async (req) => {
 
     const leadsInDb = await countBatchLeads();
     const nextPage = completed ? null : lastPage + 1;
-    const metadata = {
-      startPage,
+    const metadata: RunMeta = {
+      startPage: prevMeta.startPage ?? startPage,
       maxPages,
       lastPage,
       nextPage,
       totalAvailable,
-      pagesProcessedThisRun: pagesProcessed,
+      pagesProcessedTotal,
       completed,
+      mode: syncMode,
+      since: incrementalSince,
+      cumulativeNew,
+      cumulativeUpdated,
     };
 
     const finalStatus = await getRunStatus(runId!);
@@ -564,7 +683,7 @@ Deno.serve(async (req) => {
         runId,
         paused: finalStatus === "paused",
         stopped: finalStatus === "stopped",
-        leadsUpserted: leadsInDb,
+        leadsInDb,
         pagesProcessed,
         durationMs: Date.now() - started,
       });
@@ -592,8 +711,17 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       runId,
-      leadsUpserted: leadsInDb,
+      mode: syncMode,
+      // leadsInDb = total Batch leads in database (not "upserted this run")
+      leadsInDb,
+      // Per-chunk counts (this background invocation only)
+      chunkNew,
+      chunkUpdated,
+      // Cumulative counts across all chunks of this run
+      cumulativeNew,
+      cumulativeUpdated,
       pagesProcessed,
+      pagesProcessedTotal,
       lastPage,
       totalAvailable,
       completed,
@@ -604,7 +732,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Sync failed";
     const leadsInDb = await countBatchLeads();
-    const meta = (runRow?.metadata ?? {}) as { nextPage?: number };
+    const meta = (runRow?.metadata ?? {}) as RunMeta;
 
     await supabase
       .from("inventory_sync_runs")
@@ -614,12 +742,14 @@ Deno.serve(async (req) => {
         leads_upserted: leadsInDb,
         error_message: message,
         metadata: {
-          startPage,
-          maxPages,
+          ...meta,
           lastPage,
           totalAvailable,
           nextPage: meta.nextPage ?? null,
           completed: false,
+          cumulativeNew,
+          cumulativeUpdated,
+          pagesProcessedTotal,
         },
         updated_at: new Date().toISOString(),
       })

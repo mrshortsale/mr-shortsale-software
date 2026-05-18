@@ -55,12 +55,20 @@ export function normalizeBaseUrl(url: string | undefined | null): string {
   return trimmed.replace(/\/api\/v1\/?.*$/i, "") || BATCH_LEADS_DEFAULT_BASE;
 }
 
+export type SyncMode = "full" | "incremental";
+
 export function buildPropertyRequestBody(options: {
   page: number;
   pageSize?: number;
   listIds?: number[];
+  mode?: SyncMode;
+  /**
+   * ISO watermark for incremental mode. Batch API accepts `added_date` as "YYYY-MM-DD"
+   * to return only leads added on or after that date. The time portion is dropped.
+   */
+  updatedSince?: string;
 }): Record<string, unknown> {
-  return {
+  const body: Record<string, unknown> = {
     list_id: options.listIds ?? [],
     list_id2: [],
     lead_status: [1],
@@ -93,6 +101,15 @@ export function buildPropertyRequestBody(options: {
     has_phone_numbers: "1",
     ui_version: 2,
   };
+
+  // Incremental: pass added_date as YYYY-MM-DD so Batch filters server-side.
+  // This returns only leads added on/after the watermark date — meta.total will be
+  // the count of genuinely new leads, not the full 70k.
+  if (options.mode === "incremental" && options.updatedSince) {
+    body.added_date = options.updatedSince.slice(0, 10);
+  }
+
+  return body;
 }
 
 export async function batchFetch(
@@ -158,7 +175,7 @@ export async function fetchLists(
 
 export async function fetchSavedAddressesPage(
   creds: BatchLeadsCredentials,
-  options: { page: number; pageSize?: number; listIds?: number[] },
+  options: { page: number; pageSize?: number; listIds?: number[]; mode?: SyncMode; updatedSince?: string },
 ): Promise<BatchPropertyPage> {
   const body = buildPropertyRequestBody(options);
   const { statusCode, json } = await batchFetch(

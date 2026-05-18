@@ -16,6 +16,8 @@ function authedHeaders(): Record<string, string> {
   };
 }
 
+export type SyncMode = 'full' | 'incremental';
+
 export interface InventorySyncRun {
   id: string;
   source: string;
@@ -31,12 +33,23 @@ export interface InventorySyncRun {
     nextPage?: number | null;
     totalAvailable?: number;
     lastPage?: number;
+    mode?: SyncMode;
+    since?: string | null;
+    cumulativeNew?: number;
+    cumulativeUpdated?: number;
+    pagesProcessedTotal?: number;
   };
 }
 
 export interface InventorySyncStatus {
   batchConnected: boolean;
-  batchLeadCount: number;
+  /** Total Batch leads currently in the database. */
+  leadsInDb: number;
+  /** @deprecated use leadsInDb */
+  batchLeadCount?: number;
+  /** True when a prior successful sync run exists (required for incremental). */
+  hasIncrementalBaseline?: boolean;
+  lastRunMode?: SyncMode;
   syncInProgress?: boolean;
   canPause?: boolean;
   canResume?: boolean;
@@ -44,8 +57,12 @@ export interface InventorySyncStatus {
   progress?: {
     completed: boolean;
     nextPage: number | null;
+    /** Total leads in Batch matching the current query (not a progress denominator for incremental). */
     totalAvailable: number | null;
     leadsInDb: number;
+    cumulativeNew: number;
+    cumulativeUpdated: number;
+    pagesProcessedTotal: number;
   } | null;
   lastRun: {
     id: string;
@@ -58,14 +75,29 @@ export interface InventorySyncStatus {
       completed?: boolean;
       nextPage?: number | null;
       totalAvailable?: number;
+      mode?: SyncMode;
+      cumulativeNew?: number;
+      cumulativeUpdated?: number;
+      pagesProcessedTotal?: number;
     };
   } | null;
 }
 
 export interface InventorySyncResult {
   runId: string;
-  leadsUpserted: number;
+  mode?: SyncMode;
+  /** Total Batch leads in the database after this chunk. */
+  leadsInDb: number;
+  /** New leads added in this background chunk only. */
+  chunkNew: number;
+  /** Existing leads updated in this background chunk only. */
+  chunkUpdated: number;
+  /** Cumulative new leads across all chunks of this run. */
+  cumulativeNew: number;
+  /** Cumulative updated leads across all chunks of this run. */
+  cumulativeUpdated: number;
   pagesProcessed: number;
+  pagesProcessedTotal: number;
   lastPage: number;
   totalAvailable: number;
   completed: boolean;
@@ -107,8 +139,14 @@ export async function getBatchSyncStatus(): Promise<{ data?: InventorySyncStatus
       method: 'GET',
       headers: authedHeaders(),
     });
-    const data = await res.json();
-    if (!res.ok) return { error: data.error ?? 'Failed to load sync status' };
+    const raw = await res.json();
+    if (!res.ok) return { error: raw.error ?? 'Failed to load sync status' };
+    // Normalise: server now sends leadsInDb; keep batchLeadCount alias for any consumers not yet updated
+    const data: InventorySyncStatus = {
+      ...raw,
+      leadsInDb: raw.leadsInDb ?? raw.batchLeadCount ?? 0,
+      batchLeadCount: raw.leadsInDb ?? raw.batchLeadCount ?? 0,
+    };
     return { data };
   } catch {
     return { error: 'Network error' };
@@ -122,6 +160,7 @@ export async function syncBatchLeads(options?: {
   background?: boolean;
   force?: boolean;
   action?: 'sync' | 'resume';
+  mode?: SyncMode;
 }): Promise<{ result?: InventorySyncResult; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/batchleads-sync`, {
@@ -212,58 +251,44 @@ function delay(ms: number): Promise<void> {
 /** Poll until sync finishes; server chains chunks in the background after the first POST. */
 export async function waitForBatchSyncComplete(
   onProgress?: (status: InventorySyncStatus) => void,
-): Promise<{ totalUpserted: number; completed: boolean; error?: string }> {
+): Promise<{ leadsInDb: number; completed: boolean; error?: string }> {
   const started = Date.now();
 
   while (Date.now() - started < SYNC_POLL_MAX_MS) {
     await delay(SYNC_POLL_MS);
     const { data, error } = await getBatchSyncStatus();
-    if (error || !data) return { totalUpserted: 0, completed: false, error: error ?? 'Status unavailable' };
+    if (error || !data) return { leadsInDb: 0, completed: false, error: error ?? 'Status unavailable' };
 
     onProgress?.(data);
 
+    const leadsInDb = data.leadsInDb;
     const run = data.lastRun;
-    if (!run) return { totalUpserted: data.batchLeadCount, completed: true };
+    if (!run) return { leadsInDb, completed: true };
 
     if (run.status === 'success') {
-      return { totalUpserted: data.batchLeadCount, completed: true };
+      return { leadsInDb, completed: true };
     }
 
     if (run.status === 'failed') {
-      return {
-        totalUpserted: data.batchLeadCount,
-        completed: false,
-        error: run.error_message ?? 'Sync failed',
-      };
+      return { leadsInDb, completed: false, error: run.error_message ?? 'Sync failed' };
     }
 
     if (run.status === 'stopped') {
-      return {
-        totalUpserted: data.batchLeadCount,
-        completed: false,
-        error: run.error_message ?? 'Sync stopped',
-      };
+      return { leadsInDb, completed: false, error: run.error_message ?? 'Sync stopped' };
     }
 
     if (run.status === 'paused' && !data.syncInProgress) {
-      return {
-        totalUpserted: data.batchLeadCount,
-        completed: false,
-        error: 'Sync paused',
-      };
+      return { leadsInDb, completed: false, error: 'Sync paused' };
     }
 
     if (run.status === 'partial' && !data.syncInProgress) {
-      const total = data.progress?.totalAvailable;
-      const msg = total != null && data.batchLeadCount < total
-        ? `Partial sync: ${data.batchLeadCount.toLocaleString()} of ~${total.toLocaleString()} leads. Click Continue sync.`
-        : (run.error_message ?? 'Sync paused — click Continue sync');
-      return { totalUpserted: data.batchLeadCount, completed: false, error: msg };
+      const msg = run.error_message ?? 'Sync paused — click Continue sync';
+      return { leadsInDb, completed: false, error: msg };
     }
   }
 
   return {
-    totalUpserted: 0,
+    leadsInDb: 0,
     completed: false,
     error: 'Sync is still running in the background. Refresh the page in a few minutes.',
   };
@@ -271,32 +296,37 @@ export async function waitForBatchSyncComplete(
 
 export async function syncBatchLeadsUntilComplete(
   onProgress?: (result: InventorySyncResult) => void,
-  options?: { force?: boolean },
-): Promise<{ totalUpserted: number; completed: boolean; error?: string }> {
+  options?: { force?: boolean; mode?: SyncMode },
+): Promise<{ leadsInDb: number; completed: boolean; error?: string }> {
   const { data: status } = await getBatchSyncStatus();
   const shouldResume = status?.canResume && status.lastRun?.status !== 'stopped' && !options?.force;
   const action = shouldResume ? 'resume' : 'sync';
 
   const { result, error } = action === 'resume'
     ? await resumeBatchLeads(status?.lastRun?.id)
-    : await syncBatchLeads({ action: 'sync', force: options?.force ?? !shouldResume });
+    : await syncBatchLeads({ action: 'sync', force: options?.force ?? !shouldResume, mode: options?.mode ?? 'full' });
 
   if (error || !result) {
-    return { totalUpserted: status?.batchLeadCount ?? 0, completed: false, error: error ?? 'Sync failed' };
+    return { leadsInDb: status?.leadsInDb ?? 0, completed: false, error: error ?? 'Sync failed' };
   }
 
   onProgress?.(result);
 
   if (result.completed) {
-    return { totalUpserted: result.leadsUpserted, completed: true };
+    return { leadsInDb: result.leadsInDb, completed: true };
   }
 
   return waitForBatchSyncComplete((s) => {
     if (s.lastRun && s.progress) {
       onProgress?.({
         runId: s.lastRun.id,
-        leadsUpserted: s.progress.leadsInDb,
+        leadsInDb: s.progress.leadsInDb,
+        chunkNew: 0,
+        chunkUpdated: 0,
+        cumulativeNew: s.progress.cumulativeNew,
+        cumulativeUpdated: s.progress.cumulativeUpdated,
         pagesProcessed: 0,
+        pagesProcessedTotal: s.progress.pagesProcessedTotal,
         lastPage: 0,
         totalAvailable: s.progress.totalAvailable ?? 0,
         completed: s.progress.completed,
@@ -367,23 +397,40 @@ export function formatSyncProgress(status: InventorySyncStatus | undefined): str
   if (!status?.lastRun) return null;
   const { lastRun, progress, syncInProgress } = status;
   if (lastRun.status === 'success') return null;
+
+  const mode = lastRun.metadata?.mode ?? 'full';
+  const leadsInDb = status.leadsInDb;
+
   if (syncInProgress || lastRun.status === 'running') {
+    if (mode === 'incremental') {
+      const n = progress?.cumulativeNew ?? 0;
+      const u = progress?.cumulativeUpdated ?? 0;
+      const pages = progress?.pagesProcessedTotal ?? 0;
+      if (n > 0 || u > 0) {
+        return `Incremental sync… ${n.toLocaleString()} new, ${u.toLocaleString()} updated (${pages} pages)`;
+      }
+      return `Incremental sync… scanning for new leads`;
+    }
+    // Full sync: show DB count vs Batch total (these are comparable in full mode)
     const total = progress?.totalAvailable;
-    const n = progress?.leadsInDb ?? status.batchLeadCount;
-    if (total != null) return `Syncing… ${n.toLocaleString()} / ~${total.toLocaleString()}`;
-    return `Syncing… ${n.toLocaleString()} leads`;
+    if (total != null) return `Syncing… ${leadsInDb.toLocaleString()} / ~${total.toLocaleString()}`;
+    return `Syncing… ${leadsInDb.toLocaleString()} leads`;
   }
+
   if (lastRun.status === 'paused') {
+    if (mode === 'incremental') {
+      const n = progress?.cumulativeNew ?? 0;
+      return `Incremental paused — ${n.toLocaleString()} new leads found so far`;
+    }
     const total = progress?.totalAvailable;
-    const n = progress?.leadsInDb ?? status.batchLeadCount;
-    if (total != null) return `Paused at ${n.toLocaleString()} / ~${total.toLocaleString()} leads`;
-    return `Paused at ${n.toLocaleString()} leads`;
+    if (total != null) return `Paused at ${leadsInDb.toLocaleString()} / ~${total.toLocaleString()} leads`;
+    return `Paused at ${leadsInDb.toLocaleString()} leads`;
   }
   if (lastRun.status === 'partial') {
-    return `Interrupted at ${status.batchLeadCount.toLocaleString()} leads — resume to continue`;
+    return `Interrupted — resume to continue`;
   }
   if (lastRun.status === 'stopped') {
-    return `Stopped at ${status.batchLeadCount.toLocaleString()} leads`;
+    return `Stopped at ${leadsInDb.toLocaleString()} leads in DB`;
   }
   return null;
 }

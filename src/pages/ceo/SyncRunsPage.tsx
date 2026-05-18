@@ -32,14 +32,38 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/**
+ * New leads added by this run (incremental: cumulativeNew; full: leads_upserted DB total).
+ * For incremental runs, "new" means genuinely inserted records (not updates).
+ */
+function runNewLeads(run: InventorySyncRun): number {
+  const meta = run.metadata;
+  if (meta?.mode === 'incremental') return meta.cumulativeNew ?? 0;
+  return run.leads_upserted;
+}
+
 function formatProgress(run: InventorySyncRun): string {
   const meta = run.metadata;
-  const total = meta?.totalAvailable;
+  const mode = meta?.mode ?? 'full';
   const page = meta?.lastPage;
+
+  if (mode === 'incremental') {
+    const n = meta?.cumulativeNew ?? 0;
+    const u = meta?.cumulativeUpdated ?? 0;
+    const pages = meta?.pagesProcessedTotal ?? page;
+    const parts: string[] = [];
+    if (pages != null) parts.push(`Page ${pages}`);
+    parts.push(`+${n.toLocaleString()} new`);
+    if (u > 0) parts.push(`${u.toLocaleString()} updated`);
+    return parts.join(' · ');
+  }
+
+  // Full sync
+  const total = meta?.totalAvailable;
   if (total != null && page != null) {
     return `Page ${page} · ${run.leads_upserted.toLocaleString()} / ~${total.toLocaleString()} leads`;
   }
-  return `${run.leads_upserted.toLocaleString()} leads saved`;
+  return `${run.leads_upserted.toLocaleString()} leads in DB`;
 }
 
 export default function SyncRunsPage() {
@@ -97,7 +121,7 @@ export default function SyncRunsPage() {
           </p>
           {syncStatus && (
             <p className="text-xs text-muted-foreground mt-1">
-              {syncStatus.batchLeadCount.toLocaleString()} leads in database
+              {syncStatus.leadsInDb.toLocaleString()} leads in database
               {!syncStatus.batchConnected && (
                 <>
                   {' · '}
@@ -135,7 +159,7 @@ export default function SyncRunsPage() {
         <div className="grid grid-cols-[1.2fr_88px_1fr_1fr_1.2fr] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted font-bold border-b">
           <span>Started</span>
           <span>Status</span>
-          <span>Leads</span>
+          <span title="New leads added by this run">New Leads</span>
           <span>Finished</span>
           <span>Details</span>
         </div>
@@ -169,7 +193,11 @@ export default function SyncRunsPage() {
               {new Date(run.started_at).toLocaleString()}
             </span>
             <StatusBadge status={run.status} />
-            <span className="font-bold tabular-nums">{run.leads_upserted.toLocaleString()}</span>
+            <span className="font-bold tabular-nums">
+              {run.metadata?.mode === 'incremental'
+                ? `+${runNewLeads(run).toLocaleString()}`
+                : runNewLeads(run).toLocaleString()}
+            </span>
             <span className="text-muted-foreground text-[11px]">
               {run.completed_at ? formatLastSync(run.completed_at) : '—'}
             </span>

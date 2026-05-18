@@ -122,13 +122,13 @@ export default function LeadInventory() {
 
       setSyncStatus(data);
       setSyncing(true);
-      const { totalUpserted, completed, error } = await waitForBatchSyncComplete((s) => {
+      const { leadsInDb, completed, error } = await waitForBatchSyncComplete((s) => {
         if (!cancelled) setSyncStatus(s);
       });
       if (cancelled) return;
       setSyncing(false);
       if (completed) {
-        toast.success(`Batch sync complete — ${totalUpserted.toLocaleString()} leads in inventory`);
+        toast.success(`Batch sync complete — ${leadsInDb.toLocaleString()} leads in inventory`);
         setPage(1);
         await loadLeads();
       } else if (error) {

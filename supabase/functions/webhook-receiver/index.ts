@@ -4,7 +4,7 @@ import { decrypt } from "../_shared/crypto.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
 // Meta uses HMAC-SHA256 with hex encoding (X-Hub-Signature-256: sha256=HEX)

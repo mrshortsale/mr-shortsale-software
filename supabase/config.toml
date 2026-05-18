@@ -1,1 +1,8 @@
 project_id = "abpxitlgresjdiwpmzbb"
+
+[functions.batchleads-cron]
+verify_jwt = false
+
+# Auth is handled inside the function (CEO x-auth-token, service role for cron/internal).
+[functions.batchleads-sync]
+verify_jwt = false

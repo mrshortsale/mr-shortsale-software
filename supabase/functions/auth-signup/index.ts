@@ -4,7 +4,7 @@ import { isSignupDomainEmail, isValidEmailFormat } from "../_shared/email.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const HAS_UPPER = /[A-Z]/;
 const HAS_NUMBER = /[0-9]/;
