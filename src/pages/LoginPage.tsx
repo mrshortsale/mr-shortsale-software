@@ -60,39 +60,6 @@ const signUpSchema = z
 type SignInValues = z.infer<typeof signInSchema>;
 type SignUpValues = z.infer<typeof signUpSchema>;
 
-// ─── Demo quick-login accounts ────────────────────────────────────────────────
-
-const DEMO_ACCOUNTS = [
-  {
-    email: 'cristina@mrshortsale.net',
-    password: 'demo2026',
-    name: 'Cristina Gaspar',
-    role: 'CEO / Owner',
-    icon: Crown,
-  },
-  {
-    email: 'maria@mrshortsale.net',
-    password: 'demo2026',
-    name: 'Maria Santos',
-    role: 'Sales Rep',
-    icon: Briefcase,
-  },
-  {
-    email: 'james@mrshortsale.net',
-    password: 'demo2026',
-    name: 'James Rivera',
-    role: 'Sales Rep',
-    icon: Briefcase,
-  },
-  {
-    email: 'luis@mrshortsale.net',
-    password: 'demo2026',
-    name: 'Luis Ortega',
-    role: 'Sales Rep',
-    icon: Briefcase,
-  },
-];
-
 // ─── Password input with toggle ──────────────────────────────────────────────
 
 interface PasswordInputProps extends React.ComponentPropsWithoutRef<typeof Input> {}
