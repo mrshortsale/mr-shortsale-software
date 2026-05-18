@@ -1,6 +1,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import InventoryRepPicker from '@/components/ceo/InventoryRepPicker';
 import {
-  AlertTriangle, ArrowRightCircle, ArrowUpToLine, Clock, Copy, EyeOff,
+  AlertTriangle, ArrowRightCircle, ArrowUpToLine, Copy, EyeOff,
   Flame, Mail, MapPin, Phone, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,7 +12,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   repNameById: Map<string, string>;
-  onAssign: (lead: InventoryLead) => void;
+  onAssignRep: (lead: InventoryLead, repId: string | null) => void | Promise<void>;
   onStatusChange: (lead: InventoryLead, status: InventoryStatus) => void;
   onPushToMojo: (lead: InventoryLead) => void;
 }
@@ -47,7 +48,7 @@ function formatRelative(ms: number | null | undefined): string {
 }
 
 export default function InventoryLeadDrawer({
-  lead, open, onOpenChange, repNameById, onAssign, onStatusChange, onPushToMojo,
+  lead, open, onOpenChange, repNameById, onAssignRep, onStatusChange, onPushToMojo,
 }: Props) {
   if (!lead) return null;
 
@@ -126,12 +127,19 @@ export default function InventoryLeadDrawer({
           </Section>
 
           <div className="sticky bottom-0 -mx-6 -mb-6 p-4 bg-card border-t flex flex-wrap gap-2">
-            <button
-              onClick={() => onAssign(lead)}
-              className="flex-1 min-w-[120px] py-2 bg-muted text-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm hover:bg-muted/80"
-            >
-              <UserPlus size={14} /> {assignedName ? 'Reassign' : 'Assign rep'}
-            </button>
+            <InventoryRepPicker
+              inDrawer
+              allowUnassign={!!lead.assignedRepId}
+              onPick={(repId) => onAssignRep(lead, repId)}
+              trigger={
+                <button
+                  type="button"
+                  className="flex-1 min-w-[120px] py-2 bg-muted text-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm hover:bg-muted/80"
+                >
+                  <UserPlus size={14} /> {assignedName ? 'Reassign' : 'Assign rep'}
+                </button>
+              }
+            />
             <button
               onClick={() => onStatusChange(lead, 'Promoted')}
               className="flex-1 min-w-[120px] py-2 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"

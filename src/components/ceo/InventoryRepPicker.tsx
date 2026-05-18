@@ -9,26 +9,36 @@ interface Props {
   onPick: (repId: string | null) => void;
   /** Optional: hide the "Unassign" option (e.g. when no leads are currently assigned). */
   allowUnassign?: boolean;
+  /** Raise z-index when opened inside a Sheet/drawer. */
+  inDrawer?: boolean;
 }
 
-export default function InventoryRepPicker({ trigger, onPick, allowUnassign = true }: Props) {
+export default function InventoryRepPicker({ trigger, onPick, allowUnassign = true, inDrawer = false }: Props) {
   const [open, setOpen] = useState(false);
-  const [reps, setReps] = useState<InventoryRep[] | null>(null);
+  const [reps, setReps] = useState<InventoryRep[]>([]);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || reps) return;
+    if (!open) return;
+    let cancelled = false;
     setLoading(true);
-    fetchReps().then(({ reps, error }) => {
-      if (error) console.error(error);
-      setReps(reps ?? []);
+    setLoadError(null);
+    fetchReps().then(({ reps: fetched, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setLoadError(error);
+        setReps([]);
+      } else {
+        setReps(fetched ?? []);
+      }
       setLoading(false);
     });
-  }, [open, reps]);
+    return () => { cancelled = true; };
+  }, [open]);
 
   const filtered = useMemo(() => {
-    if (!reps) return [];
     const s = q.trim().toLowerCase();
     if (!s) return reps;
     return reps.filter((r) => r.name.toLowerCase().includes(s) || r.email.toLowerCase().includes(s));
@@ -37,7 +47,11 @@ export default function InventoryRepPicker({ trigger, onPick, allowUnassign = tr
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2">
+      <PopoverContent
+        align="end"
+        className={`w-64 p-2 ${inDrawer ? 'z-[200]' : ''}`}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="px-2 py-1.5 border-b mb-1 flex items-center gap-1.5">
           <Search size={12} className="text-muted-foreground" />
           <input
@@ -53,8 +67,13 @@ export default function InventoryRepPicker({ trigger, onPick, allowUnassign = tr
               <Loader2 size={18} className="animate-spin text-muted-foreground" />
             </div>
           )}
-          {!loading && filtered.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No reps available</p>
+          {!loading && loadError && (
+            <p className="text-xs text-destructive text-center py-4 px-2">{loadError}</p>
+          )}
+          {!loading && !loadError && filtered.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              {reps.length === 0 ? 'No active sales reps. Add reps under User Management.' : 'No matches'}
+            </p>
           )}
           {!loading && filtered.map((r) => (
             <button

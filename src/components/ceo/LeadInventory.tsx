@@ -276,15 +276,38 @@ export default function LeadInventory() {
     clearSelection();
   };
 
+  const assignLeads = async (leadIds: string[], repId: string | null) => {
+    if (leadIds.length === 0) {
+      toast.error('Select at least one lead to assign');
+      return false;
+    }
+    const { updated, error } = await assignRep(leadIds, repId);
+    if (error) {
+      toast.error(error);
+      return false;
+    }
+    const count = updated ?? leadIds.length;
+    if (count === 0) {
+      toast.error('No leads were updated. Refresh and try again.');
+      return false;
+    }
+    toast.success(
+      repId
+        ? `Assigned ${count.toLocaleString()} lead${count === 1 ? '' : 's'} to ${repNameById.get(repId) ?? 'rep'}`
+        : `Unassigned ${count.toLocaleString()} lead${count === 1 ? '' : 's'}`,
+    );
+    if (drawerLead && leadIds.includes(drawerLead.id)) {
+      setDrawerLead((prev) => (prev ? { ...prev, assignedRepId: repId } : null));
+    }
+    const { reps: refreshedReps } = await fetchReps();
+    if (refreshedReps) setReps(refreshedReps);
+    await loadLeads();
+    return true;
+  };
+
   const bulkAssign = async (repId: string | null) => {
-    const ids = [...selected];
-    const { updated, error } = await assignRep(ids, repId);
-    if (error) { toast.error(error); return; }
-    toast.success(repId
-      ? `Assigned ${updated ?? ids.length} leads to ${repNameById.get(repId) ?? 'rep'}`
-      : `Unassigned ${updated ?? ids.length} leads`);
-    clearSelection();
-    loadLeads();
+    const ok = await assignLeads([...selected], repId);
+    if (ok) clearSelection();
   };
 
   const bulkSetStatus = async (status: InventoryStatus) => {
@@ -296,9 +319,8 @@ export default function LeadInventory() {
     loadLeads();
   };
 
-  // Drawer single-lead actions
-  const drawerAssign = (lead: InventoryLead) => {
-    setSelected(new Set([lead.id]));
+  const drawerAssignRep = async (lead: InventoryLead, repId: string | null) => {
+    await assignLeads([lead.id], repId);
   };
   const drawerStatus = async (lead: InventoryLead, status: InventoryStatus) => {
     const { error } = await setLeadStatus([lead.id], status);
@@ -493,7 +515,11 @@ export default function LeadInventory() {
           <InventoryRepPicker
             onPick={bulkAssign}
             trigger={
-              <button className="px-2.5 py-1 rounded bg-primary-foreground/90 text-primary text-[11px] font-bold flex items-center gap-1">
+              <button
+                type="button"
+                disabled={selected.size === 0}
+                className="px-2.5 py-1 rounded bg-primary-foreground/90 text-primary text-[11px] font-bold flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <UserPlus size={11} /> Assign rep
               </button>
             }
@@ -783,7 +809,7 @@ export default function LeadInventory() {
         open={drawerOpen}
         onOpenChange={(o) => { setDrawerOpen(o); if (!o) setDrawerLead(null); }}
         repNameById={repNameById}
-        onAssign={drawerAssign}
+        onAssignRep={drawerAssignRep}
         onStatusChange={drawerStatus}
         onPushToMojo={drawerMojo}
       />

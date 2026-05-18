@@ -43,17 +43,24 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const action = url.searchParams.get("action") ?? "";
 
-  // GET ?action=reps — return active reps for the rep-picker UI
+  // GET ?action=reps — return active sales reps for the rep-picker UI
   if (req.method === "GET" && action === "reps") {
     const { data, error } = await supabase
       .from("users")
-      .select("id, name, email, avatar_color")
+      .select("id, name, email, avatar_color, role, is_active, status")
       .eq("role", "rep")
       .eq("is_active", true)
-      .eq("status", "active")
+      .or("status.eq.active,status.is.null")
       .order("name");
     if (error) return jsonResponse({ error: "Failed to load reps" }, 500);
-    return jsonResponse({ reps: data ?? [] });
+    return jsonResponse({
+      reps: (data ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        email: r.email,
+        avatar_color: r.avatar_color,
+      })),
+    });
   }
 
   if (req.method !== "POST") {
@@ -85,22 +92,26 @@ Deno.serve(async (req) => {
       // Verify the rep exists and is active
       const { data: rep } = await supabase
         .from("users")
-        .select("id")
+        .select("id, name")
         .eq("id", repId)
         .eq("role", "rep")
         .eq("is_active", true)
-        .eq("status", "active")
+        .or("status.eq.active,status.is.null")
         .maybeSingle();
-      if (!rep) return jsonResponse({ error: "Rep not found or inactive" }, 400);
+      if (!rep) {
+        return jsonResponse({ error: "Rep not found or inactive. Approve the user under User Management first." }, 400);
+      }
     }
 
-    const { error, count } = await supabase
+    const { data: updatedRows, error } = await supabase
       .from("inventory_leads")
-      .update({ assigned_rep_id: repId }, { count: "exact" })
-      .in("id", leadIds);
+      .update({ assigned_rep_id: repId })
+      .in("id", leadIds)
+      .select("id");
 
     if (error) return jsonResponse({ error: "Failed to assign leads" }, 500);
-    return jsonResponse({ ok: true, updated: count ?? 0 });
+    const updated = updatedRows?.length ?? 0;
+    return jsonResponse({ ok: true, updated, repId });
   }
 
   // POST ?action=status — change lead status (New/Contacted/Promoted/Dismissed)
