@@ -1,12 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
+import { isSignupDomainEmail, isValidEmailFormat } from "../_shared/email.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HAS_UPPER = /[A-Z]/;
 const HAS_NUMBER = /[0-9]/;
 
@@ -30,8 +29,14 @@ Deno.serve(async (req) => {
   if (!name || name.trim().length < 2) {
     return jsonResponse({ error: "Name must be at least 2 characters" }, 400);
   }
-  if (!email || !EMAIL_RE.test(email.trim())) {
+  if (!email || !isValidEmailFormat(email)) {
     return jsonResponse({ error: "Invalid email address" }, 400);
+  }
+  if (!isSignupDomainEmail(email)) {
+    return jsonResponse(
+      { error: "Sign-up requires a @mrshortsale.net email address" },
+      400,
+    );
   }
   if (!password || password.length < 8) {
     return jsonResponse({ error: "Password must be at least 8 characters" }, 400);

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -92,6 +92,10 @@ function StatusBadge({ user }: { user: AdminUserRow }) {
     : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />Inactive</span>;
 }
 
+function sortUsersByName(list: AdminUserRow[]): AdminUserRow[] {
+  return [...list].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
     <div className="flex gap-2 flex-wrap">
@@ -111,7 +115,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 // ─── Create user dialog ───────────────────────────────────────────────────────
 
 function CreateUserDialog({ open, onClose, onCreated }: {
-  open: boolean; onClose: () => void; onCreated: () => void;
+  open: boolean; onClose: () => void; onCreated: (user: AdminUserRow) => void;
 }) {
   const [serverError, setServerError] = useState('');
 
@@ -127,6 +131,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
     setServerError('');
     const result = await adminCreateUser(values);
     if (result.error) { setServerError(result.error); return; }
+    if (!result.user) { setServerError('Failed to create user'); return; }
 
     const approved = values.approveImmediately;
     toast.success(
@@ -135,7 +140,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
         : `${values.name} added — pending approval.`
     );
     form.reset();
-    onCreated();
+    onCreated(result.user);
     onClose();
   };
 
@@ -224,7 +229,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
 // ─── Edit user dialog ─────────────────────────────────────────────────────────
 
 function EditUserDialog({ user, open, onClose, onUpdated }: {
-  user: AdminUserRow; open: boolean; onClose: () => void; onUpdated: () => void;
+  user: AdminUserRow; open: boolean; onClose: () => void; onUpdated: (user: AdminUserRow) => void;
 }) {
   const [serverError, setServerError] = useState('');
 
@@ -250,8 +255,9 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
       isActive: values.isActive, password: values.password || undefined,
     });
     if (result.error) { setServerError(result.error); return; }
+    if (!result.user) { setServerError('Failed to update user'); return; }
     toast.success(`${values.name} updated.`);
-    onUpdated();
+    onUpdated(result.user);
     onClose();
   };
 
@@ -333,43 +339,63 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
 
 // ─── Pending users section ────────────────────────────────────────────────────
 
-function PendingSection({ onApproved }: { onApproved: () => void }) {
+function PendingSection({
+  onApproved,
+  onRejected,
+  refreshKey,
+}: {
+  onApproved: (user: AdminUserRow) => void;
+  onRejected: () => void;
+  /** Increment to reload pending list silently (e.g. after CEO creates pending user) */
+  refreshKey?: number;
+}) {
   const [pending, setPending] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<AdminUserRow | null>(null);
+  const hasLoadedOnce = useRef(false);
 
-  const fetchPending = async () => {
-    setLoading(true);
+  const fetchPending = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setFetchError('');
     const result = await adminListPendingUsers();
     if (result.error) setFetchError(result.error);
     else setPending(result.users ?? []);
-    setLoading(false);
-  };
+    if (!silent) setLoading(false);
+    hasLoadedOnce.current = true;
+  }, []);
 
-  useEffect(() => { fetchPending(); }, []);
+  useEffect(() => { fetchPending(false); }, [fetchPending]);
+
+  useEffect(() => {
+    if (refreshKey !== undefined && refreshKey > 0 && hasLoadedOnce.current) {
+      fetchPending(true);
+    }
+  }, [refreshKey, fetchPending]);
 
   const handleApprove = async (user: AdminUserRow) => {
     setActionId(user.id);
     const result = await adminApproveUser(user.id);
     setActionId(null);
     if (result.error) { toast.error(result.error); return; }
+    if (!result.user) { toast.error('Failed to approve user'); return; }
     toast.success(`${user.name} approved.`);
-    fetchPending();
-    onApproved();
+    setPending((prev) => prev.filter((p) => p.id !== user.id));
+    onApproved(result.user);
   };
 
   const handleReject = async () => {
     if (!rejectTarget) return;
-    setActionId(rejectTarget.id);
-    const result = await adminRejectUser(rejectTarget.id);
+    const target = rejectTarget;
+    setActionId(target.id);
+    const result = await adminRejectUser(target.id);
     setActionId(null);
     setRejectTarget(null);
     if (result.error) { toast.error(result.error); return; }
-    toast.success(`${rejectTarget.name}'s request rejected.`);
-    fetchPending();
+    toast.success(`${target.name}'s request rejected.`);
+    setPending((prev) => prev.filter((p) => p.id !== target.id));
+    onRejected();
   };
 
   return (
@@ -495,9 +521,10 @@ export default function UserManagement() {
   const [deleting, setDeleting] = useState(false);
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingRefreshKey, setPendingRefreshKey] = useState(0);
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const fetchUsers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setFetchError('');
     const [mainResult, pendingResult] = await Promise.all([
       adminListUsers(),
@@ -506,10 +533,32 @@ export default function UserManagement() {
     if (mainResult.error) setFetchError(mainResult.error);
     else setUsers(mainResult.users ?? []);
     setPendingCount(pendingResult.users?.length ?? 0);
-    setLoading(false);
-  };
+    if (!silent) setLoading(false);
+  }, []);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchUsers(false); }, [fetchUsers]);
+
+  const handleUserCreated = useCallback((user: AdminUserRow) => {
+    if (user.status === 'pending') {
+      setPendingCount((c) => c + 1);
+      setPendingRefreshKey((k) => k + 1);
+    } else {
+      setUsers((prev) => sortUsersByName([...prev, user]));
+    }
+  }, []);
+
+  const handleUserUpdated = useCallback((user: AdminUserRow) => {
+    setUsers((prev) => sortUsersByName(prev.map((u) => (u.id === user.id ? user : u))));
+  }, []);
+
+  const handleUserApproved = useCallback((user: AdminUserRow) => {
+    setPendingCount((c) => Math.max(0, c - 1));
+    setUsers((prev) => sortUsersByName([...prev, user]));
+  }, []);
+
+  const handleUserRejected = useCallback(() => {
+    setPendingCount((c) => Math.max(0, c - 1));
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -519,15 +568,16 @@ export default function UserManagement() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const removed = deleteTarget;
     setDeleting(true);
-    const result = await adminDeleteUser(deleteTarget.id);
+    const result = await adminDeleteUser(removed.id);
     setDeleting(false);
     setDeleteTarget(null);
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(`${deleteTarget.name} deleted.`);
-      fetchUsers();
+      toast.success(`${removed.name} deleted.`);
+      setUsers((prev) => prev.filter((u) => u.id !== removed.id));
     }
   };
 
@@ -577,7 +627,11 @@ export default function UserManagement() {
 
       {/* Pending section */}
       {activeTab === 'pending' && (
-        <PendingSection onApproved={fetchUsers} />
+        <PendingSection
+          onApproved={handleUserApproved}
+          onRejected={handleUserRejected}
+          refreshKey={pendingRefreshKey}
+        />
       )}
 
       {/* All users section */}
@@ -666,7 +720,7 @@ export default function UserManagement() {
       <CreateUserDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreated={fetchUsers}
+        onCreated={handleUserCreated}
       />
 
       {editTarget && (
@@ -674,7 +728,7 @@ export default function UserManagement() {
           user={editTarget}
           open={!!editTarget}
           onClose={() => setEditTarget(null)}
-          onUpdated={fetchUsers}
+          onUpdated={handleUserUpdated}
         />
       )}
 

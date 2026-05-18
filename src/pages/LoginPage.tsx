@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { isSignupDomainEmail } from '@/lib/emailValidation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -42,7 +43,14 @@ const signInSchema = z.object({
 const signUpSchema = z
   .object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.string().min(1, 'Email is required').email('Invalid email address'),
+    email: z
+      .string()
+      .min(1, 'Email is required')
+      .email('Invalid email address')
+      .transform((v) => v.trim().toLowerCase())
+      .refine(isSignupDomainEmail, {
+        message: 'Sign-up requires a @mrshortsale.net email address',
+      }),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
@@ -274,7 +282,9 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     <Card className="shadow-premium">
       <CardHeader>
         <CardTitle className="text-xl">Create your account</CardTitle>
-        <CardDescription>New rep accounts require CEO approval before sign-in</CardDescription>
+        <CardDescription>
+          New rep accounts require CEO approval before sign-in. Use your company email (@mrshortsale.net).
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {serverError && (
@@ -320,6 +330,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
                       {...field}
                     />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">Must be a @mrshortsale.net address</p>
                   <FormMessage />
                 </FormItem>
               )}
