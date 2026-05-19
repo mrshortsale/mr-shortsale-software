@@ -3,6 +3,8 @@ import { verifyJwt } from "../_shared/jwt.ts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { decrypt } from "../_shared/crypto.ts";
 import {
+  buildInsertRow,
+  buildUpdateRow,
   DEFAULT_MAX_PAGES_PER_RUN,
   DEFAULT_PAGE_SIZE,
   disqualifyReason,
@@ -12,6 +14,12 @@ import {
   mapBatchRowToInventoryLead,
   type SyncMode,
 } from "../_shared/batchleads.ts";
+import {
+  assignRepsRoundRobin,
+  loadActiveRepIds,
+  loadRoundRobinIndex,
+  saveRoundRobinIndex,
+} from "../_shared/roundRobin.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -44,6 +52,10 @@ interface RunMeta {
   filteredFiling?: number;
   filteredApn?: number;
   qualifiedTotal?: number;
+  // Round-robin assignment counters
+  leadsAutoAssigned?: number;
+  assignmentSkippedNoReps?: boolean;
+  roundRobinRepCount?: number;
 }
 
 async function requireCeo(req: Request): Promise<string | null> {
@@ -549,6 +561,13 @@ Deno.serve(async (req) => {
   let filteredFiling = prevMeta.filteredFiling ?? 0;
   let filteredApn = prevMeta.filteredApn ?? 0;
   let qualifiedTotal = prevMeta.qualifiedTotal ?? 0;
+  let leadsAutoAssigned = prevMeta.leadsAutoAssigned ?? 0;
+
+  // ─── Round-robin setup (once per invocation) ───────────────────────────────
+
+  const repIds = await loadActiveRepIds(supabase);
+  const assignmentSkippedNoReps = repIds.length === 0;
+  let rrIndex = assignmentSkippedNoReps ? 0 : await loadRoundRobinIndex(supabase);
 
   // ─── Sync loop ─────────────────────────────────────────────────────────────
 
@@ -679,29 +698,79 @@ Deno.serve(async (req) => {
       qualifiedTotal += rowsToUpsert.length;
 
       if (rowsToUpsert.length > 0) {
-        // Determine which rows are new vs already in the DB
+        // Determine which rows are new vs already in the DB, and whether
+        // existing rows already have a rep assigned (so we never overwrite).
         const externalIds = rowsToUpsert.map((r) => r.external_id);
-        const { data: existing } = await supabase
+        const { data: existingRows } = await supabase
           .from("inventory_leads")
-          .select("external_id")
+          .select("external_id, assigned_rep_id")
           .eq("source", "Batch")
           .in("external_id", externalIds);
 
-        const existingSet = new Set(
-          (existing ?? []).map((r: { external_id: string }) => r.external_id),
+        const existingMap = new Map<string, string | null>(
+          (existingRows ?? []).map(
+            (r: { external_id: string; assigned_rep_id: string | null }) => [
+              r.external_id,
+              r.assigned_rep_id,
+            ],
+          ),
         );
-        const pageNew = rowsToUpsert.filter((r) => !existingSet.has(r.external_id)).length;
-        const pageUpdated = rowsToUpsert.filter((r) => existingSet.has(r.external_id)).length;
+
+        // Partition and assign reps
+        const toInsert: ReturnType<typeof buildInsertRow>[] = [];
+        const toUpdate: ReturnType<typeof buildUpdateRow>[] = [];
+
+        for (const row of rowsToUpsert) {
+          const isNew = !existingMap.has(row.external_id);
+          const currentRep = existingMap.get(row.external_id) ?? null;
+          const needsAssignment = isNew || currentRep === null;
+
+          let assignedRepId: string | null = null;
+          if (needsAssignment && !assignmentSkippedNoReps) {
+            const { assignments, nextIndex } = assignRepsRoundRobin(repIds, rrIndex, 1);
+            assignedRepId = assignments[0];
+            rrIndex = nextIndex;
+            leadsAutoAssigned++;
+          }
+
+          if (isNew) {
+            toInsert.push(buildInsertRow(row, assignedRepId));
+          } else {
+            // Only pass assignedRepId when we are filling an empty slot
+            toUpdate.push(
+              buildUpdateRow(row, needsAssignment ? { assignedRepId } : {}),
+            );
+          }
+        }
+
+        const pageNew = toInsert.length;
+        const pageUpdated = toUpdate.length;
         chunkNew += pageNew;
         chunkUpdated += pageUpdated;
         cumulativeNew += pageNew;
         cumulativeUpdated += pageUpdated;
 
-        const { error: upsertErr } = await supabase
-          .from("inventory_leads")
-          .upsert(rowsToUpsert, { onConflict: "source,external_id" });
+        if (toInsert.length > 0) {
+          const { error: insertErr } = await supabase
+            .from("inventory_leads")
+            .insert(toInsert);
+          if (insertErr) throw new Error(insertErr.message);
+        }
 
-        if (upsertErr) throw new Error(upsertErr.message);
+        if (toUpdate.length > 0) {
+          // Upsert with minimal fields; onConflict falls into UPDATE path for
+          // existing rows, leaving untouched columns (status, contact_attempts,
+          // ingested_at, last_contact_date, last_outcome) unchanged.
+          const { error: updateErr } = await supabase
+            .from("inventory_leads")
+            .upsert(toUpdate, { onConflict: "source,external_id" });
+          if (updateErr) throw new Error(updateErr.message);
+        }
+
+        // Persist cursor after every page so background chunks stay fair.
+        if (!assignmentSkippedNoReps) {
+          await saveRoundRobinIndex(supabase, rrIndex, repIds.length);
+        }
       }
 
       const isLastPage = page >= pageResult.meta.last_page || pageResult.rows.length === 0;
@@ -732,6 +801,9 @@ Deno.serve(async (req) => {
       filteredFiling,
       filteredApn,
       qualifiedTotal,
+      leadsAutoAssigned,
+      assignmentSkippedNoReps: assignmentSkippedNoReps || undefined,
+      roundRobinRepCount: repIds.length || undefined,
     };
 
     const finalStatus = await getRunStatus(runId!);
@@ -782,6 +854,10 @@ Deno.serve(async (req) => {
       filteredFiling,
       filteredApn,
       qualifiedTotal,
+      // Round-robin assignment
+      leadsAutoAssigned,
+      assignmentSkippedNoReps: assignmentSkippedNoReps || undefined,
+      roundRobinRepCount: repIds.length || undefined,
       pagesProcessed,
       pagesProcessedTotal,
       lastPage,
@@ -816,6 +892,9 @@ Deno.serve(async (req) => {
           filteredFiling,
           filteredApn,
           qualifiedTotal,
+          leadsAutoAssigned,
+          assignmentSkippedNoReps: assignmentSkippedNoReps || undefined,
+          roundRobinRepCount: repIds.length || undefined,
         },
         updated_at: new Date().toISOString(),
       })

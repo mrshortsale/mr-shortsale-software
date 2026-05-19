@@ -396,6 +396,73 @@ export function mapBatchRowToInventoryLead(
 
 export type MappedInventoryLead = ReturnType<typeof mapBatchRowToInventoryLead>;
 
+// ─── Insert / update payload helpers ────────────────────────────────────────
+
+/**
+ * Fields from a mapped lead that are safe to overwrite on every sync run.
+ * These reflect fresh data from Batch (property details, scores, contact info).
+ * Workflow fields (status, contact_attempts, assigned_rep_id, etc.) are
+ * deliberately excluded so re-syncs never clobber rep work.
+ */
+export const SYNC_UPDATE_FIELDS = [
+  "batch_list_id",
+  "batch_list_name",
+  "owner",
+  "address",
+  "city",
+  "state",
+  "county",
+  "equity_pct",
+  "ltv_pct",
+  "days_to_auction",
+  "score",
+  "language",
+  "raw_payload",
+  "synced_at",
+  "apn",
+  "phone",
+  "email",
+  "filing_type",
+  "normalized_address",
+  "received_at",
+] as const;
+
+type SyncUpdateField = (typeof SYNC_UPDATE_FIELDS)[number];
+
+/**
+ * Full row for a brand-new lead insert, including the auto-assigned rep.
+ */
+export function buildInsertRow(
+  mapped: MappedInventoryLead,
+  assignedRepId: string | null,
+): MappedInventoryLead & { assigned_rep_id: string | null } {
+  return { ...mapped, assigned_rep_id: assignedRepId };
+}
+
+/**
+ * Minimal update payload for a lead that already exists in the DB.
+ * Only sync-safe fields are included; `assigned_rep_id` is added only when the
+ * caller is filling in a previously empty slot (not overwriting an existing rep).
+ */
+export function buildUpdateRow(
+  mapped: MappedInventoryLead,
+  opts: { assignedRepId?: string | null } = {},
+): Pick<MappedInventoryLead, "id" | "source" | "external_id"> &
+  Pick<MappedInventoryLead, SyncUpdateField> & { assigned_rep_id?: string | null } {
+  const row: Record<string, unknown> = {
+    id: mapped.id,
+    source: mapped.source,
+    external_id: mapped.external_id,
+  };
+  for (const f of SYNC_UPDATE_FIELDS) {
+    row[f] = mapped[f];
+  }
+  if ("assignedRepId" in opts) {
+    row["assigned_rep_id"] = opts.assignedRepId;
+  }
+  return row as ReturnType<typeof buildUpdateRow>;
+}
+
 /**
  * Apply ingest-time qualification rules to a mapped Batch lead.
  * Returns null if the lead passes, otherwise a string describing the reason
