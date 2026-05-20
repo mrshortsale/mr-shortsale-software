@@ -97,6 +97,10 @@ Deno.serve(async (req) => {
   const assignedRep = url.searchParams.get("assigned_rep");
   const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? "50")));
   const offset = Math.max(0, Number(url.searchParams.get("offset") ?? "0"));
+  const minEquityRaw = url.searchParams.get("min_equity");
+  const maxEquityRaw = url.searchParams.get("max_equity");
+  const minEquity = minEquityRaw !== null && minEquityRaw !== "" ? Number(minEquityRaw) : null;
+  const maxEquity = maxEquityRaw !== null && maxEquityRaw !== "" ? Number(maxEquityRaw) : null;
 
   // Build the main paged query for the table
   // deno-lint-ignore no-explicit-any
@@ -114,6 +118,8 @@ Deno.serve(async (req) => {
     if (assignedRep === "unassigned") qb = qb.is("assigned_rep_id", null);
     else if (assignedRep) qb = qb.eq("assigned_rep_id", assignedRep);
     if (minScore > 0) qb = qb.gte("score", minScore);
+    if (minEquity !== null && Number.isFinite(minEquity)) qb = qb.gte("equity_pct", minEquity);
+    if (maxEquity !== null && Number.isFinite(maxEquity)) qb = qb.lte("equity_pct", maxEquity);
     if (q) {
       const escaped = q.replace(/[%_,]/g, "");
       const pattern = `%${escaped}%`;
@@ -145,9 +151,12 @@ Deno.serve(async (req) => {
   const kpiBase = () =>
     supabase.from("inventory_leads").select("*", { count: "exact", head: true }).eq("source", source);
 
+  // "Hot equity" for distressed-property work = LOW equity (most-at-risk owners).
+  // Counts rows with equity_pct <= 25 (excluding Dismissed) — same threshold as the
+  // legacy ingest filter, now applied at query time.
   const [newTodayResp, hotEquityResp, auctionsLt30Resp, hotScoreResp, totalSourceResp] = await Promise.all([
     kpiBase().gte("ingested_at", todayIso),
-    kpiBase().gte("equity_pct", 75),
+    kpiBase().lte("equity_pct", 25).neq("status", "Dismissed"),
     kpiBase().lt("days_to_auction", 30).neq("status", "Dismissed"),
     kpiBase().gte("score", 8).neq("status", "Dismissed"),
     kpiBase(),

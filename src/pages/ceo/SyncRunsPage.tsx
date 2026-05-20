@@ -33,23 +33,22 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 /**
- * New leads added by this run (incremental: cumulativeNew; full: leads_upserted DB total).
- * For incremental runs, "new" means genuinely inserted records (not updates).
+ * New leads inserted by this run. `cumulativeNew` is tracked for both incremental
+ * and full syncs (inserts only — updates go to `cumulativeUpdated`). Older runs
+ * that predate this counter fall back to 0.
  */
 function runNewLeads(run: InventorySyncRun): number {
-  const meta = run.metadata;
-  if (meta?.mode === 'incremental') return meta.cumulativeNew ?? 0;
-  return run.leads_upserted;
+  return run.metadata?.cumulativeNew ?? 0;
 }
 
 function formatProgress(run: InventorySyncRun): string {
   const meta = run.metadata;
   const mode = meta?.mode ?? 'full';
+  const n = meta?.cumulativeNew ?? 0;
+  const u = meta?.cumulativeUpdated ?? 0;
   const page = meta?.lastPage;
 
   if (mode === 'incremental') {
-    const n = meta?.cumulativeNew ?? 0;
-    const u = meta?.cumulativeUpdated ?? 0;
     const pages = meta?.pagesProcessedTotal ?? page;
     const parts: string[] = [];
     if (pages != null) parts.push(`Page ${pages}`);
@@ -60,10 +59,16 @@ function formatProgress(run: InventorySyncRun): string {
 
   // Full sync
   const total = meta?.totalAvailable;
-  if (total != null && page != null) {
-    return `Page ${page} · ${run.leads_upserted.toLocaleString()} / ~${total.toLocaleString()} leads`;
+  const parts: string[] = [];
+  if (page != null) parts.push(`Page ${page}`);
+  if (n > 0 || u > 0) {
+    let counts = `+${n.toLocaleString()} new`;
+    if (u > 0) counts += ` · ${u.toLocaleString()} updated`;
+    parts.push(counts);
   }
-  return `${run.leads_upserted.toLocaleString()} leads in DB`;
+  if (total != null) parts.push(`~${total.toLocaleString()} in Batch`);
+  if (parts.length === 0) return `${run.leads_upserted.toLocaleString()} leads in DB`;
+  return parts.join(' · ');
 }
 
 export default function SyncRunsPage() {

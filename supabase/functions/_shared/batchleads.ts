@@ -113,13 +113,9 @@ export function buildPropertyRequestBody(options: {
     uncheckedids: [],
     lead_score_from: 0,
     lead_score_to: 100,
-    is_vacant: "No",
-    is_mailing_vacant: "No",
-    absentee: "No",
     skiptraced: "",
     opt_out: "both",
     self_managed: "both",
-    has_phone_numbers: "1",
     ui_version: 2,
   };
 

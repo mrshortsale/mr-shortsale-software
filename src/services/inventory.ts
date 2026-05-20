@@ -119,7 +119,7 @@ export interface InventoryStats {
   newToday: number;
   /** Average contact_attempts among New + Contacted leads. */
   avgAttempts: number;
-  /** Leads with equity_pct >= 75. */
+  /** Distressed-equity leads: equity_pct <= 25 (excluding Dismissed). */
   hotEquity: number;
   /** Leads with days_to_auction < 30 (excluding Dismissed). */
   auctionsLt30: number;
@@ -137,6 +137,10 @@ export interface FetchInventoryParams {
   statuses?: InventoryStatus[];
   filingTypes?: InventoryFilingType[];
   assignedRep?: string | 'unassigned' | null;
+  /** Lower bound (inclusive) on equity_pct. */
+  minEquity?: number;
+  /** Upper bound (inclusive) on equity_pct. Use 25 for distressed-only. */
+  maxEquity?: number;
   limit?: number;
   offset?: number;
 }
@@ -384,6 +388,12 @@ export async function fetchInventoryLeads(
     if (params.filingTypes && params.filingTypes.length > 0) query.set('filing_type', params.filingTypes.join(','));
     if (params.assignedRep !== undefined && params.assignedRep !== null) {
       query.set('assigned_rep', params.assignedRep);
+    }
+    if (params.minEquity !== undefined && params.minEquity !== null) {
+      query.set('min_equity', String(params.minEquity));
+    }
+    if (params.maxEquity !== undefined && params.maxEquity !== null) {
+      query.set('max_equity', String(params.maxEquity));
     }
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));

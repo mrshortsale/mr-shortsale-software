@@ -7,7 +7,6 @@ import {
   buildUpdateRow,
   DEFAULT_MAX_PAGES_PER_RUN,
   DEFAULT_PAGE_SIZE,
-  disqualifyReason,
   fetchSavedAddressesPage,
   loadBatchLeadsCredentials,
   logBatchApiCall,
@@ -679,9 +678,8 @@ Deno.serve(async (req) => {
         if (seen.has(mapped.external_id)) continue;
         seen.add(mapped.external_id);
 
-        const reason = disqualifyReason(mapped);
-        if (reason === "equity") { filteredEquity++; continue; }
-        if (reason === "filing") { filteredFiling++; continue; }
+        // Equity / filing filters are applied at query-time (frontend), not on ingest.
+        // We store every Batch row so users can change the filter without re-syncing.
 
         // Within-page APN dedup: drop second occurrences of the same APN
         if (mapped.apn) {
