@@ -809,8 +809,9 @@ Deno.serve(async (req) => {
 
         // Ingest-time qualification (spec section 03): equity must be <= 25%
         // AND filing type must be NOD/NTS/LP. Anything else is dropped before
-        // it touches the DB — keeps inventory_leads small and removes the need
-        // for the read-side baseline filter.
+        // it touches the DB. Batch may also narrow via server-side filters in
+        // `buildPropertyRequestBody` (phone / vacant / absentee); this remains
+        // the authoritative gate for equity + filing.
         const reason = disqualifyReason(mapped);
         if (reason === "equity") { filteredEquity++; continue; }
         if (reason === "filing") { filteredFiling++; continue; }

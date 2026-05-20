@@ -88,6 +88,19 @@ export function buildPropertyRequestBody(options: {
    * to return only leads added on or after that date. The time portion is dropped.
    */
   updatedSince?: string;
+  /**
+   * When true (default), adds Batch server-side filters that narrow the property
+   * list (phone present, non-vacant, non-absentee). These were used historically
+   * in this codebase and reduce pages vs an unfiltered pull.
+   *
+   * **Does not** replace ingest qualification: equity ≤ 25% and filing NOD/NTS/LP
+   * are still enforced in `batchleads-sync` via `disqualifyReason` — Batch's API
+   * does not expose our exact equity % / foreclosure filing derivation.
+   *
+   * Set to `false` or set env `BATCH_LEADS_RELAX_PROPERTY_FILTERS=true` to omit
+   * these fields (e.g. debugging or if Batch changes filter semantics).
+   */
+  applyBatchServerFilters?: boolean;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     list_id: options.listIds ?? [],
@@ -118,6 +131,21 @@ export function buildPropertyRequestBody(options: {
     self_managed: "both",
     ui_version: 2,
   };
+
+  let envRelax = false;
+  try {
+    envRelax = Deno.env.get("BATCH_LEADS_RELAX_PROPERTY_FILTERS") === "true";
+  } catch {
+    // non-Deno test environments
+  }
+  const useServerFilters = options.applyBatchServerFilters !== false && !envRelax;
+  if (useServerFilters) {
+    // Batch-side narrowing (verified in-repo against real API historically).
+    body.is_vacant = "No";
+    body.is_mailing_vacant = "No";
+    body.absentee = "No";
+    body.has_phone_numbers = "1";
+  }
 
   // Incremental: pass added_date as YYYY-MM-DD so Batch filters server-side.
   // This returns only leads added on/after the watermark date — meta.total will be
@@ -254,7 +282,14 @@ export async function fetchLists(
 
 export async function fetchSavedAddressesPage(
   creds: BatchLeadsCredentials,
-  options: { page: number; pageSize?: number; listIds?: number[]; mode?: SyncMode; updatedSince?: string },
+  options: {
+    page: number;
+    pageSize?: number;
+    listIds?: number[];
+    mode?: SyncMode;
+    updatedSince?: string;
+    applyBatchServerFilters?: boolean;
+  },
 ): Promise<BatchPropertyPage> {
   const body = buildPropertyRequestBody(options);
   const { statusCode, json } = await batchFetch(
@@ -526,6 +561,11 @@ export function buildUpdateRow(
  * Apply ingest-time qualification rules to a mapped Batch lead.
  * Returns null if the lead passes, otherwise a string describing the reason
  * it was filtered out (useful for run-level counters).
+ *
+ * **Defense in depth:** `buildPropertyRequestBody` may add Batch server-side
+ * filters (phone / vacant / absentee). This check is still required because
+ * Batch does not apply our equity ≤ 25% or NOD/NTS/LP filing rules in the
+ * property POST body we use.
  */
 export function disqualifyReason(lead: MappedInventoryLead): "equity" | "filing" | null {
   if (lead.equity_pct > 25) return "equity";
