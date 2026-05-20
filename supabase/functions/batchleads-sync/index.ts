@@ -7,6 +7,7 @@ import {
   buildUpdateRow,
   DEFAULT_MAX_PAGES_PER_RUN,
   DEFAULT_PAGE_SIZE,
+  disqualifyReason,
   fetchSavedAddressesPage,
   loadBatchLeadsCredentials,
   logBatchApiCall,
@@ -806,8 +807,13 @@ Deno.serve(async (req) => {
         if (seen.has(mapped.external_id)) continue;
         seen.add(mapped.external_id);
 
-        // Equity / filing filters are applied at query-time (frontend), not on ingest.
-        // We store every Batch row so users can change the filter without re-syncing.
+        // Ingest-time qualification (spec section 03): equity must be <= 25%
+        // AND filing type must be NOD/NTS/LP. Anything else is dropped before
+        // it touches the DB — keeps inventory_leads small and removes the need
+        // for the read-side baseline filter.
+        const reason = disqualifyReason(mapped);
+        if (reason === "equity") { filteredEquity++; continue; }
+        if (reason === "filing") { filteredFiling++; continue; }
 
         // Within-page APN dedup: drop second occurrences of the same APN
         if (mapped.apn) {

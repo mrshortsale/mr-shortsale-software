@@ -502,12 +502,12 @@ export default function LeadInventory() {
       <div className="rounded-xl border bg-muted/50 px-3 py-2 text-[11px] text-foreground flex items-center justify-between flex-wrap gap-2">
         <span>
           Showing <strong className="text-foreground">{totalMatching.toLocaleString()}</strong> of{' '}
-          <strong>{(stats.sourceTotal ?? 0).toLocaleString()}</strong> qualified{' '}
-          {source === 'All' ? 'Batch' : source} leads (equity ≤ 25% · NOD/NTS/LP) after filters
+          <strong>{(stats.sourceTotal ?? 0).toLocaleString()}</strong>{' '}
+          {source === 'All' ? 'Batch' : source} leads after filters
         </span>
         <span className="text-muted-foreground flex items-center gap-1">
           <Filter size={10} /> {activeStatuses.size}/{STATUS_OPTIONS.length} statuses
-          · {activeFilings.size > 0 ? `${activeFilings.size} filing` : 'all qualified filings'}
+          · {activeFilings.size > 0 ? `${activeFilings.size} filing` : 'all filings'}
         </span>
       </div>
 
