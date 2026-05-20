@@ -28,7 +28,9 @@ const supabase = createClient(
 // Clock-skew buffer applied when computing the incremental watermark
 const WATERMARK_BUFFER_MS = 10 * 60 * 1000; // 10 minutes
 // If no heartbeat for this long while status is still "running", treat as stuck (background continue failed).
-const STALE_RUN_MS = 20 * 60 * 1000;
+// Each page bumps the heartbeat, so a healthy chunk updates `updated_at` every few seconds —
+// 5 minutes of silence reliably means the chain is dead.
+const STALE_RUN_MS = 5 * 60 * 1000;
 const RESUMABLE_STATUSES = new Set(["running", "partial", "paused"]);
 const CONTROLLABLE_STATUSES = new Set(["running", "partial", "paused"]);
 
@@ -170,18 +172,25 @@ async function reconcileStaleRun(
     .select("*")
     .single();
 
+  // Self-heal: kick a background continue immediately so the user doesn't have
+  // to click Resume manually. Status will flip back to "running" on the next chunk.
+  scheduleBackgroundContinue(
+    String(run.id),
+    Number(meta.nextPage),
+    Number(meta.maxPages ?? DEFAULT_MAX_PAGES_PER_RUN),
+  );
+
   return data ?? { ...run, status: "partial", leads_upserted: leadsInDb };
 }
 
-function scheduleBackgroundContinue(
+async function postBackgroundContinue(
   runId: string,
   startPage: number,
   maxPages: number,
-): void {
+): Promise<void> {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/batchleads-sync`;
   const key = Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!;
-
-  fetch(url, {
+  await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -196,7 +205,34 @@ function scheduleBackgroundContinue(
       background: true,
       _internalContinue: true,
     }),
-  }).catch((err) => console.error("background sync continue failed:", err));
+    // Don't let a hung connection wedge the chain — fail fast and let retry handle it.
+    signal: AbortSignal.timeout(10_000),
+  });
+}
+
+/**
+ * Fire-and-forget background continue with one inline retry. If the initial POST
+ * fails (network blip, cold start), wait 3s and try once more before giving up.
+ * Without this, a single transient error silently kills the chunk chain.
+ */
+function scheduleBackgroundContinue(
+  runId: string,
+  startPage: number,
+  maxPages: number,
+): void {
+  (async () => {
+    try {
+      await postBackgroundContinue(runId, startPage, maxPages);
+    } catch (err) {
+      console.warn("background sync continue attempt 1 failed, retrying in 3s:", err);
+      try {
+        await new Promise((r) => setTimeout(r, 3_000));
+        await postBackgroundContinue(runId, startPage, maxPages);
+      } catch (retryErr) {
+        console.error("background sync continue failed after retry:", retryErr);
+      }
+    }
+  })();
 }
 
 function sleep(ms: number): Promise<void> {
