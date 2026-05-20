@@ -4,8 +4,7 @@ export const BATCH_LEADS_DEFAULT_BASE = "https://app.batchleads.io";
 export const BATCH_LEADS_PROPERTY_PATH = "/api/v1/property";
 export const BATCH_LEADS_LISTS_PATH = "/api/v1/lists";
 export const DEFAULT_PAGE_SIZE = 100;
-/** Pages per edge invocation — keep small so each chunk finishes under function limits and heartbeats stay fresh. */
-export const DEFAULT_MAX_PAGES_PER_RUN = 5;
+export const DEFAULT_MAX_PAGES_PER_RUN = 10;
 
 export interface BatchLeadsCredentials {
   apiKey: string;
@@ -88,19 +87,6 @@ export function buildPropertyRequestBody(options: {
    * to return only leads added on or after that date. The time portion is dropped.
    */
   updatedSince?: string;
-  /**
-   * When true (default), adds Batch server-side filters that narrow the property
-   * list (phone present, non-vacant, non-absentee). These were used historically
-   * in this codebase and reduce pages vs an unfiltered pull.
-   *
-   * **Does not** replace ingest qualification: equity ≤ 25% and filing NOD/NTS/LP
-   * are still enforced in `batchleads-sync` via `disqualifyReason` — Batch's API
-   * does not expose our exact equity % / foreclosure filing derivation.
-   *
-   * Set to `false` or set env `BATCH_LEADS_RELAX_PROPERTY_FILTERS=true` to omit
-   * these fields (e.g. debugging or if Batch changes filter semantics).
-   */
-  applyBatchServerFilters?: boolean;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = {
     list_id: options.listIds ?? [],
@@ -126,26 +112,15 @@ export function buildPropertyRequestBody(options: {
     uncheckedids: [],
     lead_score_from: 0,
     lead_score_to: 100,
+    is_vacant: "No",
+    is_mailing_vacant: "No",
+    absentee: "No",
     skiptraced: "",
     opt_out: "both",
     self_managed: "both",
+    has_phone_numbers: "1",
     ui_version: 2,
   };
-
-  let envRelax = false;
-  try {
-    envRelax = Deno.env.get("BATCH_LEADS_RELAX_PROPERTY_FILTERS") === "true";
-  } catch {
-    // non-Deno test environments
-  }
-  const useServerFilters = options.applyBatchServerFilters !== false && !envRelax;
-  if (useServerFilters) {
-    // Batch-side narrowing (verified in-repo against real API historically).
-    body.is_vacant = "No";
-    body.is_mailing_vacant = "No";
-    body.absentee = "No";
-    body.has_phone_numbers = "1";
-  }
 
   // Incremental: pass added_date as YYYY-MM-DD so Batch filters server-side.
   // This returns only leads added on/after the watermark date — meta.total will be
@@ -157,68 +132,6 @@ export function buildPropertyRequestBody(options: {
   return body;
 }
 
-// HTTP status codes worth retrying — Batch occasionally returns these under load.
-const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
-const MAX_FETCH_ATTEMPTS = 3;
-const BASE_RETRY_DELAY_MS = 500;
-const REQUEST_TIMEOUT_MS = 20_000;
-
-function fetchSleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Exponential backoff: 500ms, 1500ms, 4500ms... + up to 250ms jitter. */
-function backoffDelay(attempt: number): number {
-  const exp = BASE_RETRY_DELAY_MS * Math.pow(3, attempt - 1);
-  const jitter = Math.floor(Math.random() * 250);
-  return exp + jitter;
-}
-
-function isRetryableNetworkError(err: unknown): boolean {
-  const msg = String((err as Error)?.message ?? err);
-  // Deno's fetch surfaces "error sending request ... (Connect): Connection reset by peer",
-  // "client error (SendRequest)", AbortError on timeout, and DNS hiccups as EAI_AGAIN.
-  return /reset by peer|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network|abort|timeout|connect|SendRequest|client error/i
-    .test(msg);
-}
-
-/**
- * `fetch` with bounded retry + per-attempt hard timeout.
- *
- * Retries on:
- *   - TCP resets / connect errors / DNS hiccups (`isRetryableNetworkError`)
- *   - HTTP 408 / 425 / 429 / 5xx
- * Does NOT retry on:
- *   - 4xx (except those above) — application errors that won't get better
- *   - Final attempt failures — they throw to the caller as before
- */
-async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
-  let lastErr: unknown = null;
-  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
-    try {
-      const res = await fetch(url, {
-        ...init,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (RETRYABLE_STATUS.has(res.status) && attempt < MAX_FETCH_ATTEMPTS) {
-        // Drain body so the connection can be reused / released.
-        try { await res.arrayBuffer(); } catch { /* ignore */ }
-        await fetchSleep(backoffDelay(attempt));
-        continue;
-      }
-      return res;
-    } catch (err) {
-      lastErr = err;
-      if (attempt < MAX_FETCH_ATTEMPTS && isRetryableNetworkError(err)) {
-        await fetchSleep(backoffDelay(attempt));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw lastErr ?? new Error("fetchWithRetry: exhausted attempts");
-}
-
 export async function batchFetch(
   baseUrl: string,
   path: string,
@@ -227,7 +140,7 @@ export async function batchFetch(
 ): Promise<{ statusCode: number; json: Record<string, unknown>; latencyMs: number }> {
   const started = Date.now();
   const url = `${normalizeBaseUrl(baseUrl)}${path}`;
-  const res = await fetchWithRetry(url, {
+  const res = await fetch(url, {
     method: options.method ?? "GET",
     headers: {
       "Accept": "application/json",
@@ -282,14 +195,7 @@ export async function fetchLists(
 
 export async function fetchSavedAddressesPage(
   creds: BatchLeadsCredentials,
-  options: {
-    page: number;
-    pageSize?: number;
-    listIds?: number[];
-    mode?: SyncMode;
-    updatedSince?: string;
-    applyBatchServerFilters?: boolean;
-  },
+  options: { page: number; pageSize?: number; listIds?: number[]; mode?: SyncMode; updatedSince?: string },
 ): Promise<BatchPropertyPage> {
   const body = buildPropertyRequestBody(options);
   const { statusCode, json } = await batchFetch(
@@ -561,11 +467,6 @@ export function buildUpdateRow(
  * Apply ingest-time qualification rules to a mapped Batch lead.
  * Returns null if the lead passes, otherwise a string describing the reason
  * it was filtered out (useful for run-level counters).
- *
- * **Defense in depth:** `buildPropertyRequestBody` may add Batch server-side
- * filters (phone / vacant / absentee). This check is still required because
- * Batch does not apply our equity ≤ 25% or NOD/NTS/LP filing rules in the
- * property POST body we use.
  */
 export function disqualifyReason(lead: MappedInventoryLead): "equity" | "filing" | null {
   if (lead.equity_pct > 25) return "equity";
