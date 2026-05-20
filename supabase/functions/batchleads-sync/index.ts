@@ -28,7 +28,8 @@ const supabase = createClient(
 
 // Clock-skew buffer applied when computing the incremental watermark
 const WATERMARK_BUFFER_MS = 10 * 60 * 1000; // 10 minutes
-const STALE_RUN_MS = 3 * 60 * 1000;
+// If no heartbeat for this long while status is still "running", treat as stuck (background continue failed).
+const STALE_RUN_MS = 20 * 60 * 1000;
 const RESUMABLE_STATUSES = new Set(["running", "partial", "paused"]);
 const CONTROLLABLE_STATUSES = new Set(["running", "partial", "paused"]);
 
@@ -134,6 +135,14 @@ async function findControllableRun(runId?: string): Promise<Record<string, unkno
     .maybeSingle();
 
   return data;
+}
+
+/** Bump updated_at so GET/reconcileStaleRun does not mark a long chunk as "stuck" mid-flight. */
+async function touchSyncRunHeartbeat(runId: string): Promise<void> {
+  await supabase
+    .from("inventory_sync_runs")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", runId);
 }
 
 async function reconcileStaleRun(
@@ -386,7 +395,22 @@ Deno.serve(async (req) => {
   }
 
   if (internal) {
-    const status = await getRunStatus(String(body.runId));
+    const rid = String(body.runId);
+    let status = await getRunStatus(rid);
+    // reconcileStaleRun may have flipped "running" → "partial" just before this
+    // chained request arrived; treat as resumable and self-heal.
+    if (status === "partial") {
+      await supabase
+        .from("inventory_sync_runs")
+        .update({
+          status: "running",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", rid)
+        .eq("status", "partial");
+      status = await getRunStatus(rid);
+    }
     if (status !== "running") {
       return jsonResponse({ skipped: true, reason: status ?? "not_found" });
     }
@@ -494,18 +518,20 @@ Deno.serve(async (req) => {
         .from("inventory_sync_runs")
         .select("id, status")
         .eq("source", "Batch")
-        .in("status", ["running", "paused"])
+        .in("status", ["running", "paused", "partial"])
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (blocked && !body.force) {
-        return jsonResponse({
-          error: blocked.status === "paused"
+        const st = String(blocked.status);
+        const err =
+          st === "paused"
             ? "A sync is paused. Resume or stop it before starting a new one."
-            : "A sync is already running.",
-          runId: blocked.id,
-        }, 409);
+            : st === "partial"
+            ? "A sync was interrupted. Resume or stop it before starting a new one."
+            : "A sync is already running.";
+        return jsonResponse({ error: err, runId: blocked.id }, 409);
       }
 
       const { data, error } = await supabase
@@ -772,6 +798,8 @@ Deno.serve(async (req) => {
           await saveRoundRobinIndex(supabase, rrIndex, repIds.length);
         }
       }
+
+      await touchSyncRunHeartbeat(runId!);
 
       const isLastPage = page >= pageResult.meta.last_page || pageResult.rows.length === 0;
       if (isLastPage) {

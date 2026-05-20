@@ -4,7 +4,8 @@ export const BATCH_LEADS_DEFAULT_BASE = "https://app.batchleads.io";
 export const BATCH_LEADS_PROPERTY_PATH = "/api/v1/property";
 export const BATCH_LEADS_LISTS_PATH = "/api/v1/lists";
 export const DEFAULT_PAGE_SIZE = 100;
-export const DEFAULT_MAX_PAGES_PER_RUN = 10;
+/** Pages per edge invocation — keep small so each chunk finishes under function limits and heartbeats stay fresh. */
+export const DEFAULT_MAX_PAGES_PER_RUN = 5;
 
 export interface BatchLeadsCredentials {
   apiKey: string;
