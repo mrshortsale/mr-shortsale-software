@@ -45,11 +45,10 @@ import {
 const STATES = ['All', 'FL', 'TX', 'CA', 'AZ', 'NV', 'GA', 'NC', 'IL', 'NY', 'OH'];
 const PAGE_SIZE = 50;
 const STATUS_OPTIONS: InventoryStatus[] = ['New', 'Contacted', 'Promoted', 'Dismissed'];
-const FILING_OPTIONS: InventoryFilingType[] = ['NOD', 'NTS', 'LP', 'Short Sale', 'Inbound', 'REO', 'Other'];
-const EQUITY_PRESETS: { label: string; max: number | null }[] = [
-  { label: 'Equity ≤ 25%', max: 25 },
-  { label: 'All equity', max: null },
-];
+// Lead Inventory only shows leads that match the spec's qualification rule
+// (equity ≤ 25% AND filing type in the distressed set). The baseline is
+// enforced server-side; these chips let the user narrow further within it.
+const FILING_OPTIONS: InventoryFilingType[] = ['NOD', 'NTS', 'LP'];
 
 const COLUMN_WIDTHS: Record<string, string> = {
   select: '28px',
@@ -111,13 +110,11 @@ export default function LeadInventory() {
   const [activeStatuses, setActiveStatuses] = useState<Set<InventoryStatus>>(
     new Set(['New', 'Contacted', 'Promoted']),
   );
-  // Pre-select the legacy distressed filing set; users can broaden as needed now
-  // that all Batch rows are stored in the DB regardless of filing type.
+  // Empty set = "all qualified filings" (server enforces the NOD/NTS/LP baseline).
+  // Selecting chips narrows further within the qualified set.
   const [activeFilings, setActiveFilings] = useState<Set<InventoryFilingType>>(
     new Set(['NOD', 'NTS', 'LP']),
   );
-  // Pre-select the legacy distressed equity filter (<= 25%).
-  const [maxEquity, setMaxEquity] = useState<number | null>(25);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() => loadVisibleColumns());
@@ -142,7 +139,7 @@ export default function LeadInventory() {
 
   useEffect(() => {
     setPage(1);
-  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings, maxEquity]);
+  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings]);
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
@@ -160,7 +157,6 @@ export default function LeadInventory() {
         esOnly,
         statuses: [...activeStatuses],
         filingTypes: [...activeFilings],
-        maxEquity: maxEquity ?? undefined,
         limit: PAGE_SIZE,
         offset,
       }),
@@ -199,7 +195,7 @@ export default function LeadInventory() {
     }
 
     setLoading(false);
-  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings, maxEquity, page]);
+  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings, page]);
 
   useEffect(() => {
     loadLeads();
@@ -410,7 +406,7 @@ export default function LeadInventory() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Counter label="New today" value={(stats.newToday ?? 0).toLocaleString()} accent="primary" />
         <Counter label="Avg contact attempts" value={(stats.avgAttempts ?? 0).toFixed(1)} />
-        <Counter label="Equity ≤ 25%" value={(stats.hotEquity ?? 0).toLocaleString()} accent="accent" />
+        <Counter label="Active qualified" value={(stats.hotEquity ?? 0).toLocaleString()} accent="accent" />
         <Counter label="Auctions < 30d" value={(stats.auctionsLt30 ?? 0).toLocaleString()} accent="speed" />
         <Counter label="Hot (score ≥ 8)" value={(stats.hotScore ?? 0).toLocaleString()} accent="speed" />
       </div>
@@ -485,19 +481,6 @@ export default function LeadInventory() {
               </button>
             );
           })}
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-3 mr-1">Equity</span>
-          {EQUITY_PRESETS.map((preset) => {
-            const on = maxEquity === preset.max;
-            return (
-              <button
-                key={preset.label}
-                onClick={() => setMaxEquity(preset.max)}
-                className={`px-2 py-0.5 rounded text-[11px] font-bold border ${on ? 'bg-accent/15 text-accent border-accent/30' : 'bg-muted text-muted-foreground border-transparent'}`}
-              >
-                {preset.label}
-              </button>
-            );
-          })}
           {views.length > 0 && (
             <>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-3 mr-1">Saved</span>
@@ -519,12 +502,12 @@ export default function LeadInventory() {
       <div className="rounded-xl border bg-muted/50 px-3 py-2 text-[11px] text-foreground flex items-center justify-between flex-wrap gap-2">
         <span>
           Showing <strong className="text-foreground">{totalMatching.toLocaleString()}</strong> of{' '}
-          <strong>{(stats.sourceTotal ?? 0).toLocaleString()}</strong> {source === 'All' ? 'Batch' : source} leads after filters
+          <strong>{(stats.sourceTotal ?? 0).toLocaleString()}</strong> qualified{' '}
+          {source === 'All' ? 'Batch' : source} leads (equity ≤ 25% · NOD/NTS/LP) after filters
         </span>
         <span className="text-muted-foreground flex items-center gap-1">
           <Filter size={10} /> {activeStatuses.size}/{STATUS_OPTIONS.length} statuses
-          · {activeFilings.size > 0 ? `${activeFilings.size} filing` : 'all filings'}
-          · {maxEquity !== null ? `equity ≤ ${maxEquity}%` : 'all equity'}
+          · {activeFilings.size > 0 ? `${activeFilings.size} filing` : 'all qualified filings'}
         </span>
       </div>
 

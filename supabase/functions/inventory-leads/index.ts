@@ -101,11 +101,26 @@ Deno.serve(async (req) => {
   const maxEquityRaw = url.searchParams.get("max_equity");
   const minEquity = minEquityRaw !== null && minEquityRaw !== "" ? Number(minEquityRaw) : null;
   const maxEquity = maxEquityRaw !== null && maxEquityRaw !== "" ? Number(maxEquityRaw) : null;
+  // Admin-only escape hatch — bypass the qualified-lead baseline.
+  const includeUnqualified = url.searchParams.get("include_unqualified") === "true";
+
+  // ── Qualification baseline (per spec, section 03 "What Makes a Lead Qualified?") ──
+  // Batch Leads is the only source where qualification is a hard rule: equity must be
+  // at or below 25% AND filing type must be in the distressed set (NOD, NTS, LP).
+  // The frontend's filter chips narrow further; this baseline is the upper envelope
+  // and is enforced server-side so users (or buggy clients) can't ask for unqualified
+  // leads by accident.
+  const QUALIFIED_FILINGS = ["NOD", "NTS", "LP"] as const;
+  const QUALIFIED_MAX_EQUITY = 25;
+  const enforceBaseline = !includeUnqualified && source === "Batch";
 
   // Build the main paged query for the table
   // deno-lint-ignore no-explicit-any
   const applyFilters = (qb: any) => {
     qb = qb.eq("source", source);
+    if (enforceBaseline) {
+      qb = qb.lte("equity_pct", QUALIFIED_MAX_EQUITY).in("filing_type", QUALIFIED_FILINGS);
+    }
     if (state && state !== "All") qb = qb.eq("state", state);
     if (esOnly) qb = qb.eq("language", "ES");
     if (statuses.length > 0) {
@@ -114,6 +129,10 @@ Deno.serve(async (req) => {
       // Default: hide Dismissed in the table view unless explicitly requested
       qb = qb.neq("status", "Dismissed");
     }
+    // Frontend filing chips intersect with the baseline. If they pick a value
+    // outside the qualified set the baseline `.in()` will return zero rows,
+    // which is the correct UX (those leads truly aren't shown unless the admin
+    // override is used).
     if (filingTypes.length > 0) qb = qb.in("filing_type", filingTypes);
     if (assignedRep === "unassigned") qb = qb.is("assigned_rep_id", null);
     else if (assignedRep) qb = qb.eq("assigned_rep_id", assignedRep);
@@ -148,15 +167,26 @@ Deno.serve(async (req) => {
   // KPI counters scoped to the active source. Each is a HEAD count query.
   const todayIso = startOfTodayIso();
 
-  const kpiBase = () =>
-    supabase.from("inventory_leads").select("*", { count: "exact", head: true }).eq("source", source);
+  // KPI base — every counter is scoped to the same qualified baseline as the
+  // main list. Otherwise the "X of Y leads" funnel banner would compare apples
+  // (qualified, filtered) to oranges (raw ingest total).
+  const kpiBase = () => {
+    let qb = supabase
+      .from("inventory_leads")
+      .select("*", { count: "exact", head: true })
+      .eq("source", source);
+    if (enforceBaseline) {
+      qb = qb.lte("equity_pct", QUALIFIED_MAX_EQUITY).in("filing_type", QUALIFIED_FILINGS);
+    }
+    return qb;
+  };
 
-  // "Hot equity" for distressed-property work = LOW equity (most-at-risk owners).
-  // Counts rows with equity_pct <= 25 (excluding Dismissed) — same threshold as the
-  // legacy ingest filter, now applied at query time.
+  // "Hot equity" within the qualified subset = the most distressed sliver
+  // (equity_pct <= 25 already baked into the baseline — this card now reports
+  // qualified actionable leads excluding Dismissed).
   const [newTodayResp, hotEquityResp, auctionsLt30Resp, hotScoreResp, totalSourceResp] = await Promise.all([
     kpiBase().gte("ingested_at", todayIso),
-    kpiBase().lte("equity_pct", 25).neq("status", "Dismissed"),
+    kpiBase().neq("status", "Dismissed"),
     kpiBase().lt("days_to_auction", 30).neq("status", "Dismissed"),
     kpiBase().gte("score", 8).neq("status", "Dismissed"),
     kpiBase(),
@@ -165,12 +195,18 @@ Deno.serve(async (req) => {
   // Avg contact attempts requires a small aggregation; do it with a single
   // .select() and compute client-side, capped at 5000 active rows (KPI is a
   // headline metric, exact value isn't critical).
-  const { data: attemptsRows } = await supabase
+  let attemptsQ = supabase
     .from("inventory_leads")
     .select("contact_attempts")
     .eq("source", source)
     .in("status", ["New", "Contacted"])
     .limit(5000);
+  if (enforceBaseline) {
+    attemptsQ = attemptsQ
+      .lte("equity_pct", QUALIFIED_MAX_EQUITY)
+      .in("filing_type", QUALIFIED_FILINGS);
+  }
+  const { data: attemptsRows } = await attemptsQ;
   const attemptsArr = (attemptsRows ?? []).map((r: { contact_attempts: number | null }) =>
     Number(r.contact_attempts ?? 0)
   );

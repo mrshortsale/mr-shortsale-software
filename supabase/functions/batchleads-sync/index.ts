@@ -31,6 +31,12 @@ const WATERMARK_BUFFER_MS = 10 * 60 * 1000; // 10 minutes
 // Each page bumps the heartbeat, so a healthy chunk updates `updated_at` every few seconds —
 // 5 minutes of silence reliably means the chain is dead.
 const STALE_RUN_MS = 5 * 60 * 1000;
+// Worker lease — only one chunk runner may hold the lease for a given run at a time.
+// The lease is recorded in metadata.workerId / metadata.workerLeasedAt. Any chunk runner
+// that can't claim the lease bows out immediately. The lease is auto-stripped on chunk
+// end / pause / stop / stale-reconcile so the next chunk can claim instantly. If a
+// runner dies without releasing, the lease expires after this TTL.
+const LEASE_TTL_MS = 2 * 60 * 1000;
 const RESUMABLE_STATUSES = new Set(["running", "partial", "paused"]);
 const CONTROLLABLE_STATUSES = new Set(["running", "partial", "paused"]);
 
@@ -58,6 +64,15 @@ interface RunMeta {
   leadsAutoAssigned?: number;
   assignmentSkippedNoReps?: boolean;
   roundRobinRepCount?: number;
+  // Worker lease — see LEASE_TTL_MS. Cleared on chunk end / pause / stop / reconcile.
+  workerId?: string;
+  workerLeasedAt?: string;
+}
+
+/** Drop worker-lease fields from a RunMeta value, e.g. before writing the final metadata. */
+function stripLease(meta: RunMeta): RunMeta {
+  const { workerId: _wid, workerLeasedAt: _wat, ...rest } = meta;
+  return rest;
 }
 
 async function requireCeo(req: Request): Promise<string | null> {
@@ -138,13 +153,67 @@ async function findControllableRun(runId?: string): Promise<Record<string, unkno
   return data;
 }
 
-/** Bump updated_at so GET/reconcileStaleRun does not mark a long chunk as "stuck" mid-flight. */
-async function touchSyncRunHeartbeat(runId: string): Promise<void> {
-  await supabase
+/**
+ * Atomically claim the worker lease for a run.
+ *
+ * Returns the new workerId + the metadata as it stood before claiming on success,
+ * or `null` if another worker already holds an unexpired lease. The claim is a
+ * conditional update on `metadata->>workerId`, so two concurrent claimers cannot
+ * both succeed.
+ */
+async function tryClaimWorkerLease(
+  runId: string,
+): Promise<{ workerId: string; prevMeta: RunMeta } | null> {
+  const { data: cur, error: readErr } = await supabase
+    .from("inventory_sync_runs")
+    .select("metadata")
+    .eq("id", runId)
+    .maybeSingle();
+  if (readErr || !cur) return null;
+
+  const prevMeta = (cur.metadata ?? {}) as RunMeta;
+  const cutoffMs = Date.now() - LEASE_TTL_MS;
+  const heldByOther =
+    !!prevMeta.workerId &&
+    !!prevMeta.workerLeasedAt &&
+    new Date(prevMeta.workerLeasedAt).getTime() > cutoffMs;
+  if (heldByOther) return null;
+
+  const workerId = crypto.randomUUID();
+  const claimAt = new Date().toISOString();
+  const newMeta: RunMeta = { ...prevMeta, workerId, workerLeasedAt: claimAt };
+
+  let q = supabase
+    .from("inventory_sync_runs")
+    .update({ metadata: newMeta, updated_at: claimAt })
+    .eq("id", runId);
+  // CAS: only succeed if the workerId on disk is still what we just read.
+  q = prevMeta.workerId
+    ? q.filter("metadata->>workerId", "eq", prevMeta.workerId)
+    : q.filter("metadata->>workerId", "is", null);
+
+  const { data: claimed, error: updErr } = await q.select("id").maybeSingle();
+  if (updErr || !claimed) return null;
+
+  return { workerId, prevMeta };
+}
+
+/**
+ * Bump updated_at AND verify our lease is still ours (someone else may have stolen it
+ * after the LEASE_TTL_MS window, in which case we must abort gracefully so we don't
+ * race the new owner).
+ */
+async function verifyLeaseAndHeartbeat(runId: string, workerId: string): Promise<boolean> {
+  const { data, error } = await supabase
     .from("inventory_sync_runs")
     .update({ updated_at: new Date().toISOString() })
-    .eq("id", runId);
+    .eq("id", runId)
+    .filter("metadata->>workerId", "eq", workerId)
+    .select("id")
+    .maybeSingle();
+  return !error && !!data;
 }
+
 
 async function reconcileStaleRun(
   run: Record<string, unknown> | null,
@@ -166,6 +235,9 @@ async function reconcileStaleRun(
       status: "partial",
       leads_upserted: leadsInDb,
       error_message: "Sync paused — resume to fetch remaining leads",
+      // Clear the worker lease so the auto-fired continue can claim instantly.
+      // The previous worker is presumed dead (no heartbeat for STALE_RUN_MS).
+      metadata: stripLease(meta),
       updated_at: new Date().toISOString(),
     })
     .eq("id", run.id)
@@ -183,14 +255,30 @@ async function reconcileStaleRun(
   return data ?? { ...run, status: "partial", leads_upserted: leadsInDb };
 }
 
-async function postBackgroundContinue(
+/**
+ * Fire-and-forget background continue.
+ *
+ * The receiver function takes ~30-60s to respond (it processes a whole chunk
+ * before returning), so we MUST NOT await its response here — the caller is
+ * a different invocation that has its own work and should exit quickly.
+ *
+ * `EdgeRuntime.waitUntil` is Supabase's hook to keep this function alive long
+ * enough to actually flush the outgoing request, even after the main handler
+ * has returned its response. Without it, the runtime could kill the function
+ * before the request leaves the box.
+ *
+ * If the request itself fails (rare), `reconcileStaleRun` and the nightly cron
+ * are our safety nets — both auto-resume `partial` runs.
+ */
+function scheduleBackgroundContinue(
   runId: string,
   startPage: number,
   maxPages: number,
-): Promise<void> {
+): void {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/batchleads-sync`;
   const key = Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!;
-  await fetch(url, {
+
+  const dispatch = fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -205,34 +293,17 @@ async function postBackgroundContinue(
       background: true,
       _internalContinue: true,
     }),
-    // Don't let a hung connection wedge the chain — fail fast and let retry handle it.
-    signal: AbortSignal.timeout(10_000),
-  });
-}
+  }).then(
+    () => { /* receiver accepted — no body read needed */ },
+    (err) => console.warn("background sync continue dispatch failed:", err),
+  );
 
-/**
- * Fire-and-forget background continue with one inline retry. If the initial POST
- * fails (network blip, cold start), wait 3s and try once more before giving up.
- * Without this, a single transient error silently kills the chunk chain.
- */
-function scheduleBackgroundContinue(
-  runId: string,
-  startPage: number,
-  maxPages: number,
-): void {
-  (async () => {
-    try {
-      await postBackgroundContinue(runId, startPage, maxPages);
-    } catch (err) {
-      console.warn("background sync continue attempt 1 failed, retrying in 3s:", err);
-      try {
-        await new Promise((r) => setTimeout(r, 3_000));
-        await postBackgroundContinue(runId, startPage, maxPages);
-      } catch (retryErr) {
-        console.error("background sync continue failed after retry:", retryErr);
-      }
-    }
-  })();
+  try {
+    const edge = (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime;
+    edge?.waitUntil(dispatch);
+  } catch {
+    // Local dev / non-edge runtime: the event loop will handle the promise.
+  }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -289,12 +360,15 @@ async function handlePause(runId?: string) {
   }
 
   const leadsInDb = await countBatchLeads();
+  const meta = (run.metadata ?? {}) as RunMeta;
   const { data } = await supabase
     .from("inventory_sync_runs")
     .update({
       status: "paused",
       leads_upserted: leadsInDb,
       error_message: "Paused by user",
+      // Release the lease so a future Resume isn't blocked waiting for it to expire.
+      metadata: stripLease(meta),
       updated_at: new Date().toISOString(),
     })
     .eq("id", run.id)
@@ -316,6 +390,7 @@ async function handleStop(runId?: string) {
   }
 
   const leadsInDb = await countBatchLeads();
+  const meta = (run.metadata ?? {}) as RunMeta;
   const { data } = await supabase
     .from("inventory_sync_runs")
     .update({
@@ -323,6 +398,8 @@ async function handleStop(runId?: string) {
       completed_at: new Date().toISOString(),
       leads_upserted: leadsInDb,
       error_message: "Stopped by user",
+      // Release the lease so the run can't be revived by a stuck worker.
+      metadata: stripLease(meta),
       updated_at: new Date().toISOString(),
     })
     .eq("id", run.id)
@@ -624,6 +701,21 @@ Deno.serve(async (req) => {
   let qualifiedTotal = prevMeta.qualifiedTotal ?? 0;
   let leadsAutoAssigned = prevMeta.leadsAutoAssigned ?? 0;
 
+  // ─── Worker lease ──────────────────────────────────────────────────────────
+  //
+  // Serializes chunk runners for the same run. Without this, three different
+  // self-heal paths (end-of-chunk continue, reconcileStaleRun, and the nightly
+  // cron resume) can each fire `scheduleBackgroundContinue` for the same run
+  // and produce overlapping workers. That race manifests as `inventory_leads_pkey`
+  // duplicate-key crashes (two workers both .insert() the same lead), oscillating
+  // `lastPage` in metadata, and `cumulativeNew` going backwards.
+
+  const claim = await tryClaimWorkerLease(runId!);
+  if (!claim) {
+    return jsonResponse({ skipped: true, reason: "worker_busy", runId });
+  }
+  const workerId = claim.workerId;
+
   // ─── Round-robin setup (once per invocation) ───────────────────────────────
 
   const repIds = await loadActiveRepIds(supabase);
@@ -833,7 +925,20 @@ Deno.serve(async (req) => {
         }
       }
 
-      await touchSyncRunHeartbeat(runId!);
+      // Combined heartbeat + lease verification. If someone stole our lease
+      // (i.e. our 2-minute TTL expired and a new worker claimed), bail out so
+      // we don't double-process pages alongside the new owner.
+      const stillOurs = await verifyLeaseAndHeartbeat(runId!, workerId);
+      if (!stillOurs) {
+        return jsonResponse({
+          runId,
+          skipped: true,
+          reason: "lease_lost",
+          pagesProcessed,
+          lastPage,
+          durationMs: Date.now() - started,
+        });
+      }
 
       const isLastPage = page >= pageResult.meta.last_page || pageResult.rows.length === 0;
       if (isLastPage) {
@@ -944,7 +1049,9 @@ Deno.serve(async (req) => {
         leads_upserted: leadsInDb,
         error_message: message,
         metadata: {
-          ...meta,
+          // Strip lease so the next resume (auto-fired by reconcileStaleRun or
+          // the nightly cron) can claim immediately instead of waiting out the TTL.
+          ...stripLease(meta),
           lastPage,
           totalAvailable,
           nextPage: meta.nextPage ?? null,
