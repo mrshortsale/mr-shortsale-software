@@ -129,6 +129,68 @@ export function buildPropertyRequestBody(options: {
   return body;
 }
 
+// HTTP status codes worth retrying — Batch occasionally returns these under load.
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+const MAX_FETCH_ATTEMPTS = 3;
+const BASE_RETRY_DELAY_MS = 500;
+const REQUEST_TIMEOUT_MS = 20_000;
+
+function fetchSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Exponential backoff: 500ms, 1500ms, 4500ms... + up to 250ms jitter. */
+function backoffDelay(attempt: number): number {
+  const exp = BASE_RETRY_DELAY_MS * Math.pow(3, attempt - 1);
+  const jitter = Math.floor(Math.random() * 250);
+  return exp + jitter;
+}
+
+function isRetryableNetworkError(err: unknown): boolean {
+  const msg = String((err as Error)?.message ?? err);
+  // Deno's fetch surfaces "error sending request ... (Connect): Connection reset by peer",
+  // "client error (SendRequest)", AbortError on timeout, and DNS hiccups as EAI_AGAIN.
+  return /reset by peer|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network|abort|timeout|connect|SendRequest|client error/i
+    .test(msg);
+}
+
+/**
+ * `fetch` with bounded retry + per-attempt hard timeout.
+ *
+ * Retries on:
+ *   - TCP resets / connect errors / DNS hiccups (`isRetryableNetworkError`)
+ *   - HTTP 408 / 425 / 429 / 5xx
+ * Does NOT retry on:
+ *   - 4xx (except those above) — application errors that won't get better
+ *   - Final attempt failures — they throw to the caller as before
+ */
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= MAX_FETCH_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (RETRYABLE_STATUS.has(res.status) && attempt < MAX_FETCH_ATTEMPTS) {
+        // Drain body so the connection can be reused / released.
+        try { await res.arrayBuffer(); } catch { /* ignore */ }
+        await fetchSleep(backoffDelay(attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_FETCH_ATTEMPTS && isRetryableNetworkError(err)) {
+        await fetchSleep(backoffDelay(attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr ?? new Error("fetchWithRetry: exhausted attempts");
+}
+
 export async function batchFetch(
   baseUrl: string,
   path: string,
@@ -137,7 +199,7 @@ export async function batchFetch(
 ): Promise<{ statusCode: number; json: Record<string, unknown>; latencyMs: number }> {
   const started = Date.now();
   const url = `${normalizeBaseUrl(baseUrl)}${path}`;
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: options.method ?? "GET",
     headers: {
       "Accept": "application/json",

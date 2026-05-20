@@ -806,7 +806,9 @@ Deno.serve(async (req) => {
       }
 
       page++;
-      await sleep(200);
+      // Small breather between API calls so Batch's edge tier is less likely to
+      // close the connection on us. Paired with batchFetch retries.
+      await sleep(400);
     }
 
     const leadsInDb = await countBatchLeads();
