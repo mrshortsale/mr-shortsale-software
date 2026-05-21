@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { isSignupDomainEmail } from '@/lib/emailValidation';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { MicrosoftSignInButton } from '@/components/auth/MicrosoftSignInButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -36,14 +37,18 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 
-// ─── Google error codes → human-readable messages ────────────────────────────
+// ─── OAuth error codes → human-readable messages ─────────────────────────────
 
-const GOOGLE_ERRORS: Record<string, string> = {
+const AUTH_ERRORS: Record<string, string> = {
   account_disabled: 'Your account is disabled. Please contact support.',
   google_consent_denied: 'Sign-in was cancelled.',
   google_invalid_state: 'Session expired. Please try again.',
   google_not_configured: 'Google Sign-In is not configured on this server.',
   google_auth_failed: 'Google Sign-In failed. Please try again.',
+  microsoft_consent_denied: 'Sign-in was cancelled.',
+  microsoft_invalid_state: 'Session expired. Please try again.',
+  microsoft_not_configured: 'Microsoft Sign-In is not configured on this server.',
+  microsoft_auth_failed: 'Microsoft Sign-In failed. Please try again.',
 };
 
 // ─── Zod schema builders ──────────────────────────────────────────────────────
@@ -122,7 +127,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
 
   useEffect(() => {
     const code = urlParams.get('error');
-    if (code && GOOGLE_ERRORS[code]) setServerError(GOOGLE_ERRORS[code]);
+    if (code && AUTH_ERRORS[code]) setServerError(AUTH_ERRORS[code]);
   }, [urlParams]);
 
   const schema = buildSignInSchema(t);
@@ -246,7 +251,10 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
               <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
             </div>
           </div>
-          <GoogleSignInButton />
+          <div className="flex flex-col gap-2">
+            <GoogleSignInButton />
+            <MicrosoftSignInButton />
+          </div>
 
           <p className="text-center text-xs text-muted-foreground">
             {t('login.signIn.noAccount')}{' '}
@@ -442,7 +450,10 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
           </div>
         </div>
-        <GoogleSignInButton />
+        <div className="flex flex-col gap-2">
+          <GoogleSignInButton />
+          <MicrosoftSignInButton />
+        </div>
 
         <p className="text-center text-xs text-muted-foreground">
           {t('login.signUp.haveAccount')}{' '}

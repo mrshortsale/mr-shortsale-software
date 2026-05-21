@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decrypt } from "./crypto.ts";
 
 export interface GoogleProfile {
   sub: string;
@@ -13,6 +14,40 @@ export interface GoogleProfile {
 export type ProvisionResult =
   | { ok: true; user: { id: string; email: string; name: string; role: string } }
   | { ok: false; error: string };
+
+export interface OAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+export async function fetchGoogleCredentials(supabase: SupabaseClient): Promise<OAuthCredentials | null> {
+  const { data: integration } = await supabase
+    .from("integrations")
+    .select("id")
+    .eq("slug", "google-signin")
+    .single();
+
+  if (!integration) return null;
+
+  const { data: cred } = await supabase
+    .from("integration_credentials")
+    .select("encrypted_credentials, credentials_iv, status")
+    .eq("integration_id", integration.id)
+    .single();
+
+  // Only block when the CEO has explicitly disabled the integration.
+  // "error" (from a failed test) must not lock users out of sign-in.
+  if (!cred || cred.status === "disabled") return null;
+
+  try {
+    const decrypted = await decrypt(cred.encrypted_credentials, cred.credentials_iv);
+    const parsed = JSON.parse(decrypted) as Record<string, string>;
+    if (!parsed.clientId || !parsed.clientSecret) return null;
+    return { clientId: parsed.clientId, clientSecret: parsed.clientSecret };
+  } catch {
+    return null;
+  }
+}
 
 export async function loginOrProvisionWithGoogle(
   profile: GoogleProfile,

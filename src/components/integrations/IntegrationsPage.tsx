@@ -21,6 +21,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   data: '📊',
   marketing: '📢',
   communications: '📞',
+  auth: '🔐',
   custom: '🔧',
 };
 
