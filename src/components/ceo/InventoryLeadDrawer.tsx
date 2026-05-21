@@ -50,6 +50,7 @@ function formatRelative(ms: number | null | undefined): string {
 export default function InventoryLeadDrawer({
   lead, open, onOpenChange, repNameById, onAssignRep, onStatusChange, onPushToMojo,
 }: Props) {
+  const { t } = useTranslation();
   if (!lead) return null;
 
   const hot = lead.score >= 8;
@@ -136,7 +137,7 @@ export default function InventoryLeadDrawer({
                   type="button"
                   className="flex-1 min-w-[120px] py-2 bg-muted text-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm hover:bg-muted/80"
                 >
-                  <UserPlus size={14} /> {assignedName ? 'Reassign' : 'Assign rep'}
+                  <UserPlus size={14} /> {assignedName ? t('inventory.buttons.assignRep') : t('inventory.buttons.assignRep')}
                 </button>
               }
             />
@@ -144,19 +145,19 @@ export default function InventoryLeadDrawer({
               onClick={() => onStatusChange(lead, 'Promoted')}
               className="flex-1 min-w-[120px] py-2 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
             >
-              <ArrowRightCircle size={14} /> Promote
+              <ArrowRightCircle size={14} /> {t('inventory.buttons.promote')}
             </button>
             <button
               onClick={() => onStatusChange(lead, 'Dismissed')}
               className="flex-1 min-w-[120px] py-2 bg-destructive text-destructive-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
             >
-              <EyeOff size={14} /> Dismiss
+              <EyeOff size={14} /> {t('inventory.buttons.dismiss')}
             </button>
             <button
               onClick={() => onPushToMojo(lead)}
               className="flex-1 min-w-[120px] py-2 bg-primary text-primary-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
             >
-              <ArrowUpToLine size={14} /> Push to Mojo
+              <ArrowUpToLine size={14} /> {t('inventory.buttons.pushToMojo')}
             </button>
           </div>
         </div>
@@ -197,7 +198,7 @@ function CopyRow({ label, value, icon }: { label: string; value: string | null; 
           <button
             type="button"
             onClick={() => {
-              navigator.clipboard?.writeText(value).then(() => toast.success(`${label} copied`));
+              navigator.clipboard?.writeText(value).then(() => toast.success(`${label} copied`)); // label is already translated at call site
             }}
             className="p-1 rounded hover:bg-muted text-muted-foreground"
             title={`Copy ${label}`}

@@ -1,4 +1,5 @@
 import { Bell, LogOut, Menu, Moon, Search, Settings, Sun, User as UserIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ interface TopNavProps {
 export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   const initials = user?.name
     ? user.name
@@ -33,7 +35,10 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
         .toUpperCase()
     : 'U';
 
-  const roleLabel = user?.role === 'ceo' ? 'CEO / Owner' : 'Sales Rep';
+  const roleLabel =
+    user?.role === 'ceo'
+      ? t('topNav.roleLabels.ceo')
+      : t('topNav.roleLabels.rep');
 
   return (
     <header
@@ -47,7 +52,7 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
         size="icon"
         className="h-9 w-9 lg:hidden"
         onClick={onOpenSidebar}
-        aria-label="Open menu"
+        aria-label={t('topNav.openMenu')}
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -66,7 +71,7 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
         <div className="relative ml-auto w-full max-w-sm sm:ml-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search anything..."
+            placeholder={t('topNav.searchPlaceholder')}
             className="h-9 w-full border-transparent bg-muted/60 pl-9 text-sm placeholder:text-muted-foreground/70 focus-visible:border-border focus-visible:bg-background"
           />
         </div>
@@ -79,7 +84,7 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
           size="icon"
           onClick={toggleTheme}
           className="h-9 w-9"
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          aria-label={theme === 'light' ? t('topNav.switchToDark') : t('topNav.switchToLight')}
         >
           {theme === 'light' ? (
             <Moon className="h-[18px] w-[18px]" />
@@ -88,7 +93,12 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
           )}
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative h-9 w-9"
+          aria-label={t('topNav.notifications')}
+        >
           <Bell className="h-[18px] w-[18px]" />
         </Button>
 
@@ -114,11 +124,11 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2">
               <UserIcon className="h-4 w-4" />
-              <span>Profile</span>
+              <span>{t('topNav.profile')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2">
               <Settings className="h-4 w-4" />
-              <span>Settings</span>
+              <span>{t('topNav.settings')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -126,7 +136,7 @@ export default function TopNav({ onOpenSidebar, pageTitle, pageMeta }: TopNavPro
               className="gap-2 text-destructive focus:text-destructive"
             >
               <LogOut className="h-4 w-4" />
-              <span>Sign out</span>
+              <span>{t('topNav.signOut')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

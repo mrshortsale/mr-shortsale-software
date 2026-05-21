@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Activity, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,8 @@ export default function ApiUsageDashboard({ integrations }: Props) {
   const [loading, setLoading] = useState(true);
   const [filterIntegration, setFilterIntegration] = useState<string>('all');
   const [timeRange, setTimeRange] = useState<string>('7d');
+  const { i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   useEffect(() => {
     fetchLogs();
@@ -81,7 +84,7 @@ export default function ApiUsageDashboard({ integrations }: Props) {
   const chartData = useMemo(() => {
     const buckets = new Map<string, { date: string; calls: number; errors: number }>();
     for (const log of filteredLogs) {
-      const date = new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const date = new Date(log.created_at).toLocaleDateString(loc, { month: 'short', day: 'numeric' });
       const existing = buckets.get(date) || { date, calls: 0, errors: 0 };
       existing.calls++;
       if (log.status_code && log.status_code >= 400) existing.errors++;
@@ -251,7 +254,7 @@ export default function ApiUsageDashboard({ integrations }: Props) {
                     </TableCell>
                     <TableCell className="text-right">{s.avgLatency}ms</TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
-                      {new Date(s.lastCall).toLocaleString()}
+                      {new Date(s.lastCall).toLocaleString(loc)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -294,7 +297,7 @@ export default function ApiUsageDashboard({ integrations }: Props) {
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(log.created_at).toLocaleString()}
+                          {new Date(log.created_at).toLocaleString(loc)}
                         </TableCell>
                         <TableCell className="text-sm font-medium">{integ?.name || '—'}</TableCell>
                         <TableCell>

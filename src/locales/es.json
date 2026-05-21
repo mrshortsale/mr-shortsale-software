@@ -1,0 +1,630 @@
+{
+  "app": {
+    "name": "Mr. Short Sale",
+    "subLabel": "Operaciones IA",
+    "ceoSubLabel": "Operaciones IA",
+    "repSubLabel": "Espacio de Ventas",
+    "versionLabel": "Plataforma",
+    "ceoVersionSub": "v1.0.0 · Producción",
+    "repVersionLabel": "Espacio",
+    "repVersionSub": "v1.0.0 · Asesor de Ventas",
+    "ceoPlatform": "Consola CEO",
+    "repPlatform": "Consola Asesor",
+    "aiPlatform": "Plataforma de Operaciones IA"
+  },
+  "nav": {
+    "briefing": "Resumen Matutino",
+    "inventory": "Inventario de Leads",
+    "sync-runs": "Historial de Sincronización",
+    "realtor-queue": "Cola de Leads Agentes",
+    "realtor-pipeline": "Pipeline Agentes",
+    "realtor-scripts": "Scripts para Agentes",
+    "realtor-reports": "Reportes Agentes",
+    "pipeline": "Pipeline Activo",
+    "speed": "Velocidad de Respuesta",
+    "dialer": "Marcador Mojo",
+    "team": "Rendimiento del Equipo",
+    "roadmap": "Hoja de Ruta y Vistas Previas",
+    "presentation": "Presentación",
+    "settings": "Configuración",
+    "users": "Gestión de Usuarios",
+    "integrations": "Integraciones",
+    "data": "Fuentes de Datos",
+    "queue": "Cola de Ejecuciones",
+    "realtor": "Cola de Agentes",
+    "history": "Historial de Llamadas",
+    "stats": "Mis Estadísticas",
+    "sec-sales": "Hub de Ventas",
+    "sec-ops": "Operaciones",
+    "sec-strategy": "Estrategia",
+    "sec-admin": "Administración",
+    "sec-my-day": "Mi Día",
+    "sec-activity": "Actividad",
+    "ai-calls": "Llamadas Entrantes IA (Vista Previa)",
+    "ai-agents": "Agentes IA (Vista Previa)",
+    "dashboard": "Panel Principal",
+    "viewProposal": "Ver Propuesta",
+    "costTransparency": "Transparencia de Costos"
+  },
+  "topNav": {
+    "searchPlaceholder": "Buscar anything...",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú",
+    "switchToDark": "Cambiar a modo oscuro",
+    "switchToLight": "Cambiar a modo claro",
+    "notifications": "Notificaciones",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "signOut": "Cerrar sesión",
+    "roleLabels": {
+      "ceo": "CEO / Propietario",
+      "rep": "Asesor de Ventas"
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "subtitle": "Preferencias de cuenta y plataforma.",
+    "language": "Idioma",
+    "languageDescription": "Elige el idioma de la interfaz.",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "theme": "Tema",
+    "themeDescription": "Cambia entre modo claro y oscuro.",
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "account": "Cuenta",
+    "accountDescription": "Administra la configuración de tu cuenta."
+  },
+  "login": {
+    "appName": "Mr. Short Sale",
+    "appSubtitle": "Plataforma de Operaciones IA",
+    "footer": "Protegido con seguridad empresarial. · Mr. Short Sale · 2026",
+    "switchToDark": "Cambiar a modo oscuro",
+    "switchToLight": "Cambiar a modo claro",
+    "hidePassword": "Ocultar contraseña",
+    "showPassword": "Mostrar contraseña",
+    "signIn": {
+      "title": "Bienvenido de vuelta",
+      "subtitle": "Inicia sesión para continuar",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Ingresa tu contraseña",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión...",
+      "noAccount": "¿No tienes cuenta?",
+      "switchToSignUp": "Registrarse",
+      "loginFailed": "Error al iniciar sesión. Por favor intenta de nuevo."
+    },
+    "signUp": {
+      "title": "Crea tu cuenta",
+      "subtitle": "Las cuentas nuevas requieren aprobación del CEO. Usa tu correo de empresa (@mrshortsale.net).",
+      "fullName": "Nombre completo",
+      "fullNamePlaceholder": "Ana García",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@mrshortsale.net",
+      "emailHint": "Debe ser una dirección @mrshortsale.net",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Mín. 8 chars, 1 mayúscula, 1 número",
+      "confirmPassword": "Confirmar contraseña",
+      "confirmPasswordPlaceholder": "Vuelve a ingresar tu contraseña",
+      "submit": "Crear cuenta",
+      "submitting": "Creando cuenta...",
+      "haveAccount": "¿Ya tienes cuenta?",
+      "switchToSignIn": "Iniciar sesión",
+      "signUpFailed": "Error al registrarse. Por favor intenta de nuevo."
+    },
+    "pending": {
+      "title": "Cuenta enviada",
+      "backToSignIn": "Volver al inicio de sesión",
+      "defaultMessage": "Cuenta creada. Tu registro está pendiente de aprobación del CEO. Puedes iniciar sesión una vez aprobado."
+    },
+    "validation": {
+      "emailRequired": "El correo electrónico es obligatorio",
+      "emailInvalid": "Dirección de correo inválida",
+      "passwordMinSignIn": "La contraseña debe tener al menos 6 caracteres",
+      "passwordMin": "La contraseña debe tener al menos 8 caracteres",
+      "passwordUppercase": "Debe contener al menos una letra mayúscula",
+      "passwordNumber": "Debe contener al menos un número",
+      "nameMin": "El nombre debe tener al menos 2 caracteres",
+      "emailDomain": "El registro requiere un correo @mrshortsale.net",
+      "confirmPasswordRequired": "Por favor confirma tu contraseña",
+      "passwordsMismatch": "Las contraseñas no coinciden"
+    }
+  },
+  "inventory": {
+    "title": "Inventario de Leads",
+    "kpi": {
+      "newToday": "Nuevos hoy",
+      "avgContact": "Intentos de contacto prom.",
+      "activeQualified": "Calificados activos",
+      "auctionsLt30": "Subastas < 30d",
+      "hotScore": "Calientes (score ≥ 8)"
+    },
+    "filters": {
+      "search": "Buscar propietario, dirección, condado…",
+      "scoreMin": "Score ≥",
+      "status": "Estado",
+      "filing": "Archivo",
+      "saved": "Guardados",
+      "allStatuses": "Todos los estados",
+      "allFiling": "Todos los tipos",
+      "allViews": "Todas las vistas"
+    },
+    "buttons": {
+      "esOnly": "Solo ES",
+      "pushToMojo": "Enviar a Mojo",
+      "assignRep": "Asignar asesor",
+      "promote": "Promover",
+      "dismiss": "Descartar",
+      "selectAll": "Seleccionar todos visibles",
+      "rowsPerPage": "Filas por página",
+      "goToPage": "Ir al número de página",
+      "prev": "Ant.",
+      "next": "Sig.",
+      "manageSyncArrow": "Gestionar sincronización →",
+      "openIntegrations": "Abrir Integraciones",
+      "openSyncHistory": "Abrir Historial de Sincronización"
+    },
+    "pagination": {
+      "showing": "Mostrando",
+      "of": "de",
+      "page": "Página",
+      "previousPage": "Página anterior",
+      "nextPage": "Página siguiente"
+    },
+    "columns": {
+      "select": "Seleccionar",
+      "urgencyScore": "Puntuación de Urgencia",
+      "owner": "Propietario",
+      "address": "Dirección",
+      "phone": "Teléfono",
+      "leadType": "Tipo de Lead",
+      "source": "Fuente",
+      "equityPct": "Equidad %",
+      "filingType": "Tipo de Archivo",
+      "daysToAuction": "Días para Subasta",
+      "assignedRep": "Asesor Asignado",
+      "status": "Estado",
+      "dateAdded": "Fecha de Alta",
+      "apn": "APN",
+      "email": "Correo",
+      "ltvPct": "LTV %",
+      "contactAttempts": "Intentos de Contacto",
+      "lastContact": "Último Contacto",
+      "lastOutcome": "Último Resultado",
+      "city": "Ciudad",
+      "county": "Condado",
+      "language": "Idioma",
+      "batchList": "Lista Batch"
+    },
+    "toasts": {
+      "syncComplete": "Sincronización completa — {{count}} leads en inventario",
+      "mojoQueued": "{{count}} leads en cola de Mojo",
+      "mojoQueuedDesc": "Mojo marcará en orden, el primero primero.",
+      "selectAtLeastOne": "Selecciona al menos un lead para asignar",
+      "noLeadsUpdated": "No se actualizaron leads. Recarga e intenta de nuevo.",
+      "assigned": "{{count}} lead(s) asignado(s) a {{rep}}",
+      "unassigned": "{{count}} lead(s) desasignado(s)",
+      "leadsStatus": "{{count}} leads → {{status}}",
+      "leadStatus": "Lead → {{status}}",
+      "mojoQueuedSingle": "{{count}} lead en cola de Mojo",
+      "copied": "{{label}} copiado"
+    },
+    "empty": {
+      "noMatch": "No hay leads de Batch que coincidan con los filtros",
+      "unassigned": "Sin asignar"
+    }
+  },
+  "users": {
+    "title": "Gestión de Usuarios",
+    "subtitle": "Gestiona los usuarios de la plataforma y sus roles.",
+    "addUser": "Agregar Usuario",
+    "tabs": {
+      "all": "Todos los usuarios",
+      "pending": "Aprobación pendiente"
+    },
+    "table": {
+      "name": "Nombre",
+      "email": "Correo",
+      "requested": "Solicitado",
+      "actions": "Acciones",
+      "role": "Rol",
+      "status": "Estado",
+      "created": "Creado",
+      "noPending": "No hay solicitudes de registro pendientes",
+      "noUsers": "No se encontraron usuarios."
+    },
+    "pendingSection": {
+      "description": "Revisa las solicitudes de registro de nuevos asesores. Los usuarios aprobados pueden iniciar sesión inmediatamente."
+    },
+    "status": {
+      "pending": "Pendiente",
+      "rejected": "Rechazado",
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "roles": {
+      "ceo": "CEO",
+      "rep": "Asesor de Ventas"
+    },
+    "buttons": {
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "rejectRequest": "Rechazar Solicitud",
+      "cancel": "Cancelar",
+      "delete": "Eliminar",
+      "saveChanges": "Guardar Cambios"
+    },
+    "dialogs": {
+      "addTitle": "Agregar Nuevo Usuario",
+      "editTitle": "Editar Usuario",
+      "rejectTitle": "¿Rechazar a {{name}}?",
+      "rejectDesc": "Su cuenta será marcada como rechazada. No podrá iniciar sesión ni registrarse nuevamente con el mismo correo. Esta acción no se puede deshacer.",
+      "deleteTitle": "¿Eliminar a {{name}}?",
+      "deleteDesc": "Esto eliminará permanentemente al usuario y todos sus datos. Esta acción no se puede deshacer."
+    },
+    "form": {
+      "fullName": "Nombre completo",
+      "fullNamePlaceholder": "Ana García",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "ana@mrshortsale.net",
+      "tempPassword": "Contraseña temporal",
+      "tempPasswordPlaceholder": "Mín. 8 caracteres",
+      "role": "Rol",
+      "rolePlaceholder": "Seleccionar rol",
+      "avatarColor": "Color de avatar",
+      "approveImmediately": "Aprobar inmediatamente",
+      "approveImmediatelyDesc": "Si no se marca, la cuenta se creará como pendiente y debe aprobarse por separado.",
+      "accountActive": "Cuenta activa",
+      "accountActiveDesc": "Los usuarios desactivados no pueden iniciar sesión.",
+      "newPassword": "Nueva contraseña",
+      "newPasswordOptional": "(opcional)",
+      "newPasswordPlaceholder": "Dejar en blanco para mantener la actual",
+      "searchPlaceholder": "Buscar por nombre o correo…"
+    },
+    "toasts": {
+      "addedApproved": "{{name}} agregado y aprobado.",
+      "addedPending": "{{name}} agregado — aprobación pendiente.",
+      "updated": "{{name}} actualizado.",
+      "approved": "{{name}} aprobado.",
+      "rejected": "Solicitud de {{name}} rechazada.",
+      "deleted": "{{name}} eliminado.",
+      "failedApprove": "Error al aprobar usuario"
+    },
+    "validation": {
+      "nameMin": "El nombre debe tener al menos 2 caracteres",
+      "emailRequired": "El correo electrónico es obligatorio",
+      "emailInvalid": "Dirección de correo inválida",
+      "passwordMin": "La contraseña debe tener al menos 8 caracteres",
+      "roleRequired": "El rol es obligatorio"
+    }
+  },
+  "sync": {
+    "buttons": {
+      "working": "Trabajando…",
+      "resume": "Reanudar",
+      "incremental": "Sincronización incremental",
+      "fullRefresh": "Actualización completa",
+      "syncBatch": "Sincronizar Batch",
+      "newSync": "Nueva sincronización",
+      "pause": "Pausar",
+      "stop": "Detener",
+      "history": "Historial"
+    },
+    "dialog": {
+      "title": "Actualización completa — ¿Volver a obtener todos los leads?",
+      "description": "Esto volverá a obtener todos los ~{{count}} leads de Batch Leads y puede tardar varias horas. Los leads existentes se actualizarán sin eliminar datos.",
+      "incrementalNote": "Usa la Sincronización incremental en su lugar para obtener solo leads nuevos y modificados desde la última sincronización — se completa en minutos.",
+      "cancel": "Cancelar",
+      "confirm": "Sí, ejecutar actualización completa"
+    },
+    "toasts": {
+      "incrementalComplete": "Sincronización incremental completa — {{count}} leads en BD",
+      "fullComplete": "Actualización completa — {{count}} leads",
+      "connectFirst": "Conecta Batch Leads en Integraciones primero",
+      "incrementalProgress": "Sincronizando… {{new}} nuevos, {{updated}} actualizados ({{pages}} páginas)",
+      "incrementalScanning": "Sincronizando… buscando nuevos leads",
+      "syncingLeads": "Sincronizando… {{count}} leads",
+      "resuming": "Reanudando sincronización…",
+      "paused": "Sincronización pausada",
+      "stopped": "Sincronización detenida"
+    },
+    "tooltips": {
+      "incremental": "Obtener solo leads nuevos y modificados desde la última sincronización exitosa",
+      "fullRefresh": "Volver a obtener todos los leads de Batch Leads (puede tardar horas)",
+      "firstSync": "Iniciar sincronización inicial desde Batch Leads"
+    }
+  },
+  "leadQueue": {
+    "today": "Hoy",
+    "banner": {
+      "calls": "Llamadas",
+      "connected": "Conectados",
+      "qualified": "Calificados"
+    },
+    "sort": {
+      "label": "Ordenar",
+      "urgency": "Urgencia",
+      "auction": "Días para subasta",
+      "equity": "Equidad",
+      "name": "Nombre"
+    },
+    "filter": {
+      "lang": "Idioma",
+      "all": "Todos",
+      "allStatuses": "Todos los estados",
+      "notCalled": "Sin llamar",
+      "called": "Llamado",
+      "connected": "Conectado",
+      "callbackScheduled": "Devolución programada",
+      "smsSent": "SMS enviado",
+      "vmLeft": "VM dejado"
+    },
+    "card": {
+      "toAuction": "para subasta",
+      "equity": "Equidad",
+      "cbScheduled": "Dev. programada",
+      "call": "Llamar",
+      "sms": "SMS",
+      "aiResearched": "Investigado por IA",
+      "priorContact": "Contacto previo",
+      "highEquity": "Alta Equidad",
+      "taxDelinquent": "Mora fiscal"
+    },
+    "leads": "leads",
+    "aiNote": "IA pre-investigó tus {{count}} leads · Scripts listos",
+    "batchNote": "Ves {{shown}} de {{total}} leads Batch — asignados automáticamente por puntuación IA + territorio."
+  },
+  "repStats": {
+    "title": "Mis Estadísticas",
+    "callsThisWeek": "Llamadas Esta Semana",
+    "totalCalls": "Total de Llamadas",
+    "connected": "Conectados",
+    "qualified": "Calificados",
+    "leadsInQueue": "Leads en Cola"
+  },
+  "syncRuns": {
+    "title": "Historial de Sincronización",
+    "leadsInDatabase": "leads en base de datos",
+    "status": {
+      "running": "En ejecución",
+      "completed": "Completado",
+      "failed": "Fallido",
+      "stopped": "Detenido",
+      "paused": "Pausado"
+    },
+    "table": {
+      "started": "Iniciado",
+      "duration": "Duración",
+      "result": "Resultado",
+      "status": "Estado"
+    },
+    "empty": "Sin historial de sincronización.",
+    "syncNow": "Sincronizar ahora"
+  },
+  "briefing": {
+    "title": "Resumen Matutino",
+    "goodMorning": "Buenos días",
+    "today": "Hoy",
+    "pipeline": "Pipeline",
+    "team": "Equipo",
+    "loading": "Cargando resumen…"
+  },
+  "speed": {
+    "title": "Velocidad de Respuesta",
+    "newLead": "Nuevo Lead",
+    "respond": "Responder",
+    "assign": "Asignar",
+    "call": "Llamar",
+    "sms": "SMS",
+    "responseTime": "Tiempo de Respuesta",
+    "avgResponseTime": "Tiempo Prom. de Respuesta",
+    "leadsToday": "Leads Hoy"
+  },
+  "pipeline": {
+    "title": "Pipeline Activo",
+    "stages": {
+      "new": "Nuevo",
+      "contacted": "Contactado",
+      "qualified": "Calificado",
+      "offer": "Oferta",
+      "contract": "Contrato",
+      "closed": "Cerrado"
+    }
+  },
+  "team": {
+    "title": "Rendimiento del Equipo",
+    "calls": "Llamadas",
+    "connected": "Conectados",
+    "qualified": "Calificados",
+    "rank": "Rango",
+    "rep": "Asesor",
+    "today": "Hoy",
+    "week": "Semana",
+    "month": "Mes"
+  },
+  "roadmap": {
+    "title": "Hoja de Ruta y Vistas Previas",
+    "upcoming": "Próximo",
+    "inProgress": "En Progreso",
+    "completed": "Completado",
+    "preview": "Vista Previa"
+  },
+  "realtorQueue": {
+    "title": "Cola de Leads Agentes",
+    "search": "Buscar agentes…",
+    "call": "Llamar",
+    "sms": "SMS",
+    "status": {
+      "new": "Nuevo",
+      "contacted": "Contactado",
+      "active": "Activo",
+      "closed": "Cerrado"
+    }
+  },
+  "realtorPipeline": {
+    "title": "Pipeline Agentes"
+  },
+  "realtorScripts": {
+    "title": "Scripts para Agentes"
+  },
+  "realtorReports": {
+    "title": "Reportes Agentes"
+  },
+  "integrations": {
+    "title": "Integraciones",
+    "configure": "Configurar",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "lastTested": "Última prueba",
+    "testConnection": "Probar conexión",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "webhookUrl": "URL del Webhook",
+    "verifyToken": "Token de Verificación",
+    "apiKey": "Clave de API",
+    "secretKey": "Clave Secreta",
+    "add": "Agregar Integración",
+    "apiUsage": "Uso de API",
+    "usageDashboard": "Panel de Uso"
+  },
+  "dataSources": {
+    "title": "Fuentes de Datos",
+    "recordsThisWeek": "esta semana",
+    "configure": "Configurar"
+  },
+  "dialer": {
+    "title": "Marcador Mojo",
+    "queue": "Cola del Marcador",
+    "start": "Iniciar Sesión",
+    "stop": "Detener Sesión",
+    "skip": "Omitir",
+    "callback": "Devolver llamada"
+  },
+  "ai": {
+    "inboundCalls": {
+      "title": "Llamadas Entrantes IA"
+    },
+    "agents": {
+      "title": "Agentes IA",
+      "actionsToday": "acciones hoy"
+    }
+  },
+  "leadDrawer": {
+    "title": "Detalles del Lead",
+    "owner": "Propietario",
+    "address": "Dirección",
+    "phone": "Teléfono",
+    "email": "Correo",
+    "filingType": "Tipo de Archivo",
+    "daysToAuction": "Días para Subasta",
+    "equityPct": "Equidad %",
+    "sqft": "Metros cuadrados",
+    "estimatedValue": "Valor Estimado (AVM)",
+    "purchasePrice": "Precio de Compra",
+    "assignedRep": "Asesor Asignado",
+    "status": "Estado",
+    "call": "Llamar",
+    "sms": "SMS",
+    "copyPhone": "Copiar teléfono",
+    "copyEmail": "Copiar correo",
+    "copyAddress": "Copiar dirección"
+  },
+  "realtorLeadDrawer": {
+    "listPrice": "Precio de lista",
+    "priceDrops": "Bajadas de precio",
+    "amount": "Monto"
+  },
+  "sms": {
+    "title": "Hilo de SMS",
+    "send": "Enviar",
+    "placeholder": "Escribe un mensaje…",
+    "you": "Tú",
+    "them": "Ellos"
+  },
+  "activeCall": {
+    "title": "Llamada Activa",
+    "end": "Terminar Llamada",
+    "notes": "Notas de Llamada",
+    "outcome": "Resultado",
+    "save": "Guardar y Terminar",
+    "connected": "Conectado",
+    "duration": "Duración"
+  },
+  "callHistory": {
+    "title": "Historial de Llamadas",
+    "date": "Fecha",
+    "duration": "Duración",
+    "outcome": "Resultado",
+    "notes": "Notas",
+    "empty": "Sin historial de llamadas aún."
+  },
+  "realtorQueueRep": {
+    "title": "Cola de Agentes",
+    "search": "Buscar…",
+    "call": "Llamar",
+    "sms": "SMS"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe.",
+    "goHome": "Ir al inicio"
+  },
+  "proposal": {
+    "title": "Propuesta"
+  },
+  "costs": {
+    "title": "Transparencia de Costos"
+  },
+  "presentation": {
+    "title": "Presentación"
+  },
+  "inventoryDrawer": {
+    "title": "Detalles del Lead",
+    "close": "Cerrar"
+  },
+  "caseDrawer": {
+    "title": "Detalles del Caso",
+    "close": "Cerrar"
+  },
+  "agentDrillDown": {
+    "title": "Actividad del Agente",
+    "close": "Cerrar"
+  },
+  "speedFeed": {
+    "title": "Feed de Velocidad de Respuesta",
+    "newLead": "Nuevo lead",
+    "responded": "Respondido",
+    "assigned": "Asignado"
+  },
+  "sourceProvenance": {
+    "source": "Fuente",
+    "batchLeads": "Batch Leads",
+    "realie": "Realie.ai",
+    "attom": "Attom"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "close": "Cerrar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "add": "Agregar",
+    "search": "Buscar",
+    "loading": "Cargando…",
+    "error": "Ocurrió un error",
+    "retry": "Reintentar",
+    "yes": "Sí",
+    "no": "No",
+    "confirm": "Confirmar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "prev": "Anterior",
+    "of": "de",
+    "showing": "Mostrando",
+    "noData": "No hay datos disponibles",
+    "actions": "Acciones"
+  }
+}

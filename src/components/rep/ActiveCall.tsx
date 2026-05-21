@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAICallScript } from '@/data/leads';
@@ -18,6 +19,7 @@ export default function ActiveCall() {
     return () => clearInterval(intervalRef.current);
   }, []);
 
+  const { t } = useTranslation();
   if (!lead) return null;
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -58,7 +60,7 @@ export default function ActiveCall() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Outcome buttons */}
             <div className="space-y-4">
-              <h3 className="font-bold text-foreground">Call Outcome</h3>
+              <h3 className="font-bold text-foreground">{t('activeCall.outcome')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 <OutcomeButton label="Connected" onClick={() => handleOutcome('Connected')} color="bg-accent text-accent-foreground" />
                 <OutcomeButton label="Voicemail Left" onClick={() => handleOutcome('Voicemail Left')} color="bg-warning text-primary-foreground" />
@@ -78,7 +80,7 @@ export default function ActiveCall() {
 
             {/* Script */}
             <div className="metric-card max-h-[60vh] overflow-y-auto">
-              <h3 className="font-bold text-foreground mb-3">Call Script</h3>
+              <h3 className="font-bold text-foreground mb-3">{t('activeCall.notes')}</h3>
               <pre className="text-sm text-muted-foreground whitespace-pre-wrap">{getAICallScript(lead)}</pre>
             </div>
           </div>
@@ -87,11 +89,11 @@ export default function ActiveCall() {
             <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
               <PhoneOff size={28} className="text-accent" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Call Logged</h3>
+              <h3 className="text-xl font-bold text-foreground mb-2">{t('activeCall.save')}</h3>
             <p className="text-muted-foreground mb-1">{lead.homeowner_name} · {formatTime(seconds)} · {outcome}</p>
-            {notes && <p className="text-sm text-muted-foreground">Notes: {notes}</p>}
+            {notes && <p className="text-sm text-muted-foreground">{t('activeCall.notes')}: {notes}</p>}
             <button onClick={handleClose} className="mt-6 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold">
-              Back to Queue
+              {t('nav.queue')}
             </button>
           </div>
         )}

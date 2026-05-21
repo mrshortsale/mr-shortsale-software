@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Phone, Send, Activity, CheckCircle, XCircle, Voicemail, Clock, Ban } from 'lucide-react';
 import { getMojoStatus, MojoQueueStatus, sendToMojo, MojoOutcome } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';

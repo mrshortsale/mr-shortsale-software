@@ -1,7 +1,10 @@
 import { RealtorLead } from '@/data/realtorLeads';
 import { X, Phone, Mail, ExternalLink, MapPin, Calendar, TrendingDown, Building2, MessageSquare, Globe } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function RealtorLeadDetailDrawer({ lead, onClose }: { lead: RealtorLead; onClose: () => void }) {
+  const { i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-foreground/40" onClick={onClose} />
@@ -48,7 +51,7 @@ export default function RealtorLeadDetailDrawer({ lead, onClose }: { lead: Realt
 
           <Section title="Property">
             <Row icon={<MapPin size={12} />} label="Address" value={`${lead.propertyAddress}, ${lead.city}, ${lead.state}`} />
-            <Row label="List price" value={`$${lead.listPrice.toLocaleString()}`} />
+            <Row label="List price" value={`$${lead.listPrice.toLocaleString(loc)}`} />
             <Row icon={<Calendar size={12} />} label="Days on market" value={`${lead.daysOnMarket} days`} />
           </Section>
 
@@ -57,7 +60,7 @@ export default function RealtorLeadDetailDrawer({ lead, onClose }: { lead: Realt
               {lead.priceDrops.map((d, i) => (
                 <div key={i} className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-1"><TrendingDown size={12} className="text-speed" /> {d.date}</span>
-                  <span className="font-bold text-speed">−${d.amount.toLocaleString()}</span>
+                  <span className="font-bold text-speed">−${d.amount.toLocaleString(loc)}</span>
                 </div>
               ))}
               <p className="text-[11px] text-muted-foreground italic mt-1">Multiple price drops = motivated seller, agent open to outside help.</p>

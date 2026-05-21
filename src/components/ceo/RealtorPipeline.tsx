@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { realtorLeads, realtorPipelineStages, RealtorLead, RealtorLeadStatus } from '@/data/realtorLeads';
 import { Building2, Phone, Calendar, Home, ExternalLink } from 'lucide-react';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';

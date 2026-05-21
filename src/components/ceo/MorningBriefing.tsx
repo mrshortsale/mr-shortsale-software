@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowUp, Users, Phone, Bot, CheckSquare, Square, AlertTriangle, Sparkles } from 'lucide-react';
 import { aiInboundCalls } from '@/data/calls';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';

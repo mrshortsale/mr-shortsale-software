@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { agents, Agent, totalActionsToday, hoursSavedThisWeek } from '@/data/agents';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Activity } from 'lucide-react';
@@ -19,6 +20,8 @@ const statusLabel: Record<string, string> = {
 export default function AIAgentsRoster() {
   const [selected, setSelected] = useState<Agent | null>(null);
   const [open, setOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   const onSee = (a: Agent) => {
     setSelected(a);
@@ -41,8 +44,8 @@ export default function AIAgentsRoster() {
           Six specialized AI agents working 24/7 inside your business — finding leads, verifying data, scoring urgency, writing scripts, and following up. So your team focuses on closing.
         </p>
         <div className="flex flex-wrap gap-6 text-sm">
-          <HeroStat value={`${agents.length}`} label="agents active" />
-          <HeroStat value={totalActionsToday.toLocaleString()} label="actions today" />
+          <HeroStat value={`${agents.length}`} label={t('ai.agents.title')} />
+          <HeroStat value={totalActionsToday.toLocaleString(loc)} label={t('ai.agents.actionsToday')} />
           <HeroStat value={`${hoursSavedThisWeek} hrs`} label="saved this week" />
         </div>
       </div>

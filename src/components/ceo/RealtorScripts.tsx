@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageSquare, Globe, Copy, Check } from 'lucide-react';
 
 interface Script {

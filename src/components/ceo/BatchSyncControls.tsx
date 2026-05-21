@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, History, Loader2, Pause, Play, RefreshCw, RotateCcw, Square, Zap } from 'lucide-react';
 import { toast } from 'sonner';
@@ -46,6 +47,8 @@ export default function BatchSyncControls({
 }: BatchSyncControlsProps) {
   const [busy, setBusy] = useState(false);
   const [confirmFullRefresh, setConfirmFullRefresh] = useState(false);
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   const refreshStatus = useCallback(async () => {
     const { data } = await getBatchSyncStatus();
@@ -61,9 +64,9 @@ export default function BatchSyncControls({
     if (error && !completed) toast.message(error, { duration: 6000 });
     else if (completed) {
       if (mode === 'incremental') {
-        toast.success(`Incremental sync complete — ${leadsInDb.toLocaleString()} leads in DB`);
+        toast.success(t('sync.toasts.incrementalComplete', { count: leadsInDb.toLocaleString(loc) }));
       } else {
-        toast.success(`Full refresh complete — ${leadsInDb.toLocaleString()} leads`);
+        toast.success(t('sync.toasts.fullComplete', { count: leadsInDb.toLocaleString(loc) }));
       }
     }
     await onComplete?.();
@@ -71,7 +74,7 @@ export default function BatchSyncControls({
 
   const runSync = async (mode: 'incremental' | 'full', force = false) => {
     if (!batchConnected) {
-      toast.error('Connect Batch Leads under Integrations first');
+      toast.error(t('sync.toasts.connectFirst'));
       return;
     }
     onSyncingChange(true);
@@ -85,12 +88,12 @@ export default function BatchSyncControls({
             const pages = progress.pagesProcessedTotal ?? 0;
             toast.message(
               n > 0 || u > 0
-                ? `Incremental sync… ${n.toLocaleString()} new, ${u.toLocaleString()} updated (${pages} pages)`
-                : `Incremental sync… scanning for new leads`,
+                ? t('sync.toasts.incrementalProgress', { new: n.toLocaleString(loc), updated: u.toLocaleString(loc), pages })
+                : t('sync.toasts.incrementalScanning'),
               { id: 'batch-sync', duration: 2000 },
             );
           } else {
-            toast.message(`Syncing… ${progress.leadsInDb.toLocaleString()} leads`, {
+            toast.message(t('sync.toasts.syncingLeads', { count: progress.leadsInDb.toLocaleString(loc) }), {
               id: 'batch-sync',
               duration: 2000,
             });
@@ -121,7 +124,7 @@ export default function BatchSyncControls({
 
   const handleResume = async () => {
     if (!batchConnected) {
-      toast.error('Connect Batch Leads under Integrations first');
+      toast.error(t('sync.toasts.connectFirst'));
       return;
     }
     onSyncingChange(true);
@@ -132,7 +135,7 @@ export default function BatchSyncControls({
         toast.error(error);
         return;
       }
-      toast.message('Resuming sync…', { id: 'batch-sync' });
+      toast.message(t('sync.toasts.resuming'), { id: 'batch-sync' });
       const resumedMode = syncStatus?.lastRun?.metadata?.mode ?? 'full';
       await pollUntilSettled(resumedMode);
       toast.dismiss('batch-sync');
@@ -147,7 +150,7 @@ export default function BatchSyncControls({
     try {
       const { error } = await pauseBatchSync(syncStatus?.lastRun?.id);
       if (error) toast.error(error);
-      else toast.success('Sync paused');
+      else toast.success(t('sync.toasts.paused'));
       await refreshStatus();
       onSyncingChange(false);
     } finally {
@@ -160,7 +163,7 @@ export default function BatchSyncControls({
     try {
       const { error } = await stopBatchSync(syncStatus?.lastRun?.id);
       if (error) toast.error(error);
-      else toast.success('Sync stopped');
+      else toast.success(t('sync.toasts.stopped'));
       await refreshStatus();
       onSyncingChange(false);
       await onComplete?.();
@@ -193,7 +196,7 @@ export default function BatchSyncControls({
             className={`${btn} bg-primary text-primary-foreground`}
           >
             {disabled ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
-            {disabled ? 'Working…' : 'Resume'}
+            {disabled ? t('sync.buttons.working') : t('sync.buttons.resume')}
           </button>
         )}
 
@@ -204,10 +207,10 @@ export default function BatchSyncControls({
             onClick={handleIncremental}
             disabled={disabled || !batchConnected}
             className={`${btn} bg-primary text-primary-foreground`}
-            title="Fetch only new and changed leads since the last successful sync"
+            title={t('sync.tooltips.incremental')}
           >
             {disabled ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-            {disabled ? 'Working…' : 'Incremental sync'}
+            {disabled ? t('sync.buttons.working') : t('sync.buttons.incremental')}
           </button>
         )}
 
@@ -222,12 +225,12 @@ export default function BatchSyncControls({
               : `${btn} bg-primary text-primary-foreground`
             }
             title={hasBaseline
-              ? 'Re-fetch all leads from Batch Leads (may take hours)'
-              : 'Start initial sync from Batch Leads'
+              ? t('sync.tooltips.fullRefresh')
+              : t('sync.tooltips.firstSync')
             }
           >
             {disabled ? <Loader2 size={12} className="animate-spin" /> : hasBaseline ? <RotateCcw size={12} /> : <RefreshCw size={12} />}
-            {disabled ? 'Working…' : wasStopped && !hasBaseline ? 'New sync' : hasBaseline ? 'Full refresh' : 'Sync Batch'}
+            {disabled ? t('sync.buttons.working') : wasStopped && !hasBaseline ? t('sync.buttons.newSync') : hasBaseline ? t('sync.buttons.fullRefresh') : t('sync.buttons.syncBatch')}
           </button>
         )}
 
@@ -238,7 +241,7 @@ export default function BatchSyncControls({
             disabled={disabled}
             className={`${btn} bg-muted text-foreground border`}
           >
-            <Pause size={12} /> Pause
+            <Pause size={12} /> {t('sync.buttons.pause')}
           </button>
         )}
         {canStop && (
@@ -248,7 +251,7 @@ export default function BatchSyncControls({
             disabled={disabled}
             className={`${btn} bg-destructive/10 text-destructive border border-destructive/30`}
           >
-            <Square size={12} /> Stop
+            <Square size={12} /> {t('sync.buttons.stop')}
           </button>
         )}
         {showHistoryLink && (
@@ -256,7 +259,7 @@ export default function BatchSyncControls({
             to={`${CEO_BASE}/sync-runs`}
             className={`${btn} bg-muted text-muted-foreground hover:text-foreground`}
           >
-            <History size={12} /> History
+            <History size={12} /> {t('sync.buttons.history')}
           </Link>
         )}
       </div>
@@ -267,19 +270,16 @@ export default function BatchSyncControls({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-amber-500" />
-              Full refresh — re-fetch all leads?
+              {t('sync.dialog.title')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This will re-fetch all ~{syncStatus?.leadsInDb?.toLocaleString() ?? '70k'} leads
-              from Batch Leads and may take several hours. Existing leads will be updated in place
-              and no data will be deleted.
+              {t('sync.dialog.description', { count: syncStatus?.leadsInDb?.toLocaleString(loc) ?? '70k' })}
               <br /><br />
-              Use <strong>Incremental sync</strong> instead to fetch only new and changed leads
-              since the last sync — it completes in minutes.
+              {t('sync.dialog.incrementalNote')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('sync.dialog.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-amber-600 hover:bg-amber-700 text-white"
               onClick={() => {
@@ -287,7 +287,7 @@ export default function BatchSyncControls({
                 runSync('full', true);
               }}
             >
-              Yes, run Full refresh
+              {t('sync.dialog.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

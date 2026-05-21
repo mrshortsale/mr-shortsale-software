@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { aiInboundCalls, AIInboundCall } from '@/data/calls';
 import { Bot, ChevronDown, ChevronUp, Play, FileText } from 'lucide-react';
 

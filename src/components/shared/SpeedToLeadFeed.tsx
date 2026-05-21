@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generateMetaLead, MetaLead, seedMetaLeads } from '@/integrations/metaAds';
 import { Zap, ArrowUpToLine, Volume2, VolumeX, Clock, Facebook, Info } from 'lucide-react';
 import { toast } from 'sonner';

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import AgentDrillDown from './AgentDrillDown';
 
@@ -31,13 +32,14 @@ export default function TeamPerformance() {
   const [period, setPeriod] = useState<Period>('today');
   const [drillAgent, setDrillAgent] = useState<typeof agentStats.today[0] | null>(null);
   const data = agentStats[period];
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-6">
       <div className="flex gap-2 items-center">
         {(['today', 'week', 'month'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-            {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
+            {p === 'today' ? t('team.today') : p === 'week' ? t('team.week') : t('team.month')}
           </button>
         ))}
         <span className="ml-auto text-xs text-muted-foreground">Click any agent for drill-down →</span>

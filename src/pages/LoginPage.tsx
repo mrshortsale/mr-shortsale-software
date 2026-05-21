@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
   Brain,
@@ -33,38 +34,43 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 
-// ─── Zod schemas ─────────────────────────────────────────────────────────────
+// ─── Zod schema builders ──────────────────────────────────────────────────────
 
-const signInSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-const signUpSchema = z
-  .object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
+function buildSignInSchema(t: (key: string) => string) {
+  return z.object({
     email: z
       .string()
-      .min(1, 'Email is required')
-      .email('Invalid email address')
-      .transform((v) => v.trim().toLowerCase())
-      .refine(isSignupDomainEmail, {
-        message: 'Sign-up requires a @mrshortsale.net email address',
-      }),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-      .regex(/[0-9]/, 'Must contain at least one number'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
+      .min(1, t('login.validation.emailRequired'))
+      .email(t('login.validation.emailInvalid')),
+    password: z.string().min(6, t('login.validation.passwordMinSignIn')),
   });
+}
 
-type SignInValues = z.infer<typeof signInSchema>;
-type SignUpValues = z.infer<typeof signUpSchema>;
+function buildSignUpSchema(t: (key: string) => string) {
+  return z
+    .object({
+      name: z.string().min(2, t('login.validation.nameMin')),
+      email: z
+        .string()
+        .min(1, t('login.validation.emailRequired'))
+        .email(t('login.validation.emailInvalid'))
+        .transform((v) => v.trim().toLowerCase())
+        .refine(isSignupDomainEmail, { message: t('login.validation.emailDomain') }),
+      password: z
+        .string()
+        .min(8, t('login.validation.passwordMin'))
+        .regex(/[A-Z]/, t('login.validation.passwordUppercase'))
+        .regex(/[0-9]/, t('login.validation.passwordNumber')),
+      confirmPassword: z.string().min(1, t('login.validation.confirmPasswordRequired')),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('login.validation.passwordsMismatch'),
+      path: ['confirmPassword'],
+    });
+}
+
+type SignInValues = { email: string; password: string };
+type SignUpValues = { name: string; email: string; password: string; confirmPassword: string };
 
 // ─── Password input with toggle ──────────────────────────────────────────────
 
@@ -72,6 +78,7 @@ interface PasswordInputProps extends React.ComponentPropsWithoutRef<typeof Input
 
 function PasswordInput({ className, ...props }: PasswordInputProps) {
   const [show, setShow] = useState(false);
+  const { t } = useTranslation();
   return (
     <div className="relative">
       <Input
@@ -83,7 +90,7 @@ function PasswordInput({ className, ...props }: PasswordInputProps) {
         type="button"
         onClick={() => setShow((v) => !v)}
         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-        aria-label={show ? 'Hide password' : 'Show password'}
+        aria-label={show ? t('login.hidePassword') : t('login.showPassword')}
         tabIndex={-1}
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -96,11 +103,13 @@ function PasswordInput({ className, ...props }: PasswordInputProps) {
 
 function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const [serverError, setServerError] = useState('');
   const [loadingDemo, setLoadingDemo] = useState<string | null>(null);
 
+  const schema = buildSignInSchema(t);
   const form = useForm<SignInValues>({
-    resolver: zodResolver(signInSchema),
+    resolver: zodResolver(schema),
     defaultValues: { email: '', password: '' },
   });
 
@@ -111,7 +120,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
     setServerError('');
     const result = await login(values.email, values.password);
     if (!result.success) {
-      setServerError(result.error ?? 'Login failed. Please try again.');
+      setServerError(result.error ?? t('login.signIn.loginFailed'));
     }
   };
 
@@ -120,17 +129,18 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
     setLoadingDemo(email);
     const result = await login(email, password);
     if (!result.success) {
-      setServerError(result.error ?? 'Login failed. Please try again.');
+      setServerError(result.error ?? t('login.signIn.loginFailed'));
     }
     setLoadingDemo(null);
   };
+  void handleQuickLogin;
 
   return (
     <div className="space-y-6">
       <Card className="shadow-premium">
         <CardHeader>
-          <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to your account to continue</CardDescription>
+          <CardTitle className="text-xl">{t('login.signIn.title')}</CardTitle>
+          <CardDescription>{t('login.signIn.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {serverError && (
@@ -147,10 +157,12 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">Email</FormLabel>
+                    <FormLabel className="text-sm font-medium">
+                      {t('login.signIn.email')}
+                    </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="you@example.com"
+                        placeholder={t('login.signIn.emailPlaceholder')}
                         type="email"
                         autoComplete="email"
                         className="h-10"
@@ -168,17 +180,19 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                      <FormLabel className="text-sm font-medium">Password</FormLabel>
+                      <FormLabel className="text-sm font-medium">
+                        {t('login.signIn.password')}
+                      </FormLabel>
                       <button
                         type="button"
                         className="text-xs font-medium text-primary hover:underline"
                       >
-                        Forgot password?
+                        {t('login.signIn.forgotPassword')}
                       </button>
                     </div>
                     <FormControl>
                       <PasswordInput
-                        placeholder="Enter your password"
+                        placeholder={t('login.signIn.passwordPlaceholder')}
                         autoComplete="current-password"
                         className="h-10"
                         {...field}
@@ -197,23 +211,23 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    {t('login.signIn.submitting')}
                   </>
                 ) : (
-                  'Sign in'
+                  t('login.signIn.submit')
                 )}
               </Button>
             </form>
           </Form>
 
           <p className="text-center text-xs text-muted-foreground">
-            Don't have an account?{' '}
+            {t('login.signIn.noAccount')}{' '}
             <button
               type="button"
               onClick={onSwitch}
               className="font-semibold text-primary hover:underline"
             >
-              Sign up
+              {t('login.signIn.switchToSignUp')}
             </button>
           </p>
         </CardContent>
@@ -226,11 +240,13 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
 
 function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   const { signup } = useAuth();
+  const { t } = useTranslation();
   const [serverError, setServerError] = useState('');
   const [pendingMessage, setPendingMessage] = useState('');
 
+  const schema = buildSignUpSchema(t);
   const form = useForm<SignUpValues>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(schema),
     defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
   });
 
@@ -241,14 +257,11 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     setPendingMessage('');
     const result = await signup(values.email, values.password, values.name);
     if (!result.success) {
-      setServerError(result.error ?? 'Sign-up failed. Please try again.');
+      setServerError(result.error ?? t('login.signUp.signUpFailed'));
       return;
     }
     if (result.pendingApproval) {
-      setPendingMessage(
-        result.message ??
-          'Account created. Your signup is pending CEO approval. You can sign in once approved.'
-      );
+      setPendingMessage(result.message ?? t('login.pending.defaultMessage'));
       form.reset();
     }
   };
@@ -262,7 +275,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">Account submitted</p>
+              <p className="font-semibold text-foreground">{t('login.pending.title')}</p>
               <p className="mt-1 text-sm text-muted-foreground">{pendingMessage}</p>
             </div>
             <button
@@ -270,7 +283,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               onClick={onSwitch}
               className="mt-2 text-sm font-semibold text-primary hover:underline"
             >
-              Back to Sign in
+              {t('login.pending.backToSignIn')}
             </button>
           </div>
         </CardContent>
@@ -281,10 +294,8 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   return (
     <Card className="shadow-premium">
       <CardHeader>
-        <CardTitle className="text-xl">Create your account</CardTitle>
-        <CardDescription>
-          New rep accounts require CEO approval before sign-in. Use your company email (@mrshortsale.net).
-        </CardDescription>
+        <CardTitle className="text-xl">{t('login.signUp.title')}</CardTitle>
+        <CardDescription>{t('login.signUp.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {serverError && (
@@ -301,10 +312,12 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Full name</FormLabel>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.signUp.fullName')}
+                  </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Jane Smith"
+                      placeholder={t('login.signUp.fullNamePlaceholder')}
                       autoComplete="name"
                       className="h-10"
                       {...field}
@@ -320,17 +333,19 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Email</FormLabel>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.signUp.email')}
+                  </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="you@mrshortsale.net"
+                      placeholder={t('login.signUp.emailPlaceholder')}
                       type="email"
                       autoComplete="email"
                       className="h-10"
                       {...field}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">Must be a @mrshortsale.net address</p>
+                  <p className="text-xs text-muted-foreground">{t('login.signUp.emailHint')}</p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -341,10 +356,12 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Password</FormLabel>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.signUp.password')}
+                  </FormLabel>
                   <FormControl>
                     <PasswordInput
-                      placeholder="Min 8 chars, 1 uppercase, 1 number"
+                      placeholder={t('login.signUp.passwordPlaceholder')}
                       autoComplete="new-password"
                       className="h-10"
                       {...field}
@@ -360,10 +377,12 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Confirm password</FormLabel>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.signUp.confirmPassword')}
+                  </FormLabel>
                   <FormControl>
                     <PasswordInput
-                      placeholder="Re-enter your password"
+                      placeholder={t('login.signUp.confirmPasswordPlaceholder')}
                       autoComplete="new-password"
                       className="h-10"
                       {...field}
@@ -378,40 +397,27 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
+                  {t('login.signUp.submitting')}
                 </>
               ) : (
-                'Create account'
+                t('login.signUp.submit')
               )}
             </Button>
           </form>
         </Form>
 
         <p className="text-center text-xs text-muted-foreground">
-          Already have an account?{' '}
+          {t('login.signUp.haveAccount')}{' '}
           <button
             type="button"
             onClick={onSwitch}
             className="font-semibold text-primary hover:underline"
           >
-            Sign in
+            {t('login.signUp.switchToSignIn')}
           </button>
         </p>
       </CardContent>
     </Card>
-  );
-}
-
-// ─── Google icon ──────────────────────────────────────────────────────────────
-
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#EA4335"
-        d="M12 11v3.2h5.4c-.2 1.4-1.6 4-5.4 4-3.2 0-5.9-2.7-5.9-6S8.8 6.2 12 6.2c1.8 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.7 14.7 2.7 12 2.7 6.9 2.7 2.7 6.9 2.7 12s4.2 9.3 9.3 9.3c5.4 0 8.9-3.8 8.9-9.1 0-.6-.1-1.1-.2-1.6H12z"
-      />
-    </svg>
   );
 }
 
@@ -420,6 +426,7 @@ function GoogleIcon({ className }: { className?: string }) {
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -431,7 +438,7 @@ export default function LoginPage() {
           size="icon"
           onClick={toggleTheme}
           className="h-9 w-9"
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          aria-label={theme === 'light' ? t('login.switchToDark') : t('login.switchToLight')}
         >
           {theme === 'light' ? (
             <Moon className="h-[18px] w-[18px]" />
@@ -447,9 +454,9 @@ export default function LoginPage() {
             <Brain className="h-6 w-6" />
           </div>
           <h1 className="mt-3 text-xl font-semibold tracking-tight text-foreground">
-            Mr. Short Sale
+            {t('login.appName')}
           </h1>
-          <p className="text-xs text-muted-foreground">AI Operations Platform</p>
+          <p className="text-xs text-muted-foreground">{t('login.appSubtitle')}</p>
         </div>
 
         <div className="w-full space-y-6">
@@ -461,7 +468,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-8 text-center text-[11px] text-muted-foreground">
-          Protected by enterprise-grade security. · Mr. Short Sale · 2026
+          {t('login.footer')}
         </p>
       </div>
     </div>

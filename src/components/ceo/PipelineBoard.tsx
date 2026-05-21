@@ -1,5 +1,6 @@
 import { pipelineCases, PipelineStage } from '@/data/pipeline';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Calendar, User, ArrowRightCircle } from 'lucide-react';
 import CaseDetailDrawer from './CaseDetailDrawer';
 import { getCaseDetails } from '@/data/caseDetails';

@@ -1,5 +1,6 @@
 import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getMetaHealth, MetaHealth } from '@/integrations/metaAds';
 import { Facebook, Zap, Clock, TrendingUp } from 'lucide-react';
 import SourceProvenance from '@/components/shared/SourceProvenance';

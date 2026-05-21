@@ -44,3 +44,9 @@ export function getRepPageTitle(pathname: string): string {
   if (match && match.kind === 'item') return match.label;
   return 'Dashboard';
 }
+
+export function getRepNavItemId(pathname: string): string {
+  const match = findNavItemByPath(repNavItems, pathname);
+  if (match && match.kind === 'item') return match.id;
+  return 'dashboard';
+}
