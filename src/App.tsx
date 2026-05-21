@@ -34,6 +34,7 @@ import SyncRunsPage from '@/pages/ceo/SyncRunsPage';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
 import AIAgentsRoster from '@/components/ceo/AIAgentsRoster';
 
+import GoogleCallbackPage from '@/pages/GoogleCallbackPage';
 import RepQueuePage from '@/pages/rep/RepQueuePage';
 import RealtorQueue from '@/components/rep/RealtorQueue';
 import CallHistory from '@/components/rep/CallHistory';
@@ -98,6 +99,7 @@ const App = () => (
               <Route path="stats" element={<RepStats />} />
             </Route>
 
+            <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
             <Route path="/proposal" element={<Proposal />} />
             <Route path="/costs" element={<Costs />} />
             <Route path="*" element={<NotFound />} />

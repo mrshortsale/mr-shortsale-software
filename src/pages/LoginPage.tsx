@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   Brain,
@@ -16,6 +17,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { isSignupDomainEmail } from '@/lib/emailValidation';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,6 +35,18 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+
+// ─── Google error codes → human-readable messages ────────────────────────────
+
+const GOOGLE_ERRORS: Record<string, string> = {
+  account_pending_approval:
+    'Your account is pending CEO approval. You will receive an email once approved.',
+  account_disabled: 'Your account is disabled. Please contact support.',
+  google_consent_denied: 'Sign-in was cancelled.',
+  google_invalid_state: 'Session expired. Please try again.',
+  google_not_configured: 'Google Sign-In is not configured on this server.',
+  google_auth_failed: 'Google Sign-In failed. Please try again.',
+};
 
 // ─── Zod schema builders ──────────────────────────────────────────────────────
 
@@ -106,6 +120,12 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   const { t } = useTranslation();
   const [serverError, setServerError] = useState('');
   const [loadingDemo, setLoadingDemo] = useState<string | null>(null);
+  const [urlParams] = useSearchParams();
+
+  useEffect(() => {
+    const code = urlParams.get('error');
+    if (code && GOOGLE_ERRORS[code]) setServerError(GOOGLE_ERRORS[code]);
+  }, [urlParams]);
 
   const schema = buildSignInSchema(t);
   const form = useForm<SignInValues>({
@@ -219,6 +239,16 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
               </Button>
             </form>
           </Form>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+          <GoogleSignInButton />
 
           <p className="text-center text-xs text-muted-foreground">
             {t('login.signIn.noAccount')}{' '}
@@ -405,6 +435,16 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             </Button>
           </form>
         </Form>
+
+        <div className="relative my-2">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+          </div>
+        </div>
+        <GoogleSignInButton />
 
         <p className="text-center text-xs text-muted-foreground">
           {t('login.signUp.haveAccount')}{' '}

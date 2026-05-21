@@ -6,3 +6,10 @@ verify_jwt = false
 # Auth is handled inside the function (CEO x-auth-token, service role for cron/internal).
 [functions.batchleads-sync]
 verify_jwt = false
+
+# Google OAuth — browser redirects hit these directly; no Supabase JWT present.
+[functions.auth-google-initiate]
+verify_jwt = false
+
+[functions.auth-google-callback]
+verify_jwt = false
