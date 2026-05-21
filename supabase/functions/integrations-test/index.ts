@@ -66,6 +66,13 @@ const BUILTIN_HEALTH: Record<string, { endpoint: string; headers: (creds: Record
       return key ? { "api-key": key } : {};
     },
   },
+  openai: {
+    endpoint: "/v1/models",
+    headers: (creds) => {
+      const key = getApiKey(creds);
+      return key ? { "Authorization": `Bearer ${key}` } : {};
+    },
+  },
 };
 
 function normalizeBaseUrl(url: string): string {
@@ -283,6 +290,15 @@ Deno.serve(async (req) => {
       latency_ms: 0,
       error: "No API key stored. Edit credentials, paste your Batch Leads api-key, save, then test again.",
       debug: { request_url: `${baseUrl}${BATCH_LEADS_TAGS}`, api_key_length: 0 },
+    }, 400);
+  }
+
+  if (integration.slug === "openai" && !apiKey) {
+    return jsonResponse({
+      success: false,
+      latency_ms: 0,
+      error: "No API key stored. Edit credentials, paste your OpenAI API key (sk-...), save, then test again.",
+      debug: { request_url: `${baseUrl}/v1/models`, api_key_length: 0 },
     }, 400);
   }
 
