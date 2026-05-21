@@ -208,7 +208,7 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
               </div>
             </div>
 
-            {credentials?.last_test_error && (
+            {credentials?.last_test_error && !isConnected && (
               <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
                 <p className="text-xs text-red-700 dark:text-red-400">{credentials.last_test_error}</p>
               </div>
