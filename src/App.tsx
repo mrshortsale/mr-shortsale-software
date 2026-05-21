@@ -67,6 +67,7 @@ const App = () => (
         <AppProvider>
           <Routes>
             <Route path="/" element={<HomeRedirect />} />
+            <Route path="/login" element={<LoginPage />} />
 
             <Route path={CEO_BASE} element={<CEOLayout />}>
               <Route index element={<Navigate to="briefing" replace />} />
