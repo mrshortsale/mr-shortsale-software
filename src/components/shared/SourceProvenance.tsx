@@ -1,5 +1,6 @@
 import { Database, Building2, Facebook, Layers, ArrowRight } from 'lucide-react';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type ProvenanceSource = 'Batch' | 'Zillow' | 'Meta' | 'ATOM';
 
@@ -30,9 +31,10 @@ const STATUS_DOT: Record<NonNullable<ChipDef['status']>, string> = {
 };
 
 export default function SourceProvenance({ chips, onOpenSources }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl bg-card border px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Data sources</span>
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t('sourceProvenance.title')}</span>
       {chips.map(c => (
         <span key={c.source} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-foreground">
           <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[c.status ?? 'ok']}`} />
@@ -47,7 +49,7 @@ export default function SourceProvenance({ chips, onOpenSources }: Props) {
           onClick={onOpenSources}
           className="ml-auto inline-flex items-center gap-1 text-[11px] text-primary font-bold hover:underline"
         >
-          Open Data Sources <ArrowRight size={11} />
+          {t('sourceProvenance.openDataSources')} <ArrowRight size={11} />
         </button>
       )}
     </div>

@@ -14,9 +14,17 @@ const stageColors: Record<PipelineStage, string> = {
   'Pending Approval': 'border-t-primary',
 };
 
+const STAGE_KEYS: Record<PipelineStage, string> = {
+  'Initial Contact': 'pipeline.stages.initialContact',
+  'Docs Collected': 'pipeline.stages.docsCollected',
+  'Bank Submitted': 'pipeline.stages.bankSubmitted',
+  'Pending Approval': 'pipeline.stages.pendingApproval',
+};
+
 export default function PipelineBoard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = pipelineCases.find(c => c.id === selectedId) || null;
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-4">
@@ -27,17 +35,17 @@ export default function PipelineBoard() {
         ]}
       />
       <div className="rounded-xl bg-primary/5 border border-primary/20 px-3 py-2 flex flex-wrap items-center gap-3 text-xs">
-        <span className="font-bold text-foreground">Active Pipeline</span>
-        <span className="text-muted-foreground">12 active cases · 0 denials · avg close 67d</span>
+        <span className="font-bold text-foreground">{t('pipeline.title')}</span>
+        <span className="text-muted-foreground">{t('pipeline.summary', { count: 12 })}</span>
         <span className="ml-auto inline-flex items-center gap-1 text-accent font-bold">
-          <ArrowRightCircle size={12} /> 3 promoted from Inventory today
+          <ArrowRightCircle size={12} /> {t('pipeline.promotedToday', { count: 3 })}
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {stages.map(stage => (
           <div key={stage}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-foreground">{stage}</h3>
+              <h3 className="text-sm font-bold text-foreground">{t(STAGE_KEYS[stage])}</h3>
               <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
                 {pipelineCases.filter(c => c.stage === stage).length}
               </span>
@@ -60,8 +68,8 @@ export default function PipelineBoard() {
                     </div>
                     <div className="mt-2.5">
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-0.5">
-                        <span>Docs {docPct}%</span>
-                        <span>{d.days_in_stage}d in stage</span>
+                        <span>{t('pipeline.docsProgress', { pct: docPct })}</span>
+                        <span>{t('pipeline.daysInStage', { days: d.days_in_stage })}</span>
                       </div>
                       <div className="h-1 bg-muted rounded-full overflow-hidden">
                         <div className="h-full bg-accent" style={{ width: `${docPct}%` }} />
@@ -75,7 +83,7 @@ export default function PipelineBoard() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground mt-4 text-center">0 denials to date · 12 active cases · avg. close 67 days · Click any card for full case detail</p>
+      <p className="text-xs text-muted-foreground mt-4 text-center">{t('pipeline.footer')}</p>
 
       <CaseDetailDrawer
         caseData={selected}

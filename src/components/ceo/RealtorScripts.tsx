@@ -45,6 +45,7 @@ const scripts: Script[] = [
 export default function RealtorScripts() {
   const [lang, setLang] = useState<'EN' | 'ES'>('EN');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const copy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -57,8 +58,8 @@ export default function RealtorScripts() {
       <div className="metric-card flex items-center gap-3">
         <MessageSquare className="text-secondary" size={20} />
         <div className="flex-1">
-          <h3 className="font-bold text-foreground">Realtor-to-Realtor Script Library</h3>
-          <p className="text-xs text-muted-foreground">Bilingual scripts tuned for listing agents — different tone than homeowner outreach</p>
+          <h3 className="font-bold text-foreground">{t('realtorScripts.libraryTitle')}</h3>
+          <p className="text-xs text-muted-foreground">{t('realtorScripts.librarySubtitle')}</p>
         </div>
         <div className="flex rounded-lg bg-muted p-0.5">
           <button onClick={() => setLang('EN')} className={`px-3 py-1.5 text-xs font-bold rounded ${lang === 'EN' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>EN</button>
@@ -77,7 +78,7 @@ export default function RealtorScripts() {
                   <h4 className="font-bold text-foreground text-sm">{s.scenario}</h4>
                 </div>
                 <button onClick={() => copy(s.id, text)} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-                  {copiedId === s.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+                  {copiedId === s.id ? <><Check size={12} /> {t('realtorScripts.copied')}</> : <><Copy size={12} /> {t('realtorScripts.copy')}</>}
                 </button>
               </div>
               <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3 leading-relaxed whitespace-pre-line">{text}</p>

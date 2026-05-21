@@ -125,7 +125,7 @@ export default function SyncRunsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">
-            Batch Leads import history. Each run pages through saved addresses and upserts into inventory (no duplicates).
+            {t('syncRuns.description')}
           </p>
           {syncStatus && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -134,7 +134,7 @@ export default function SyncRunsPage() {
                 <>
                   {' · '}
                   <Link to={`${CEO_BASE}/integrations`} className="text-primary font-bold underline">
-                    Connect Batch Leads
+                    {t('syncRuns.connectBatchLeads')}
                   </Link>
                 </>
               )}
@@ -218,7 +218,11 @@ export default function SyncRunsPage() {
       {total > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+            {t('syncRuns.pagination', {
+              start: (page - 1) * PAGE_SIZE + 1,
+              end: Math.min(page * PAGE_SIZE, total),
+              total,
+            })}
           </span>
           <div className="flex items-center gap-1">
             <button

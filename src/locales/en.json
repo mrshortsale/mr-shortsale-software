@@ -387,7 +387,10 @@
   },
   "syncRuns": {
     "title": "Sync History",
+    "description": "Batch Leads import history. Each run pages through saved addresses and upserts into inventory (no duplicates).",
+    "connectBatchLeads": "Connect Batch Leads",
     "leadsInDatabase": "leads in database",
+    "pagination": "{{start}}–{{end}} of {{total}}",
     "status": {
       "running": "Running",
       "completed": "Completed",
@@ -399,7 +402,15 @@
       "started": "Started",
       "duration": "Duration",
       "result": "Result",
-      "status": "Status"
+      "status": "Status",
+      "newLeads": "New Leads"
+    },
+    "progress": {
+      "page": "Page {{page}}",
+      "new": "+{{count}} new",
+      "updated": "{{count}} updated",
+      "inBatch": "~{{count}} in Batch",
+      "leadsInDb": "{{count}} leads in DB"
     },
     "empty": "No sync runs yet.",
     "syncNow": "Sync now"
@@ -447,7 +458,16 @@
   },
   "pipeline": {
     "title": "Active Pipeline",
+    "summary": "{{count}} active cases · 0 denials · avg close 67d",
+    "promotedToday": "{{count}} promoted from Inventory today",
+    "docsProgress": "Docs {{pct}}%",
+    "daysInStage": "{{days}}d in stage",
+    "footer": "0 denials to date · 12 active cases · avg. close 67 days · Click any card for full case detail",
     "stages": {
+      "initialContact": "Initial Contact",
+      "docsCollected": "Docs Collected",
+      "bankSubmitted": "Bank Submitted",
+      "pendingApproval": "Pending Approval",
       "new": "New",
       "contacted": "Contacted",
       "qualified": "Qualified",
@@ -484,21 +504,95 @@
     "search": "Search realtors…",
     "call": "Call",
     "sms": "SMS",
+    "stats": {
+      "total": "Total realtor leads",
+      "new": "New",
+      "awaitingFollowup": "Awaiting follow-up",
+      "partnered": "Partnered"
+    },
+    "filters": {
+      "allStates": "All states",
+      "allStatuses": "All statuses",
+      "esOnly": "ES only",
+      "hotOnly": "Hot only"
+    },
+    "sort": {
+      "daysDesc": "Days on market (desc)",
+      "newest": "Newest listing",
+      "priceDesc": "List price (desc)",
+      "mostDrops": "Most price drops",
+      "longestDom": "Longest DOM"
+    },
+    "leadCount": "{{count}} leads",
+    "leadCount_one": "{{count}} lead",
+    "listingsCount": "{{count}} listings",
+    "listingsCount_one": "{{count}} listing",
+    "bulk": {
+      "selected": "{{count}} selected",
+      "assignTo": "Assign to:",
+      "assign": "Assign",
+      "clear": "Clear"
+    },
+    "empty": "No realtor leads match these filters. Try clearing them.",
+    "lastContact": "Last contact:",
+    "list": "List",
+    "dom": "DOM",
+    "drops": "Drops",
+    "hot": "HOT",
+    "pushToMojo": "Push to Mojo",
+    "pushToMojoTitle": "Push agent to Mojo dialer queue",
+    "email": "Email",
+    "emailTitle": "Email agent",
+    "listing": "Listing",
+    "listingTitle": "Open Zillow listing",
+    "assignRep": "Assign to rep",
+    "mojoQueued": "{{name}} queued in Mojo",
     "status": {
       "new": "New",
       "contacted": "Contacted",
+      "partnered": "Partnered",
+      "closedWon": "Closed Won",
+      "declined": "Declined",
       "active": "Active",
       "closed": "Closed"
     }
   },
   "realtorPipeline": {
-    "title": "Realtor Pipeline"
+    "title": "Realtor Pipeline",
+    "chainTitle": "Realtor Short Sale Chain",
+    "chainDescription": "Listings already on Zillow as short sales. We pitch the listing agent realtor-to-realtor — we close the short sale at no cost to them, they keep the commission.",
+    "priceDrops": "↓ {{count}} price drop",
+    "priceDrops_other": "↓ {{count}} price drops"
   },
   "realtorScripts": {
-    "title": "Realtor Scripts"
+    "title": "Realtor Scripts",
+    "libraryTitle": "Realtor-to-Realtor Script Library",
+    "librarySubtitle": "Bilingual scripts tuned for listing agents — different tone than homeowner outreach",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "realtorReports": {
-    "title": "Realtor Reports"
+    "title": "Realtor Reports",
+    "kpi": {
+      "realtorLeads": "Realtor leads",
+      "thisMonth": "this month",
+      "partnerRate": "Partner rate",
+      "ofTotal": "{{partnered}} of {{total}}",
+      "pipelineValue": "Pipeline value",
+      "partneredListings": "partnered listings",
+      "closedWon": "Closed Won",
+      "deals": "{{count}} deals",
+      "deals_one": "{{count}} deal"
+    },
+    "funnelByStage": "Funnel by stage",
+    "topBrokerages": "Top brokerages by lead volume",
+    "comparisonTitle": "Foreclosure vs Realtor chain",
+    "comparisonSubtitle": "Both pipelines run in parallel. Realtor chain has higher partner rate but lower volume — quality over quantity.",
+    "foreclosure": "Foreclosure",
+    "homeownerConversion": "homeowner conversion",
+    "realtor": "Realtor",
+    "listingAgentPartnership": "listing-agent partnership",
+    "warmerLeads": "Realtor leads are warmer — listing already exists, seller already motivated."
   },
   "integrations": {
     "title": "Integrations",
@@ -642,7 +736,18 @@
     "title": "Realtor Queue",
     "search": "Search…",
     "call": "Call",
-    "sms": "SMS"
+    "sms": "SMS",
+    "bannerTitle": "Realtor Short Sale queue.",
+    "bannerBody": "Listing agents on Zillow short-sale listings — pitch realtor-to-realtor. They keep their commission, we close the file.",
+    "sourceSynced": "Source: Zillow · synced 12 min ago",
+    "inQueue": "{{count}} in queue",
+    "empty": "Nothing matches these filters. Clear them to see your full queue.",
+    "last": "Last:",
+    "dropsCount": "{{count}} drops",
+    "pushToMojoDesc": "Mojo will dial from your headset on next pickup",
+    "pushToMojoTitle": "Push agent's number into Mojo Triple Dialer queue",
+    "email": "Email",
+    "listing": "Listing"
   },
   "notFound": {
     "title": "Page not found",
@@ -708,6 +813,8 @@
     "pushedToMojoDesc": "Mojo Triple Dialer will dial this lead on your next pickup"
   },
   "sourceProvenance": {
+    "title": "Data sources",
+    "openDataSources": "Open Data Sources",
     "source": "Source",
     "batchLeads": "Batch Leads",
     "realie": "Realie.ai",

@@ -387,7 +387,10 @@
   },
   "syncRuns": {
     "title": "Historial de Sincronización",
+    "description": "Historial de importación de Batch Leads. Cada ejecución recorre direcciones guardadas y las inserta en el inventario (sin duplicados).",
+    "connectBatchLeads": "Conectar Batch Leads",
     "leadsInDatabase": "leads en base de datos",
+    "pagination": "{{start}}–{{end}} de {{total}}",
     "status": {
       "running": "En ejecución",
       "completed": "Completado",
@@ -399,7 +402,15 @@
       "started": "Iniciado",
       "duration": "Duración",
       "result": "Resultado",
-      "status": "Estado"
+      "status": "Estado",
+      "newLeads": "Nuevos Leads"
+    },
+    "progress": {
+      "page": "Página {{page}}",
+      "new": "+{{count}} nuevos",
+      "updated": "{{count}} actualizados",
+      "inBatch": "~{{count}} en Batch",
+      "leadsInDb": "{{count}} leads en BD"
     },
     "empty": "Sin historial de sincronización.",
     "syncNow": "Sincronizar ahora"
@@ -447,7 +458,16 @@
   },
   "pipeline": {
     "title": "Pipeline Activo",
+    "summary": "{{count}} casos activos · 0 rechazos · cierre prom. 67d",
+    "promotedToday": "{{count}} promovidos del Inventario hoy",
+    "docsProgress": "Docs {{pct}}%",
+    "daysInStage": "{{days}}d en etapa",
+    "footer": "0 rechazos hasta la fecha · 12 casos activos · cierre prom. 67 días · Haz clic en cualquier tarjeta para ver detalles",
     "stages": {
+      "initialContact": "Contacto Inicial",
+      "docsCollected": "Docs Recopilados",
+      "bankSubmitted": "Enviado al Banco",
+      "pendingApproval": "Pendiente de Aprobación",
       "new": "Nuevo",
       "contacted": "Contactado",
       "qualified": "Calificado",
@@ -484,21 +504,95 @@
     "search": "Buscar agentes…",
     "call": "Llamar",
     "sms": "SMS",
+    "stats": {
+      "total": "Leads de agentes",
+      "new": "Nuevos",
+      "awaitingFollowup": "Pendientes de seguimiento",
+      "partnered": "Asociados"
+    },
+    "filters": {
+      "allStates": "Todos los estados",
+      "allStatuses": "Todos los estatus",
+      "esOnly": "Solo ES",
+      "hotOnly": "Solo calientes"
+    },
+    "sort": {
+      "daysDesc": "Días en mercado (desc)",
+      "newest": "Listado más reciente",
+      "priceDesc": "Precio de lista (desc)",
+      "mostDrops": "Más bajadas de precio",
+      "longestDom": "Mayor DOM"
+    },
+    "leadCount": "{{count}} leads",
+    "leadCount_one": "{{count}} lead",
+    "listingsCount": "{{count}} listados",
+    "listingsCount_one": "{{count}} listado",
+    "bulk": {
+      "selected": "{{count}} seleccionados",
+      "assignTo": "Asignar a:",
+      "assign": "Asignar",
+      "clear": "Limpiar"
+    },
+    "empty": "Ningún lead agente coincide con estos filtros. Intenta limpiarlos.",
+    "lastContact": "Último contacto:",
+    "list": "Lista",
+    "dom": "DOM",
+    "drops": "Bajadas",
+    "hot": "CALIENTE",
+    "pushToMojo": "Enviar a Mojo",
+    "pushToMojoTitle": "Enviar agente a la cola de Mojo",
+    "email": "Correo",
+    "emailTitle": "Enviar correo al agente",
+    "listing": "Listado",
+    "listingTitle": "Abrir listado en Zillow",
+    "assignRep": "Asignar asesor",
+    "mojoQueued": "{{name}} en cola de Mojo",
     "status": {
       "new": "Nuevo",
       "contacted": "Contactado",
+      "partnered": "Asociado",
+      "closedWon": "Cerrado Ganado",
+      "declined": "Rechazado",
       "active": "Activo",
       "closed": "Cerrado"
     }
   },
   "realtorPipeline": {
-    "title": "Pipeline Agentes"
+    "title": "Pipeline Agentes",
+    "chainTitle": "Cadena Short Sale Agentes",
+    "chainDescription": "Listados ya en Zillow como short sales. Contactamos al agente listador agente-a-agente — cerramos el short sale sin costo para ellos, se quedan con la comisión.",
+    "priceDrops": "↓ {{count}} bajada de precio",
+    "priceDrops_other": "↓ {{count}} bajadas de precio"
   },
   "realtorScripts": {
-    "title": "Scripts para Agentes"
+    "title": "Scripts para Agentes",
+    "libraryTitle": "Biblioteca de Scripts Agente-a-Agente",
+    "librarySubtitle": "Scripts bilingües para agentes listadores — tono diferente al de propietarios",
+    "copy": "Copiar",
+    "copied": "Copiado"
   },
   "realtorReports": {
-    "title": "Reportes Agentes"
+    "title": "Reportes Agentes",
+    "kpi": {
+      "realtorLeads": "Leads agentes",
+      "thisMonth": "este mes",
+      "partnerRate": "Tasa de asociación",
+      "ofTotal": "{{partnered}} de {{total}}",
+      "pipelineValue": "Valor del pipeline",
+      "partneredListings": "listados asociados",
+      "closedWon": "Cerrado Ganado",
+      "deals": "{{count}} acuerdos",
+      "deals_one": "{{count}} acuerdo"
+    },
+    "funnelByStage": "Embudo por etapa",
+    "topBrokerages": "Principales corretajes por volumen de leads",
+    "comparisonTitle": "Foreclosure vs cadena Agentes",
+    "comparisonSubtitle": "Ambos pipelines corren en paralelo. La cadena de agentes tiene mayor tasa de asociación pero menor volumen — calidad sobre cantidad.",
+    "foreclosure": "Foreclosure",
+    "homeownerConversion": "conversión propietarios",
+    "realtor": "Agente",
+    "listingAgentPartnership": "asociación agente listador",
+    "warmerLeads": "Los leads de agentes son más cálidos — el listado ya existe, el vendedor ya está motivado."
   },
   "integrations": {
     "title": "Integraciones",
@@ -642,7 +736,18 @@
     "title": "Cola de Agentes",
     "search": "Buscar…",
     "call": "Llamar",
-    "sms": "SMS"
+    "sms": "SMS",
+    "bannerTitle": "Cola Short Sale Agentes.",
+    "bannerBody": "Agentes listadores en listados short sale de Zillow — contacto agente-a-agente. Se quedan con su comisión, nosotros cerramos el caso.",
+    "sourceSynced": "Fuente: Zillow · sincronizado hace 12 min",
+    "inQueue": "{{count}} en cola",
+    "empty": "Nada coincide con estos filtros. Límpialos para ver tu cola completa.",
+    "last": "Último:",
+    "dropsCount": "{{count}} bajadas",
+    "pushToMojoDesc": "Mojo marcará desde tu auricular en la próxima recogida",
+    "pushToMojoTitle": "Enviar número del agente a la cola de Mojo Triple Dialer",
+    "email": "Correo",
+    "listing": "Listado"
   },
   "notFound": {
     "title": "Página no encontrada",
@@ -708,6 +813,8 @@
     "pushedToMojoDesc": "Mojo Triple Dialer marcará este lead en tu próxima recogida"
   },
   "sourceProvenance": {
+    "title": "Fuentes de datos",
+    "openDataSources": "Abrir Fuentes de Datos",
     "source": "Fuente",
     "batchLeads": "Batch Leads",
     "realie": "Realie.ai",

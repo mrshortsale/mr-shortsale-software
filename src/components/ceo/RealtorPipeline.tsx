@@ -23,17 +23,18 @@ const stageBadge: Record<RealtorLeadStatus, string> = {
 
 export default function RealtorPipeline() {
   const [selected, setSelected] = useState<RealtorLead | null>(null);
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-4">
-      <SourceProvenance chips={[{ source: 'Zillow', count: `${realtorLeads.length} listings`, lastSync: '12m ago', status: 'pending' }]} />
+      <SourceProvenance chips={[{ source: 'Zillow', count: t('realtorQueue.listingsCount', { count: realtorLeads.length }), lastSync: '12m ago', status: 'pending' }]} />
       <div className="rounded-xl bg-gradient-to-r from-secondary/10 to-accent/10 border border-secondary/20 p-4">
         <div className="flex items-start gap-3">
           <Building2 className="text-secondary mt-0.5" size={20} />
           <div>
-            <h3 className="font-bold text-foreground">Realtor Short Sale Chain</h3>
+            <h3 className="font-bold text-foreground">{t('realtorPipeline.chainTitle')}</h3>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Listings already on Zillow as short sales. We pitch the listing agent realtor-to-realtor — we close the short sale at <strong>no cost to them</strong>, they keep the commission.
+              {t('realtorPipeline.chainDescription')}
             </p>
           </div>
         </div>
@@ -45,7 +46,7 @@ export default function RealtorPipeline() {
           return (
             <div key={stage} className="bg-muted/40 rounded-xl p-3 min-h-[400px]">
               <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold px-2 py-1 rounded ${stageBadge[stage]}`}>{stage}</span>
+                <span className={`text-xs font-bold px-2 py-1 rounded ${stageBadge[stage]}`}>{t(`realtorQueue.status.${stage === 'Closed Won' ? 'closedWon' : stage.toLowerCase()}`)}</span>
                 <span className="text-xs font-bold text-muted-foreground">{items.length}</span>
               </div>
               <div className="space-y-2">
@@ -66,7 +67,7 @@ export default function RealtorPipeline() {
                       <span className="text-muted-foreground flex items-center gap-1"><Calendar size={10} /> {lead.daysOnMarket}d</span>
                     </div>
                     {lead.priceDrops.length > 0 && (
-                      <span className="inline-block mt-1 text-[10px] text-speed">↓ {lead.priceDrops.length} price drop{lead.priceDrops.length > 1 ? 's' : ''}</span>
+                      <span className="inline-block mt-1 text-[10px] text-speed">{t('realtorPipeline.priceDrops', { count: lead.priceDrops.length })}</span>
                     )}
                   </button>
                 ))}
