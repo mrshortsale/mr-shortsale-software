@@ -33,6 +33,8 @@ import CEOSettingsPage from '@/pages/ceo/CEOSettingsPage';
 import SyncRunsPage from '@/pages/ceo/SyncRunsPage';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
 import AIAgentsRoster from '@/components/ceo/AIAgentsRoster';
+import AgentsPage from '@/pages/ceo/ai/AgentsPage';
+import LogsPage from '@/pages/ceo/ai/LogsPage';
 
 import GoogleCallbackPage from '@/pages/GoogleCallbackPage';
 import MicrosoftCallbackPage from '@/pages/MicrosoftCallbackPage';
@@ -89,6 +91,8 @@ const App = () => (
               <Route path="integrations" element={<IntegrationsPage />} />
               <Route path="data" element={<DataSources />} />
               <Route path="settings" element={<CEOSettingsPage />} />
+              <Route path="ai/agents" element={<AgentsPage />} />
+              <Route path="ai/logs" element={<LogsPage />} />
               <Route path="preview/ai-calls" element={<AIInboundCalls />} />
               <Route path="preview/ai-agents" element={<AIAgentsRoster />} />
             </Route>
