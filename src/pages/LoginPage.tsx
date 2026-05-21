@@ -39,8 +39,6 @@ import {
 // ─── Google error codes → human-readable messages ────────────────────────────
 
 const GOOGLE_ERRORS: Record<string, string> = {
-  account_pending_approval:
-    'Your account is pending CEO approval. You will receive an email once approved.',
   account_disabled: 'Your account is disabled. Please contact support.',
   google_consent_denied: 'Sign-in was cancelled.',
   google_invalid_state: 'Session expired. Please try again.',
@@ -461,12 +459,56 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
+// ─── Pending approval card ────────────────────────────────────────────────────
+
+function PendingApprovalCard({ onBack }: { onBack: () => void }) {
+  return (
+    <Card className="shadow-premium">
+      <CardContent className="pt-8 pb-8">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+            <CheckCircle2 className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-lg font-semibold text-foreground">Account pending approval</p>
+            <p className="text-sm text-muted-foreground">
+              Your account has been created and is awaiting CEO approval.
+              <br />
+              You'll be able to sign in once it's approved.
+            </p>
+          </div>
+          <div className="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/40 dark:bg-amber-900/20">
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              If you believe this is taking too long, please contact your administrator.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-1 text-sm font-semibold text-primary hover:underline"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Page shell ───────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const { theme, toggleTheme } = useTheme();
   const { t } = useTranslation();
+  const [urlParams, setUrlParams] = useSearchParams();
+
+  const isPending = urlParams.get('error') === 'account_pending_approval';
+
+  const clearPending = () => {
+    setUrlParams({}, { replace: true });
+    setMode('signin');
+  };
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -500,7 +542,9 @@ export default function LoginPage() {
         </div>
 
         <div className="w-full space-y-6">
-          {mode === 'signin' ? (
+          {isPending ? (
+            <PendingApprovalCard onBack={clearPending} />
+          ) : mode === 'signin' ? (
             <SignInForm onSwitch={() => setMode('signup')} />
           ) : (
             <SignUpForm onSwitch={() => setMode('signin')} />
