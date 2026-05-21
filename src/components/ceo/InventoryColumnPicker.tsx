@@ -1,4 +1,5 @@
 import { Columns3, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export interface InventoryColumn {
@@ -70,7 +71,23 @@ interface Props {
   onChange: (next: Set<string>) => void;
 }
 
+// Maps column IDs that don't match translation key names to their actual keys
+const COLUMN_KEY_MAP: Record<string, string> = {
+  score: 'urgencyScore',
+  equity: 'equityPct',
+  filing: 'filingType',
+  auction: 'daysToAuction',
+  rep: 'assignedRep',
+  ltv: 'ltvPct',
+  attempts: 'contactAttempts',
+};
+
+export function getColumnTranslationKey(id: string): string {
+  return `inventory.columns.${COLUMN_KEY_MAP[id] ?? id}`;
+}
+
 export default function InventoryColumnPicker({ visible, onChange }: Props) {
+  const { t } = useTranslation();
   const toggle = (id: string) => {
     const col = INVENTORY_COLUMNS.find((c) => c.id === id);
     if (col?.required) return;
@@ -118,7 +135,7 @@ export default function InventoryColumnPicker({ visible, onChange }: Props) {
                 disabled={c.required}
                 className={`w-full flex items-center justify-between px-2 py-1.5 text-xs rounded hover:bg-muted ${c.required ? 'opacity-60 cursor-default' : ''}`}
               >
-                <span className="text-foreground">{c.label}</span>
+                <span className="text-foreground">{t(getColumnTranslationKey(c.id), c.label)}</span>
                 <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? 'bg-primary border-primary' : 'border-muted-foreground/30'}`}>
                   {checked && <Check size={10} className="text-primary-foreground" />}
                 </span>

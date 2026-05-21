@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -35,6 +36,8 @@ interface Props {
 }
 
 export default function IntegrationConfigPanel({ integration, onBack }: Props) {
+  const { i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
   const [credentials, setCredentials] = useState<IntegrationCredentials | null>(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
@@ -175,7 +178,7 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                 </p>
                 {credentials?.last_tested_at && (
                   <p className="text-xs text-muted-foreground">
-                    Last tested: {new Date(credentials.last_tested_at).toLocaleString()}
+                    Last tested: {new Date(credentials.last_tested_at).toLocaleString(loc)}
                   </p>
                 )}
               </div>

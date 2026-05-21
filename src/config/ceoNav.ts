@@ -111,3 +111,13 @@ export function getCeoPageTitle(pathname: string): string {
 
   return 'Dashboard';
 }
+
+export function getCeoNavItemId(pathname: string): string {
+  const match = findNavItemByPath(ceoNavItems, pathname);
+  if (match && match.kind === 'item') return match.id;
+
+  if (pathname === `${CEO_BASE}/preview/ai-calls`) return 'ai-calls';
+  if (pathname === `${CEO_BASE}/preview/ai-agents`) return 'ai-agents';
+
+  return 'dashboard';
+}

@@ -1,24 +1,26 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { mariaCallHistory, jamesCallHistory, luisCallHistory, CallRecord } from '@/data/calls';
 import { MessageSquare } from 'lucide-react';
 
 export default function CallHistory() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const history = user?.id === 'u2' ? mariaCallHistory : user?.id === 'u3' ? jamesCallHistory : luisCallHistory;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-bold text-foreground">Call History</h2>
+      <h2 className="text-lg font-bold text-foreground">{t('callHistory.title')}</h2>
       <div className="metric-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left">
-              <th className="pb-3 text-muted-foreground font-medium">Date</th>
-              <th className="pb-3 text-muted-foreground font-medium">Homeowner</th>
-              <th className="pb-3 text-muted-foreground font-medium">Duration</th>
-              <th className="pb-3 text-muted-foreground font-medium">Outcome</th>
-              <th className="pb-3 text-muted-foreground font-medium">Follow-up</th>
-              <th className="pb-3 text-muted-foreground font-medium">SMS</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('callHistory.date')}</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('callHistory.homeowner')}</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('callHistory.duration')}</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('callHistory.outcome')}</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('callHistory.followUp')}</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('callHistory.sms')}</th>
             </tr>
           </thead>
           <tbody>

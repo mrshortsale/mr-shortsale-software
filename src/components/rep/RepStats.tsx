@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import { mariaCallHistory, jamesCallHistory, luisCallHistory } from '@/data/calls';
@@ -6,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 export default function RepStats() {
   const { user } = useAuth();
   const { leads } = useApp();
+  const { t } = useTranslation();
   const history = user?.id === 'u2' ? mariaCallHistory : user?.id === 'u3' ? jamesCallHistory : luisCallHistory;
   const myLeads = leads.filter(l => l.assigned_agent === user?.id);
 
@@ -24,17 +26,17 @@ export default function RepStats() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-foreground">My Stats</h2>
+      <h2 className="text-lg font-bold text-foreground">{t('repStats.title')}</h2>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Calls" value={String(history.length)} />
-        <StatCard label="Connected" value={String(connected)} />
-        <StatCard label="Qualified" value={String(qualified)} />
-        <StatCard label="Leads in Queue" value={String(myLeads.length)} />
+        <StatCard label={t('repStats.totalCalls')} value={String(history.length)} />
+        <StatCard label={t('repStats.connected')} value={String(connected)} />
+        <StatCard label={t('repStats.qualified')} value={String(qualified)} />
+        <StatCard label={t('repStats.leadsInQueue')} value={String(myLeads.length)} />
       </div>
 
       <div className="metric-card">
-        <h3 className="font-bold text-foreground mb-4">Calls This Week</h3>
+        <h3 className="font-bold text-foreground mb-4">{t('repStats.callsThisWeek')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={weekData}>
             <XAxis dataKey="day" tick={{ fontSize: 12 }} />

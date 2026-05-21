@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppSidebar from '@/components/AppSidebar';
 import TopNav from '@/components/TopNav';
 import { useAuth } from '@/contexts/AuthContext';
-import { ceoNavItems, getCeoPageTitle } from '@/config/ceoNav';
+import { ceoNavItems, getCeoNavItemId } from '@/config/ceoNav';
 
 export default function CEOLayout() {
   const { user, loading } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useTranslation();
 
   if (loading) {
     return (
@@ -27,7 +29,8 @@ export default function CEOLayout() {
     return <Navigate to="/rep/queue" replace />;
   }
 
-  const pageTitle = getCeoPageTitle(location.pathname);
+  const navItemId = getCeoNavItemId(location.pathname);
+  const pageTitle = t(`nav.${navItemId}`);
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,16 +38,16 @@ export default function CEOLayout() {
         navItems={ceoNavItems}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        appName="Mr. Short Sale"
-        appSubLabel="AI Operations"
-        versionLabel="Platform"
-        versionSubLabel="v1.0.0 · Production"
+        appName={t('app.name')}
+        appSubLabel={t('app.ceoSubLabel')}
+        versionLabel={t('app.versionLabel')}
+        versionSubLabel={t('app.ceoVersionSub')}
       />
 
       <TopNav
         onOpenSidebar={() => setSidebarOpen(true)}
         pageTitle={pageTitle}
-        pageMeta="CEO Console"
+        pageMeta={t('app.ceoPlatform')}
       />
 
       <main className="mt-16 min-h-[calc(100vh-4rem)] p-4 lg:ml-64 lg:p-8">

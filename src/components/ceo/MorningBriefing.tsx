@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowUp, Users, Phone, Bot, CheckSquare, Square, AlertTriangle, Sparkles } from 'lucide-react';
 import { aiInboundCalls } from '@/data/calls';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
@@ -32,6 +33,7 @@ const recentAICalls = aiInboundCalls.slice(0, 3);
 export default function MorningBriefing() {
   const [newLeads, setNewLeads] = useState(47);
   const [callsCompleted, setCallsCompleted] = useState(31);
+  const { t } = useTranslation();
 
   useLiveLeadFeed(() => setNewLeads(n => n + 1));
 
@@ -47,10 +49,10 @@ export default function MorningBriefing() {
     <div className="space-y-6">
       {/* Top metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="New Leads Today" value={String(newLeads)} subtitle="via Realie.ai + Batch Leads API — same day" icon={<ArrowUp className="text-accent" size={20} />} accent="accent" pulse />
-        <MetricCard title="Equity-Qualified" value="18" subtitle="ready to call" icon={<Users className="text-secondary" size={20} />} accent="secondary" />
-        <MetricCard title="Calls Completed" value={String(callsCompleted)} subtitle="across all agents today" icon={<Phone className="text-primary" size={20} />} accent="primary" />
-        <MetricCard title="AI Inbound Handled" value="6" subtitle="after hours last night" icon={<Bot size={20} />} accent="warning" />
+        <MetricCard title={t('briefing.newLeadsToday')} value={String(newLeads)} subtitle={t('briefing.newLeadsSubtitle')} icon={<ArrowUp className="text-accent" size={20} />} accent="accent" pulse />
+        <MetricCard title={t('briefing.equityQualified')} value="18" subtitle={t('briefing.readyToCall')} icon={<Users className="text-secondary" size={20} />} accent="secondary" />
+        <MetricCard title={t('briefing.callsCompleted')} value={String(callsCompleted)} subtitle={t('briefing.callsCompletedSubtitle')} icon={<Phone className="text-primary" size={20} />} accent="primary" />
+        <MetricCard title={t('briefing.aiInboundHandled')} value="6" subtitle={t('briefing.aiInboundSubtitle')} icon={<Bot size={20} />} accent="warning" />
       </div>
 
       {/* Speed-to-Lead live feed (Meta Ads) */}
@@ -62,7 +64,7 @@ export default function MorningBriefing() {
       {/* Second row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="metric-card">
-          <h3 className="font-bold text-foreground mb-4">Active Short Sale Pipeline</h3>
+          <h3 className="font-bold text-foreground mb-4">{t('briefing.activePipeline')}</h3>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={pipelineData} layout="vertical">
               <XAxis type="number" hide />
@@ -74,18 +76,18 @@ export default function MorningBriefing() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <p className="text-xs text-muted-foreground mt-2">0 denials to date · avg. close 67 days</p>
+          <p className="text-xs text-muted-foreground mt-2">{t('briefing.pipelineNote')}</p>
         </div>
 
         <div className="metric-card">
-          <h3 className="font-bold text-foreground mb-4">My Task Checklist</h3>
+          <h3 className="font-bold text-foreground mb-4">{t('briefing.taskChecklist')}</h3>
           <div className="space-y-3">
             {tasks.map((task, i) => (
               <div key={i} className="flex items-start gap-3">
                 {task.done ? <CheckSquare size={18} className="text-accent mt-0.5 shrink-0" /> : <Square size={18} className="text-muted-foreground mt-0.5 shrink-0" />}
                 <span className={`text-sm ${task.done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{task.text}</span>
-                {task.priority === 'urgent' && <span className="badge-urgent shrink-0"><AlertTriangle size={10} className="mr-1" />Urgent</span>}
-                {task.priority === 'new' && <span className="badge-en shrink-0"><Sparkles size={10} className="mr-1" />New</span>}
+                {task.priority === 'urgent' && <span className="badge-urgent shrink-0"><AlertTriangle size={10} className="mr-1" />{t('briefing.urgent')}</span>}
+                {task.priority === 'new' && <span className="badge-en shrink-0"><Sparkles size={10} className="mr-1" />{t('briefing.new')}</span>}
               </div>
             ))}
           </div>
@@ -94,7 +96,7 @@ export default function MorningBriefing() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="metric-card">
-          <h3 className="font-bold text-foreground mb-4">Team Performance Today</h3>
+          <h3 className="font-bold text-foreground mb-4">{t('briefing.teamPerformanceToday')}</h3>
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={teamData} layout="vertical">
               <XAxis type="number" hide />
@@ -102,11 +104,11 @@ export default function MorningBriefing() {
               <Bar dataKey="calls" radius={[0, 6, 6, 0]} fill="hsl(212,70%,37%)" barSize={20} />
             </BarChart>
           </ResponsiveContainer>
-          <p className="text-xs text-muted-foreground mt-2">4 qualified handed to Cristina</p>
+          <p className="text-xs text-muted-foreground mt-2">{t('briefing.teamNote')}</p>
         </div>
 
         <div className="metric-card">
-          <h3 className="font-bold text-foreground mb-4">AI Inbound Calls — Last 24hrs</h3>
+          <h3 className="font-bold text-foreground mb-4">{t('briefing.aiInboundLast24')}</h3>
           <div className="space-y-3">
             {recentAICalls.map(call => (
               <div key={call.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">

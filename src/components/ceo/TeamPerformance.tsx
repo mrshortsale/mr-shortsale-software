@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import AgentDrillDown from './AgentDrillDown';
 
@@ -31,20 +32,21 @@ export default function TeamPerformance() {
   const [period, setPeriod] = useState<Period>('today');
   const [drillAgent, setDrillAgent] = useState<typeof agentStats.today[0] | null>(null);
   const data = agentStats[period];
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-6">
       <div className="flex gap-2 items-center">
         {(['today', 'week', 'month'] as Period[]).map(p => (
           <button key={p} onClick={() => setPeriod(p)} className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
-            {p === 'today' ? 'Today' : p === 'week' ? 'This Week' : 'This Month'}
+            {p === 'today' ? t('team.today') : p === 'week' ? t('team.week') : t('team.month')}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">Click any agent for drill-down →</span>
+        <span className="ml-auto text-xs text-muted-foreground">{t('team.drillDownHint')}</span>
       </div>
 
       <div className="metric-card">
-        <h3 className="font-bold text-foreground mb-4">Calls by Agent</h3>
+        <h3 className="font-bold text-foreground mb-4">{t('team.callsByAgent')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data} layout="vertical" onClick={(e) => {
             if (e && e.activePayload && e.activePayload[0]) {
@@ -66,12 +68,12 @@ export default function TeamPerformance() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left">
-              <th className="pb-3 text-muted-foreground font-medium">Agent</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Calls</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Connected</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Qualified</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Conv. Rate</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Avg Duration</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('team.agent')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.calls')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.connected')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.qualified')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.convRate')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.avgDuration')}</th>
             </tr>
           </thead>
           <tbody>

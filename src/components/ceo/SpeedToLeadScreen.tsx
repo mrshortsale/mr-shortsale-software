@@ -1,11 +1,13 @@
 import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getMetaHealth, MetaHealth } from '@/integrations/metaAds';
 import { Facebook, Zap, Clock, TrendingUp } from 'lucide-react';
 import SourceProvenance from '@/components/shared/SourceProvenance';
 
 export default function SpeedToLeadScreen() {
   const [m, setM] = useState<MetaHealth | null>(null);
+  const { t } = useTranslation();
   useEffect(() => { getMetaHealth().then(setM); }, []);
 
   return (
@@ -14,18 +16,18 @@ export default function SpeedToLeadScreen() {
         chips={[{ source: 'Meta', count: `${m?.leadsToday ?? 0} today`, lastSync: 'live webhook', status: 'live' }]}
       />
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Metric label="Leads Today" value={m?.leadsToday ?? '—'} icon={<Facebook size={18} className="text-speed" />} />
-        <Metric label="Avg Response" value={m ? `${Math.floor(m.avgResponseSec / 60)}m ${m.avgResponseSec % 60}s` : '—'} icon={<Clock size={18} className="text-secondary" />} />
-        <Metric label="Conversion %" value={`${m?.conversionPct ?? '—'}%`} icon={<TrendingUp size={18} className="text-accent" />} />
-        <Metric label="Status" value="Live" icon={<Zap size={18} className="text-speed" />} />
+        <Metric label={t('speed.leadsToday')} value={m?.leadsToday ?? '—'} icon={<Facebook size={18} className="text-speed" />} />
+        <Metric label={t('speed.avgResponse')} value={m ? `${Math.floor(m.avgResponseSec / 60)}m ${m.avgResponseSec % 60}s` : '—'} icon={<Clock size={18} className="text-secondary" />} />
+        <Metric label={t('speed.conversion')} value={`${m?.conversionPct ?? '—'}%`} icon={<TrendingUp size={18} className="text-accent" />} />
+        <Metric label={t('speed.status')} value={t('speed.live')} icon={<Zap size={18} className="text-speed" />} />
       </div>
 
       <SpeedToLeadFeed />
 
       <div className="metric-card border-l-4 border-l-speed">
-        <h3 className="font-bold text-foreground mb-1">How Speed-to-Lead works</h3>
+        <h3 className="font-bold text-foreground mb-1">{t('speed.howItWorks')}</h3>
         <p className="text-[11px] text-muted-foreground mb-2 italic">
-          Note: Mr. Short Sale app does not place calls. All dialing happens inside Mojo Triple Dialer — we just push leads to it via API.
+          {t('speed.howItWorksNote')}
         </p>
         <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal pl-5">
           <li>Meta Ads form-fill triggers webhook in &lt; 1 second</li>

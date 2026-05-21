@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -75,21 +76,23 @@ function UserAvatar({ name, color, size = 'md' }: { name: string; color: string;
 }
 
 function RoleBadge({ role }: { role: 'ceo' | 'rep' }) {
+  const { t } = useTranslation();
   return role === 'ceo'
-    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary"><ShieldCheck size={11} /> CEO</span>
-    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary/10 text-secondary"><User size={11} /> Rep</span>;
+    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary"><ShieldCheck size={11} /> {t('users.roles.ceo')}</span>
+    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary/10 text-secondary"><User size={11} /> {t('users.roles.rep')}</span>;
 }
 
 function StatusBadge({ user }: { user: AdminUserRow }) {
+  const { t } = useTranslation();
   if (user.status === 'pending') {
-    return <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium"><Clock size={11} />Pending</span>;
+    return <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium"><Clock size={11} />{t('users.status.pending')}</span>;
   }
   if (user.status === 'rejected') {
-    return <span className="inline-flex items-center gap-1.5 text-xs text-destructive font-medium"><UserX size={11} />Rejected</span>;
+    return <span className="inline-flex items-center gap-1.5 text-xs text-destructive font-medium"><UserX size={11} />{t('users.status.rejected')}</span>;
   }
   return user.is_active
-    ? <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />Active</span>
-    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />Inactive</span>;
+    ? <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />{t('users.status.active')}</span>
+    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />{t('users.status.inactive')}</span>;
 }
 
 function sortUsersByName(list: AdminUserRow[]): AdminUserRow[] {
@@ -118,6 +121,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
   open: boolean; onClose: () => void; onCreated: (user: AdminUserRow) => void;
 }) {
   const [serverError, setServerError] = useState('');
+  const { t } = useTranslation();
 
   const form = useForm<CreateUserValues>({
     resolver: zodResolver(createUserSchema),
@@ -136,8 +140,8 @@ function CreateUserDialog({ open, onClose, onCreated }: {
     const approved = values.approveImmediately;
     toast.success(
       approved
-        ? `${values.name} added and approved.`
-        : `${values.name} added — pending approval.`
+        ? t('users.toasts.addedApproved', { name: values.name })
+        : t('users.toasts.addedPending', { name: values.name })
     );
     form.reset();
     onCreated(result.user);
@@ -148,7 +152,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
     <Dialog open={open} onOpenChange={(o) => { if (!o) { setServerError(''); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New User</DialogTitle>
+          <DialogTitle>{t('users.dialogs.addTitle')}</DialogTitle>
         </DialogHeader>
 
         {serverError && (
@@ -160,25 +164,25 @@ function CreateUserDialog({ open, onClose, onCreated }: {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Jane Smith" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t('users.form.fullName')}</FormLabel><FormControl><Input placeholder={t('users.form.fullNamePlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
 
             <FormField control={form.control} name="email" render={({ field }) => (
-              <FormItem><FormLabel>Email</FormLabel><FormControl><Input placeholder="jane@mrshortsale.net" type="email" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t('users.form.email')}</FormLabel><FormControl><Input placeholder={t('users.form.emailPlaceholder')} type="email" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
 
             <FormField control={form.control} name="password" render={({ field }) => (
-              <FormItem><FormLabel>Temporary Password</FormLabel><FormControl><Input placeholder="Min 8 characters" type="password" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t('users.form.tempPassword')}</FormLabel><FormControl><Input placeholder={t('users.form.tempPasswordPlaceholder')} type="password" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
 
             <FormField control={form.control} name="role" render={({ field }) => (
               <FormItem>
-                <FormLabel>Role</FormLabel>
+                <FormLabel>{t('users.form.role')}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger></FormControl>
+                  <FormControl><SelectTrigger><SelectValue placeholder={t('users.form.rolePlaceholder')} /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="rep">Sales Rep</SelectItem>
-                    <SelectItem value="ceo">CEO</SelectItem>
+                    <SelectItem value="rep">{t('users.roles.rep')}</SelectItem>
+                    <SelectItem value="ceo">{t('users.roles.ceo')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -187,7 +191,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
 
             <FormField control={form.control} name="avatarColor" render={({ field }) => (
               <FormItem>
-                <FormLabel>Avatar Color</FormLabel>
+                <FormLabel>{t('users.form.avatarColor')}</FormLabel>
                 <FormControl>
                   <ColorPicker value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -204,19 +208,19 @@ function CreateUserDialog({ open, onClose, onCreated }: {
                   />
                 </FormControl>
                 <div>
-                  <FormLabel className="mb-0 cursor-pointer">Approve immediately</FormLabel>
+                  <FormLabel className="mb-0 cursor-pointer">{t('users.form.approveImmediately')}</FormLabel>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    If unchecked, account will be created as pending and must be approved separately.
+                    {t('users.form.approveImmediatelyDesc')}
                   </p>
                 </div>
               </FormItem>
             )} />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={onClose}>{t('users.buttons.cancel')}</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <Loader2 size={14} className="animate-spin mr-2" />}
-                Add User
+                {t('users.addUser')}
               </Button>
             </DialogFooter>
           </form>
@@ -232,6 +236,7 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
   user: AdminUserRow; open: boolean; onClose: () => void; onUpdated: (user: AdminUserRow) => void;
 }) {
   const [serverError, setServerError] = useState('');
+  const { t } = useTranslation();
 
   const form = useForm<EditUserValues>({
     resolver: zodResolver(editUserSchema),
@@ -256,7 +261,7 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
     });
     if (result.error) { setServerError(result.error); return; }
     if (!result.user) { setServerError('Failed to update user'); return; }
-    toast.success(`${values.name} updated.`);
+    toast.success(t('users.toasts.updated', { name: values.name }));
     onUpdated(result.user);
     onClose();
   };
@@ -265,7 +270,7 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
     <Dialog open={open} onOpenChange={(o) => { if (!o) { setServerError(''); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
+          <DialogTitle>{t('users.dialogs.editTitle')}</DialogTitle>
         </DialogHeader>
 
         {serverError && (
@@ -277,17 +282,17 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t('users.form.fullName')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )} />
 
             <FormField control={form.control} name="role" render={({ field }) => (
               <FormItem>
-                <FormLabel>Role</FormLabel>
+                <FormLabel>{t('users.form.role')}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="rep">Sales Rep</SelectItem>
-                    <SelectItem value="ceo">CEO</SelectItem>
+                    <SelectItem value="rep">{t('users.roles.rep')}</SelectItem>
+                    <SelectItem value="ceo">{t('users.roles.ceo')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -296,7 +301,7 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
 
             <FormField control={form.control} name="avatarColor" render={({ field }) => (
               <FormItem>
-                <FormLabel>Avatar Color</FormLabel>
+                <FormLabel>{t('users.form.avatarColor')}</FormLabel>
                 <FormControl>
                   <ColorPicker value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -306,8 +311,8 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
             <FormField control={form.control} name="isActive" render={({ field }) => (
               <FormItem className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <FormLabel className="mb-0">Account Active</FormLabel>
-                  <p className="text-xs text-muted-foreground mt-0.5">Deactivated users cannot log in.</p>
+                  <FormLabel className="mb-0">{t('users.form.accountActive')}</FormLabel>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('users.form.accountActiveDesc')}</p>
                 </div>
                 <FormControl>
                   <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -317,17 +322,17 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
 
             <FormField control={form.control} name="password" render={({ field }) => (
               <FormItem>
-                <FormLabel>New Password <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
-                <FormControl><Input placeholder="Leave blank to keep current" type="password" {...field} /></FormControl>
+                <FormLabel>{t('users.form.newPassword')} <span className="text-muted-foreground font-normal">{t('users.form.newPasswordOptional')}</span></FormLabel>
+                <FormControl><Input placeholder={t('users.form.newPasswordPlaceholder')} type="password" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={onClose}>{t('users.buttons.cancel')}</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting && <Loader2 size={14} className="animate-spin mr-2" />}
-                Save Changes
+                {t('users.buttons.saveChanges')}
               </Button>
             </DialogFooter>
           </form>
@@ -355,6 +360,7 @@ function PendingSection({
   const [actionId, setActionId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<AdminUserRow | null>(null);
   const hasLoadedOnce = useRef(false);
+  const { t } = useTranslation();
 
   const fetchPending = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -379,8 +385,8 @@ function PendingSection({
     const result = await adminApproveUser(user.id);
     setActionId(null);
     if (result.error) { toast.error(result.error); return; }
-    if (!result.user) { toast.error('Failed to approve user'); return; }
-    toast.success(`${user.name} approved.`);
+    if (!result.user) { toast.error(t('users.toasts.failedApprove')); return; }
+    toast.success(t('users.toasts.approved', { name: user.name }));
     setPending((prev) => prev.filter((p) => p.id !== user.id));
     onApproved(result.user);
   };
@@ -393,7 +399,7 @@ function PendingSection({
     setActionId(null);
     setRejectTarget(null);
     if (result.error) { toast.error(result.error); return; }
-    toast.success(`${target.name}'s request rejected.`);
+    toast.success(t('users.toasts.rejected', { name: target.name }));
     setPending((prev) => prev.filter((p) => p.id !== target.id));
     onRejected();
   };
@@ -401,7 +407,7 @@ function PendingSection({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Review signup requests from new reps. Approved users can sign in immediately.
+        {t('users.pendingSection.description')}
       </p>
 
       {fetchError && (
@@ -415,10 +421,10 @@ function PendingSection({
           <TableHeader>
             <TableRow>
               <TableHead className="w-10" />
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Requested</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('users.table.name')}</TableHead>
+              <TableHead>{t('users.table.email')}</TableHead>
+              <TableHead>{t('users.table.requested')}</TableHead>
+              <TableHead className="text-right">{t('users.table.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -432,7 +438,7 @@ function PendingSection({
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
                   <CheckCircle2 size={24} className="mx-auto mb-2 text-muted-foreground/40" />
-                  No pending signup requests
+                  {t('users.table.noPending')}
                 </TableCell>
               </TableRow>
             ) : pending.map((u) => (
@@ -457,7 +463,7 @@ function PendingSection({
                       {actionId === u.id
                         ? <Loader2 size={12} className="animate-spin" />
                         : <CheckCircle2 size={12} />}
-                      Approve
+                      {t('users.buttons.approve')}
                     </Button>
                     <Button
                       size="sm"
@@ -467,7 +473,7 @@ function PendingSection({
                       onClick={() => setRejectTarget(u)}
                     >
                       <XCircle size={12} />
-                      Reject
+                      {t('users.buttons.reject')}
                     </Button>
                   </div>
                 </TableCell>
@@ -480,21 +486,20 @@ function PendingSection({
       <AlertDialog open={!!rejectTarget} onOpenChange={(o) => { if (!o) setRejectTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reject {rejectTarget?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>{t('users.dialogs.rejectTitle', { name: rejectTarget?.name })}</AlertDialogTitle>
             <AlertDialogDescription>
-              Their account will be marked as rejected. They will not be able to sign in and cannot
-              re-register with the same email. This action cannot be undone.
+              {t('users.dialogs.rejectDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('users.buttons.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleReject}
               disabled={!!actionId}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {actionId ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
-              Reject Request
+              {t('users.buttons.rejectRequest')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -566,6 +571,8 @@ export default function UserManagement() {
     return users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
   }, [users, search]);
 
+  const { t } = useTranslation();
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const removed = deleteTarget;
@@ -576,7 +583,7 @@ export default function UserManagement() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(`${removed.name} deleted.`);
+      toast.success(t('users.toasts.deleted', { name: removed.name }));
       setUsers((prev) => prev.filter((u) => u.id !== removed.id));
     }
   };
@@ -586,11 +593,11 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-foreground">User Management</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage platform users and their roles.</p>
+          <h2 className="text-xl font-bold text-foreground">{t('users.title')}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{t('users.subtitle')}</p>
         </div>
         <Button onClick={() => setShowCreate(true)} size="sm" className="gap-2">
-          <Plus size={15} /> Add User
+          <Plus size={15} /> {t('users.addUser')}
         </Button>
       </div>
 
@@ -605,7 +612,7 @@ export default function UserManagement() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          All users
+          {t('users.tabs.all')}
         </button>
         <button
           type="button"
@@ -616,7 +623,7 @@ export default function UserManagement() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          Pending approval
+          {t('users.tabs.pending')}
           {pendingCount > 0 && (
             <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
               {pendingCount}
@@ -643,7 +650,7 @@ export default function UserManagement() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email…"
+              placeholder={t('users.form.searchPlaceholder')}
               className="pl-8 h-9 text-sm"
             />
           </div>
@@ -659,12 +666,12 @@ export default function UserManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10" />
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-20 text-right">Actions</TableHead>
+                  <TableHead>{t('users.table.name')}</TableHead>
+                  <TableHead>{t('users.table.email')}</TableHead>
+                  <TableHead>{t('users.table.role')}</TableHead>
+                  <TableHead>{t('users.table.status')}</TableHead>
+                  <TableHead>{t('users.table.created')}</TableHead>
+                  <TableHead className="w-20 text-right">{t('users.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -677,7 +684,7 @@ export default function UserManagement() {
                 ) : filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-sm">
-                      No users found.
+                      {t('users.table.noUsers')}
                     </TableCell>
                   </TableRow>
                 ) : filtered.map((u) => (
@@ -735,20 +742,20 @@ export default function UserManagement() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the user and all their data. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
-              Delete
+          <AlertDialogTitle>{t('users.dialogs.deleteTitle', { name: deleteTarget?.name })}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('users.dialogs.deleteDesc')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('users.buttons.cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={deleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+            {t('users.buttons.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

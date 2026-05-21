@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Search, Plug, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,10 +25,15 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 function StatusBadge({ status }: { status: IntegrationStatus | null }) {
+  const { t } = useTranslation();
   if (!status) {
-    return <Badge variant="outline" className="text-xs">Not configured</Badge>;
+    return <Badge variant="outline" className="text-xs">{t('integrations.notConfigured')}</Badge>;
   }
-  const config = STATUS_CONFIG[status];
+  const config = {
+    connected: { label: t('integrations.statusConnected'), className: STATUS_CONFIG.connected.className },
+    disabled: { label: t('integrations.statusDisabled'), className: STATUS_CONFIG.disabled.className },
+    error: { label: t('integrations.statusError'), className: STATUS_CONFIG.error.className },
+  }[status];
   return <Badge className={`text-xs border-0 ${config.className}`}>{config.label}</Badge>;
 }
 
@@ -38,6 +44,7 @@ export default function IntegrationsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [showUsage, setShowUsage] = useState(false);
+  const { t } = useTranslation();
 
   const fetchIntegrations = useCallback(async () => {
     setLoading(true);
@@ -79,7 +86,7 @@ export default function IntegrationsPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => setShowUsage(false)}>
-            ← Back to Integrations
+            {t('integrations.backToIntegrations')}
           </Button>
         </div>
         <ApiUsageDashboard integrations={integrations} />
@@ -96,20 +103,20 @@ export default function IntegrationsPage() {
             <Plug className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{t('integrations.title')}</h1>
             <p className="text-sm text-muted-foreground">
-              Connect external services to your platform.{' '}
-              <span className="font-medium text-primary">{connectedCount} connected</span>
+              {t('integrations.subtitle')}{' '}
+              <span className="font-medium text-primary">{t('integrations.connectedCount', { count: connectedCount })}</span>
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowUsage(true)}>
-            API Usage
+            {t('integrations.apiUsage')}
           </Button>
           <Button size="sm" onClick={() => setShowAddModal(true)}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Add Integration
+            {t('integrations.add')}
           </Button>
         </div>
       </div>
@@ -118,7 +125,7 @@ export default function IntegrationsPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search integrations..."
+          placeholder={t('integrations.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -156,7 +163,7 @@ export default function IntegrationsPage() {
                 </div>
 
                 <p className="mt-3 text-xs text-muted-foreground line-clamp-2">
-                  {integration.description || 'No description provided.'}
+                  {integration.description || t('integrations.noDescription')}
                 </p>
 
                 <div className="mt-4 flex items-center justify-between">
@@ -169,10 +176,10 @@ export default function IntegrationsPage() {
                       setSelectedIntegration(integration);
                     }}
                   >
-                    Configure
+                    {t('integrations.configure')}
                   </Button>
                   {integration.is_builtin && (
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Built-in</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('integrations.builtIn')}</span>
                   )}
                 </div>
               </CardContent>
@@ -185,7 +192,7 @@ export default function IntegrationsPage() {
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Plug className="h-12 w-12 text-muted-foreground/50" />
           <p className="mt-3 text-sm text-muted-foreground">
-            {search ? 'No integrations match your search.' : 'No integrations configured yet.'}
+            {search ? t('integrations.noSearchResults') : t('integrations.empty')}
           </p>
         </div>
       )}
@@ -194,7 +201,7 @@ export default function IntegrationsPage() {
       <div className="flex justify-center pt-2">
         <Button variant="ghost" size="sm" onClick={fetchIntegrations} disabled={loading}>
           <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('integrations.refresh')}
         </Button>
       </div>
 

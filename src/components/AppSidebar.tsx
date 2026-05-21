@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Brain, ChevronDown, ChevronRight, ExternalLink, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -121,6 +122,7 @@ function SectionNode({
 }: SectionNodeProps) {
   const isOpen = expanded.has(item.id);
   const Icon = item.icon;
+  const { t } = useTranslation();
 
   return (
     <li>
@@ -134,7 +136,7 @@ function SectionNode({
         )}
       >
         {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
-        <span className="flex-1 truncate text-left">{item.label}</span>
+        <span className="flex-1 truncate text-left">{t(`nav.${item.id}`, item.label)}</span>
         {isOpen ? (
           <ChevronDown className="h-3.5 w-3.5 opacity-70 transition-transform" />
         ) : (
@@ -180,6 +182,8 @@ function NavNode({
   onClose,
   depth,
 }: NavNodeProps) {
+  const { t } = useTranslation();
+
   if (item.kind === 'section') {
     return (
       <SectionNode
@@ -216,7 +220,7 @@ function NavNode({
                 depth === 0 ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5',
               )}
             />
-            <span className="flex-1 truncate">{item.label}</span>
+            <span className="flex-1 truncate">{t(`nav.${item.id}`, item.label)}</span>
           </NavLink>
         </li>
       );
@@ -239,7 +243,7 @@ function NavNode({
               depth === 0 ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5',
             )}
           />
-          <span className="flex-1 truncate">{item.label}</span>
+          <span className="flex-1 truncate">{t(`nav.${item.id}`, item.label)}</span>
           <ExternalLink className="h-3 w-3 opacity-60 transition-opacity group-hover:opacity-100" />
         </a>
       </li>
@@ -267,7 +271,7 @@ function NavNode({
               depth === 0 ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5',
             )}
           />
-          <span className="flex-1 truncate text-left">{item.label}</span>
+          <span className="flex-1 truncate text-left">{t(`nav.${item.id}`, item.label)}</span>
           {isOpen ? (
             <ChevronDown className="h-3.5 w-3.5 opacity-70" />
           ) : (
@@ -307,7 +311,7 @@ function NavNode({
             depth === 0 ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5',
           )}
         />
-        <span className="flex-1 truncate text-left">{item.label}</span>
+        <span className="flex-1 truncate text-left">{t(`nav.${item.id}`, item.label)}</span>
         {item.badge ? (
           <span
             className={cn(
@@ -337,6 +341,7 @@ export default function AppSidebar({
   versionSubLabel = 'v1.0.0 · Production',
 }: AppSidebarProps) {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const activeId = useMemo(() => resolveActiveId(navItems, pathname), [navItems, pathname]);
 
   const defaultOpenIds = useMemo(() => collectDefaultOpen(navItems), [navItems]);
@@ -395,7 +400,7 @@ export default function AppSidebar({
             type="button"
             onClick={onClose}
             className="text-sidebar-foreground/70 transition-colors hover:text-sidebar-foreground lg:hidden"
-            aria-label="Close menu"
+            aria-label={t('topNav.closeMenu')}
           >
             <X className="h-5 w-5" />
           </button>

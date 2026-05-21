@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   InventoryLead,
@@ -33,6 +34,7 @@ import InventoryLeadDrawer, {
 } from '@/components/ceo/InventoryLeadDrawer';
 import InventoryColumnPicker, {
   INVENTORY_COLUMNS,
+  getColumnTranslationKey,
   loadVisibleColumns,
 } from '@/components/ceo/InventoryColumnPicker';
 import InventoryRepPicker from '@/components/ceo/InventoryRepPicker';
@@ -88,6 +90,8 @@ const EMPTY_STATS: InventoryStats = {
 
 export default function LeadInventory() {
   const { views } = useSavedViews();
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   const [leads, setLeads] = useState<InventoryLead[]>([]);
   const [stats, setStats] = useState<InventoryStats>(EMPTY_STATS);
@@ -217,7 +221,7 @@ export default function LeadInventory() {
       });
       if (cancelled) return;
       if (completed) {
-        toast.success(`Batch sync complete — ${leadsInDb.toLocaleString()} leads in inventory`);
+        toast.success(t('inventory.toasts.syncComplete', { count: leadsInDb.toLocaleString(loc) }));
         setPage(1);
         await loadLeads();
       } else if (error) {
@@ -298,14 +302,16 @@ export default function LeadInventory() {
 
   const bulkPushMojo = () => {
     sendToMojo([...selected]).then((r) =>
-      toast.success(`${r.queued} leads queued in Mojo`, { description: 'Mojo will dial in order, top first.' }),
+      toast.success(t('inventory.toasts.mojoQueued', { count: r.queued }), {
+        description: t('inventory.toasts.mojoQueuedDesc'),
+      }),
     );
     clearSelection();
   };
 
   const assignLeads = async (leadIds: string[], repId: string | null) => {
     if (leadIds.length === 0) {
-      toast.error('Select at least one lead to assign');
+      toast.error(t('inventory.toasts.selectAtLeastOne'));
       return false;
     }
     const { updated, error } = await assignRep(leadIds, repId);
@@ -315,13 +321,13 @@ export default function LeadInventory() {
     }
     const count = updated ?? leadIds.length;
     if (count === 0) {
-      toast.error('No leads were updated. Refresh and try again.');
+      toast.error(t('inventory.toasts.noLeadsUpdated'));
       return false;
     }
     toast.success(
       repId
-        ? `Assigned ${count.toLocaleString()} lead${count === 1 ? '' : 's'} to ${repNameById.get(repId) ?? 'rep'}`
-        : `Unassigned ${count.toLocaleString()} lead${count === 1 ? '' : 's'}`,
+        ? t('inventory.toasts.assigned', { count: count.toLocaleString(loc), rep: repNameById.get(repId) ?? 'rep' })
+        : t('inventory.toasts.unassigned', { count: count.toLocaleString(loc) }),
     );
     if (drawerLead && leadIds.includes(drawerLead.id)) {
       setDrawerLead((prev) => (prev ? { ...prev, assignedRepId: repId } : null));
@@ -341,7 +347,7 @@ export default function LeadInventory() {
     const ids = [...selected];
     const { updated, error } = await setLeadStatus(ids, status);
     if (error) { toast.error(error); return; }
-    toast.success(`${updated ?? ids.length} leads → ${status}`);
+    toast.success(t('inventory.toasts.leadsStatus', { count: updated ?? ids.length, status }));
     clearSelection();
     loadLeads();
   };
@@ -352,12 +358,12 @@ export default function LeadInventory() {
   const drawerStatus = async (lead: InventoryLead, status: InventoryStatus) => {
     const { error } = await setLeadStatus([lead.id], status);
     if (error) { toast.error(error); return; }
-    toast.success(`Lead → ${status}`);
+    toast.success(t('inventory.toasts.leadStatus', { status }));
     setDrawerOpen(false);
     loadLeads();
   };
   const drawerMojo = (lead: InventoryLead) => {
-    sendToMojo([lead.id]).then((r) => toast.success(`${r.queued} lead queued in Mojo`));
+    sendToMojo([lead.id]).then((r) => toast.success(t('inventory.toasts.mojoQueuedSingle', { count: r.queued })));
     setDrawerOpen(false);
   };
 
@@ -368,7 +374,7 @@ export default function LeadInventory() {
 
   const copyValue = (value: string | null | undefined, label: string) => {
     if (!value) return;
-    navigator.clipboard?.writeText(value).then(() => toast.success(`${label} copied`));
+    navigator.clipboard?.writeText(value).then(() => toast.success(t('inventory.toasts.copied', { label })));
   };
 
   const empty = !loading && !loadError && totalMatching === 0;
@@ -406,7 +412,7 @@ export default function LeadInventory() {
             to={`${CEO_BASE}/sync-runs`}
             className="text-primary font-bold hover:underline shrink-0"
           >
-            Manage sync →
+            {t('inventory.buttons.manageSyncArrow')}
           </Link>
         </div>
       )}
@@ -414,17 +420,17 @@ export default function LeadInventory() {
       {loadError && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive flex flex-wrap items-center gap-2">
           <span>{loadError}</span>
-          <Link to={`${CEO_BASE}/integrations`} className="font-bold underline">Open Integrations</Link>
+          <Link to={`${CEO_BASE}/integrations`} className="font-bold underline">{t('inventory.buttons.openIntegrations')}</Link>
         </div>
       )}
 
       {/* 5 spec KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Counter label="New today" value={(stats.newToday ?? 0).toLocaleString()} accent="primary" />
-        <Counter label="Avg contact attempts" value={(stats.avgAttempts ?? 0).toFixed(1)} />
-        <Counter label="Active qualified" value={(stats.hotEquity ?? 0).toLocaleString()} accent="accent" />
-        <Counter label="Auctions < 30d" value={(stats.auctionsLt30 ?? 0).toLocaleString()} accent="speed" />
-        <Counter label="Hot (score ≥ 8)" value={(stats.hotScore ?? 0).toLocaleString()} accent="speed" />
+        <Counter label={t('inventory.kpi.newToday')} value={(stats.newToday ?? 0).toLocaleString(loc)} accent="primary" />
+        <Counter label={t('inventory.kpi.avgContact')} value={(stats.avgAttempts ?? 0).toFixed(1)} />
+        <Counter label={t('inventory.kpi.activeQualified')} value={(stats.hotEquity ?? 0).toLocaleString(loc)} accent="accent" />
+        <Counter label={t('inventory.kpi.auctionsLt30')} value={(stats.auctionsLt30 ?? 0).toLocaleString(loc)} accent="speed" />
+        <Counter label={t('inventory.kpi.hotScore')} value={(stats.hotScore ?? 0).toLocaleString(loc)} accent="speed" />
       </div>
 
       <div className="rounded-xl border bg-card p-3 space-y-2">
@@ -434,14 +440,14 @@ export default function LeadInventory() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search owner, address, county…"
+              placeholder={t('inventory.filters.search')}
               className="w-full pl-7 pr-2 py-1.5 text-xs border rounded-md bg-muted outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
           <Select value={source} onChange={(v) => setSource(v as InventorySource | 'All')} options={['All', 'Batch']} />
           <Select value={state} onChange={setState} options={STATES} />
           <label className="text-[11px] flex items-center gap-1.5 text-foreground">
-            Score ≥
+            {t('inventory.filters.scoreMin')}
             <input
               type="number"
               min={0}
@@ -455,13 +461,13 @@ export default function LeadInventory() {
             onClick={() => setEsOnly((v) => !v)}
             className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 ${esOnly ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}
           >
-            <Globe size={11} /> ES only
+            <Globe size={11} /> {t('inventory.buttons.esOnly')}
           </button>
           <InventoryColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mr-1">Status</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mr-1">{t('inventory.filters.status')}</span>
           {STATUS_OPTIONS.map((s) => {
             const on = activeStatuses.has(s);
             return (
@@ -474,7 +480,7 @@ export default function LeadInventory() {
               </button>
             );
           })}
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-3 mr-1">Filing</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-3 mr-1">{t('inventory.filters.filing')}</span>
           {FILING_OPTIONS.map((f) => {
             const on = activeFilings.has(f);
             return (
@@ -489,7 +495,7 @@ export default function LeadInventory() {
           })}
           {views.length > 0 && (
             <>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-3 mr-1">Saved</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold ml-3 mr-1">{t('inventory.filters.saved')}</span>
               {views.map((vw) => (
                 <button
                   key={vw.id}
@@ -524,7 +530,7 @@ export default function LeadInventory() {
             onClick={bulkPushMojo}
             className="px-2.5 py-1 rounded bg-primary-foreground text-primary text-[11px] font-bold flex items-center gap-1"
           >
-            <ArrowUpToLine size={11} /> Push to Mojo
+            <ArrowUpToLine size={11} /> {t('inventory.buttons.pushToMojo')}
           </button>
           <InventoryRepPicker
             onPick={bulkAssign}
@@ -534,7 +540,7 @@ export default function LeadInventory() {
                 disabled={selected.size === 0}
                 className="px-2.5 py-1 rounded bg-primary-foreground/90 text-primary text-[11px] font-bold flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <UserPlus size={11} /> Assign rep
+                <UserPlus size={11} /> {t('inventory.buttons.assignRep')}
               </button>
             }
           />
@@ -542,13 +548,13 @@ export default function LeadInventory() {
             onClick={() => bulkSetStatus('Promoted')}
             className="px-2.5 py-1 rounded bg-accent text-accent-foreground text-[11px] font-bold flex items-center gap-1"
           >
-            <ArrowRightCircle size={11} /> Promote
+            <ArrowRightCircle size={11} /> {t('inventory.buttons.promote')}
           </button>
           <button
             onClick={() => bulkSetStatus('Dismissed')}
             className="px-2.5 py-1 rounded bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center gap-1"
           >
-            <EyeOff size={11} /> Dismiss
+            <EyeOff size={11} /> {t('inventory.buttons.dismiss')}
           </button>
           <button onClick={clearSelection} className="ml-auto opacity-80 hover:opacity-100"><X size={14} /></button>
         </div>
@@ -570,14 +576,14 @@ export default function LeadInventory() {
                       checked={selected.size === leads.length && leads.length > 0}
                       onChange={selectAllVisible}
                       className="cursor-pointer"
-                      aria-label="Select all visible"
+                      aria-label={t('inventory.buttons.selectAll')}
                     />
                   );
                 }
                 const align = c.id === 'equity' || c.id === 'auction' || c.id === 'score' || c.id === 'ltv' || c.id === 'attempts'
                   ? 'text-right'
                   : '';
-                return <span key={c.id} className={align}>{c.label}</span>;
+                return <span key={c.id} className={align}>{t(getColumnTranslationKey(c.id), c.label)}</span>;
               })}
             </div>
           {loading && (
@@ -587,7 +593,7 @@ export default function LeadInventory() {
           )}
           {empty && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">No Batch leads match your filters</p>
+              <p className="font-medium text-foreground">{t('inventory.empty.noMatch')}</p>
               <p className="text-xs mt-1">
                 {batchConnected
                   ? 'Loosen filters (status, score, filing) or run a sync from Sync History.'
@@ -598,12 +604,12 @@ export default function LeadInventory() {
                   to={`${CEO_BASE}/sync-runs`}
                   className="mt-2 text-primary font-bold text-xs hover:underline"
                 >
-                  Open Sync History
+                  {t('inventory.buttons.openSyncHistory')}
                 </Link>
               )}
               {!batchConnected && (
                 <Link to={`${CEO_BASE}/integrations`} className="mt-2 text-primary font-bold text-xs hover:underline">
-                  Go to Integrations
+                  {t('inventory.buttons.openIntegrations')}
                 </Link>
               )}
             </div>
@@ -725,7 +731,7 @@ export default function LeadInventory() {
                           return (
                             <span key={c.id}>
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
-                                Unassigned
+                                {t('inventory.empty.unassigned')}
                               </span>
                             </span>
                           );
@@ -759,7 +765,7 @@ export default function LeadInventory() {
                             className="text-[10px] text-muted-foreground"
                             title={lead.ingestedAt ? new Date(lead.ingestedAt).toISOString() : ''}
                           >
-                            {formatRelative(lead.ingestedAt ?? lead.receivedAt)}
+                            {formatRelative(lead.ingestedAt ?? lead.receivedAt, t)}
                           </span>
                         );
                       case 'apn':
@@ -771,7 +777,7 @@ export default function LeadInventory() {
                       case 'attempts':
                         return <span key={c.id} className="text-right font-mono text-muted-foreground">{lead.contactAttempts ?? 0}</span>;
                       case 'lastContact':
-                        return <span key={c.id} className="text-[10px] text-muted-foreground">{lead.lastContactDate ? formatRelative(lead.lastContactDate) : '—'}</span>;
+                        return <span key={c.id} className="text-[10px] text-muted-foreground">{lead.lastContactDate ? formatRelative(lead.lastContactDate, t) : '—'}</span>;
                       case 'lastOutcome':
                         return <span key={c.id} className="truncate text-muted-foreground">{lead.lastOutcome ?? '—'}</span>;
                       case 'city':
@@ -796,8 +802,8 @@ export default function LeadInventory() {
         <div className="px-3 py-2.5 text-[11px] text-muted-foreground bg-muted border-t flex flex-wrap items-center justify-between gap-3">
           <span>
             {totalMatching > 0
-              ? `Showing ${rangeStart.toLocaleString()}–${rangeEnd.toLocaleString()} of ${totalMatching.toLocaleString()}`
-              : 'No leads'}
+              ? `${t('inventory.pagination.showing')} ${rangeStart.toLocaleString(loc)}–${rangeEnd.toLocaleString(loc)} ${t('inventory.pagination.of')} ${totalMatching.toLocaleString(loc)}`
+              : t('common.noData')}
           </span>
 
           <div className="flex items-center gap-1.5">
@@ -805,8 +811,8 @@ export default function LeadInventory() {
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
               disabled={loading}
-              title="Rows per page"
-              aria-label="Rows per page"
+              title={t('inventory.buttons.rowsPerPage')}
+              aria-label={t('inventory.buttons.rowsPerPage')}
               className="px-2 py-1 rounded border bg-card text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
             >
               {PAGE_SIZE_OPTIONS.map((n) => (
@@ -815,7 +821,7 @@ export default function LeadInventory() {
             </select>
 
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <span className="font-medium">Go to</span>
+              <span className="font-medium">{t('inventory.pagination.page')}</span>
               <input
                 type="number"
                 min={1}
@@ -830,7 +836,7 @@ export default function LeadInventory() {
                 }}
                 disabled={loading || totalPages <= 1}
                 title="Press Enter to jump to page"
-                aria-label="Go to page number"
+                aria-label={t('inventory.buttons.goToPage')}
                 className="w-10 px-1 py-0.5 text-xs text-center font-bold text-foreground border rounded bg-card outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
               />
             </span>
@@ -840,21 +846,21 @@ export default function LeadInventory() {
               onClick={() => goToPage(page - 1)}
               disabled={page <= 1 || loading}
               className="px-2 py-1 rounded border bg-card hover:bg-background disabled:opacity-40 flex items-center gap-0.5 font-bold text-foreground"
-              aria-label="Previous page"
+              aria-label={t('inventory.pagination.previousPage')}
             >
-              <ChevronLeft size={14} /> Prev
+              <ChevronLeft size={14} /> {t('inventory.buttons.prev')}
             </button>
             <span className="px-2 py-1 font-medium text-foreground tabular-nums whitespace-nowrap">
-              Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+              {t('inventory.pagination.page')} {page.toLocaleString(loc)} {t('inventory.pagination.of')} {totalPages.toLocaleString(loc)}
             </span>
             <button
               type="button"
               onClick={() => goToPage(page + 1)}
               disabled={page >= totalPages || loading}
               className="px-2 py-1 rounded border bg-card hover:bg-background disabled:opacity-40 flex items-center gap-0.5 font-bold text-foreground"
-              aria-label="Next page"
+              aria-label={t('inventory.pagination.nextPage')}
             >
-              Next <ChevronRight size={14} />
+              {t('inventory.buttons.next')} <ChevronRight size={14} />
             </button>
           </div>
         </div>

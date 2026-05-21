@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import BatchSyncControls from '@/components/ceo/BatchSyncControls';
 import { CEO_BASE } from '@/config/ceoNav';
@@ -79,6 +80,8 @@ export default function SyncRunsPage() {
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<InventorySyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -122,16 +125,16 @@ export default function SyncRunsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">
-            Batch Leads import history. Each run pages through saved addresses and upserts into inventory (no duplicates).
+            {t('syncRuns.description')}
           </p>
           {syncStatus && (
             <p className="text-xs text-muted-foreground mt-1">
-              {syncStatus.leadsInDb.toLocaleString()} leads in database
+              {syncStatus.leadsInDb.toLocaleString(loc)} {t('syncRuns.leadsInDatabase')}
               {!syncStatus.batchConnected && (
                 <>
                   {' · '}
                   <Link to={`${CEO_BASE}/integrations`} className="text-primary font-bold underline">
-                    Connect Batch Leads
+                    {t('syncRuns.connectBatchLeads')}
                   </Link>
                 </>
               )}
@@ -155,23 +158,23 @@ export default function SyncRunsPage() {
             className="px-2.5 py-1.5 rounded-md bg-muted text-[11px] font-bold flex items-center gap-1 disabled:opacity-60"
           >
             {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            Refresh
+            {t('syncRuns.syncNow')}
           </button>
         </div>
       </div>
 
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="grid grid-cols-[1.2fr_88px_1fr_1fr_1.2fr] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted font-bold border-b">
-          <span>Started</span>
-          <span>Status</span>
-          <span title="New leads added by this run">New Leads</span>
-          <span>Finished</span>
-          <span>Details</span>
+          <span>{t('syncRuns.table.started')}</span>
+          <span>{t('syncRuns.table.status')}</span>
+          <span>{t('syncRuns.table.result')}</span>
+          <span>{t('syncRuns.table.duration')}</span>
+          <span>{t('syncRuns.table.result')}</span>
         </div>
 
         {loading && runs.length === 0 && (
           <div className="px-3 py-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-            <Loader2 size={14} className="animate-spin" /> Loading sync runs…
+            <Loader2 size={14} className="animate-spin" /> {t('common.loading')}
           </div>
         )}
 
@@ -181,11 +184,10 @@ export default function SyncRunsPage() {
 
         {!loading && !error && runs.length === 0 && (
           <div className="px-3 py-8 text-center text-xs text-muted-foreground">
-            No sync runs yet. Start one from{' '}
+            {t('syncRuns.empty')}{' '}
             <Link to={`${CEO_BASE}/inventory`} className="text-primary font-bold underline">
-              Lead Inventory
+              {t('nav.inventory')}
             </Link>
-            .
           </div>
         )}
 
@@ -195,7 +197,7 @@ export default function SyncRunsPage() {
             className="grid grid-cols-[1.2fr_88px_1fr_1fr_1.2fr] gap-2 px-3 py-2.5 text-xs border-b last:border-b-0 items-center hover:bg-muted/40"
           >
             <span className="font-mono text-[11px]">
-              {new Date(run.started_at).toLocaleString()}
+              {new Date(run.started_at).toLocaleString(loc)}
             </span>
             <StatusBadge status={run.status} />
             <span className="font-bold tabular-nums">
@@ -216,7 +218,11 @@ export default function SyncRunsPage() {
       {total > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>
-            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+            {t('syncRuns.pagination', {
+              start: (page - 1) * PAGE_SIZE + 1,
+              end: Math.min(page * PAGE_SIZE, total),
+              total,
+            })}
           </span>
           <div className="flex items-center gap-1">
             <button

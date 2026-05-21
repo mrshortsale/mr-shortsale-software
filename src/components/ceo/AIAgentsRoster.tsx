@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { agents, Agent, totalActionsToday, hoursSavedThisWeek } from '@/data/agents';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Activity } from 'lucide-react';
@@ -10,15 +11,11 @@ const statusDot: Record<string, string> = {
   idle: 'bg-muted-foreground/40',
 };
 
-const statusLabel: Record<string, string> = {
-  active: 'Active',
-  working: 'Working',
-  idle: 'Idle',
-};
-
 export default function AIAgentsRoster() {
   const [selected, setSelected] = useState<Agent | null>(null);
   const [open, setOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   const onSee = (a: Agent) => {
     setSelected(a);
@@ -34,16 +31,16 @@ export default function AIAgentsRoster() {
             <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-75 animate-ping" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
           </span>
-          <span className="opacity-90 uppercase tracking-wider font-semibold">All systems operational</span>
+          <span className="opacity-90 uppercase tracking-wider font-semibold">{t('ai.agents.allOperational')}</span>
         </div>
-        <h2 className="text-3xl lg:text-4xl font-bold mb-2">Your AI Workforce</h2>
+        <h2 className="text-3xl lg:text-4xl font-bold mb-2">{t('ai.agents.workforceTitle')}</h2>
         <p className="text-sm opacity-90 mb-5 max-w-xl">
-          Six specialized AI agents working 24/7 inside your business — finding leads, verifying data, scoring urgency, writing scripts, and following up. So your team focuses on closing.
+          {t('ai.agents.workforceSubtitle')}
         </p>
         <div className="flex flex-wrap gap-6 text-sm">
-          <HeroStat value={`${agents.length}`} label="agents active" />
-          <HeroStat value={totalActionsToday.toLocaleString()} label="actions today" />
-          <HeroStat value={`${hoursSavedThisWeek} hrs`} label="saved this week" />
+          <HeroStat value={`${agents.length}`} label={t('ai.agents.agentsActive')} />
+          <HeroStat value={totalActionsToday.toLocaleString(loc)} label={t('ai.agents.actionsToday')} />
+          <HeroStat value={`${hoursSavedThisWeek} hrs`} label={t('ai.agents.savedThisWeek')} />
         </div>
       </div>
 
@@ -69,7 +66,13 @@ function HeroStat({ value, label }: { value: string; label: string }) {
 }
 
 function AgentCard({ agent, onSee }: { agent: Agent; onSee: () => void }) {
+  const { t } = useTranslation();
   const Icon = agent.icon;
+  const statusLabels: Record<string, string> = {
+    active: t('ai.agents.statusActive'),
+    working: t('ai.agents.statusWorking'),
+    idle: t('ai.agents.statusIdle'),
+  };
   return (
     <div className="rounded-2xl bg-card border shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
       {/* Colored header strip */}
@@ -88,7 +91,7 @@ function AgentCard({ agent, onSee }: { agent: Agent; onSee: () => void }) {
           </div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold bg-card/20 backdrop-blur rounded-full px-2 py-1">
             <span className={`w-1.5 h-1.5 rounded-full ${statusDot[agent.status]}`} />
-            {statusLabel[agent.status]}
+            {statusLabels[agent.status]}
           </div>
         </div>
       </div>
@@ -97,7 +100,7 @@ function AgentCard({ agent, onSee }: { agent: Agent; onSee: () => void }) {
         <p className="text-sm text-foreground leading-relaxed">{agent.shortDescription}</p>
 
         <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Powered by</p>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{t('ai.agents.poweredBy')}</p>
           <div className="flex flex-wrap gap-1.5">
             {agent.stack.map(s => (
               <Badge key={s} variant="secondary" className="text-[10px] px-2 py-0">{s}</Badge>
@@ -124,7 +127,7 @@ function AgentCard({ agent, onSee }: { agent: Agent; onSee: () => void }) {
             onClick={onSee}
             className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-primary hover:bg-muted/60 rounded-md transition-colors"
           >
-            See activity <ArrowRight size={12} />
+            {t('ai.agents.seeActivity')} <ArrowRight size={12} />
           </button>
         </div>
       </div>

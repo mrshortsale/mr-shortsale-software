@@ -1,0 +1,845 @@
+{
+  "app": {
+    "name": "Mr. Short Sale",
+    "subLabel": "AI Operations",
+    "ceoSubLabel": "AI Operations",
+    "repSubLabel": "Sales Workspace",
+    "versionLabel": "Platform",
+    "ceoVersionSub": "v1.0.0 · Production",
+    "repVersionLabel": "Workspace",
+    "repVersionSub": "v1.0.0 · Sales Rep",
+    "ceoPlatform": "CEO Console",
+    "repPlatform": "Rep Console",
+    "aiPlatform": "AI Operations Platform"
+  },
+  "nav": {
+    "briefing": "Morning Briefing",
+    "inventory": "Lead Inventory",
+    "sync-runs": "Sync History",
+    "realtor-queue": "Realtor Lead Queue",
+    "realtor-pipeline": "Realtor Pipeline",
+    "realtor-scripts": "Realtor Scripts",
+    "realtor-reports": "Realtor Reports",
+    "pipeline": "Active Pipeline",
+    "speed": "Speed-to-Lead",
+    "dialer": "Mojo Dialer",
+    "team": "Team Performance",
+    "roadmap": "Roadmap & Previews",
+    "presentation": "Presentation",
+    "settings": "Settings",
+    "users": "User Management",
+    "integrations": "Integrations",
+    "data": "Data Sources",
+    "queue": "Foreclosure Queue",
+    "realtor": "Realtor Queue",
+    "history": "Call History",
+    "stats": "My Stats",
+    "sec-sales": "Sales Hub",
+    "sec-ops": "Operations",
+    "sec-strategy": "Strategy",
+    "sec-admin": "Admin",
+    "sec-my-day": "My Day",
+    "sec-activity": "Activity",
+    "ai-calls": "AI Inbound Calls (Preview)",
+    "ai-agents": "AI Agents (Preview)",
+    "dashboard": "Dashboard",
+    "viewProposal": "View Proposal",
+    "costTransparency": "Cost Transparency"
+  },
+  "topNav": {
+    "searchPlaceholder": "Search anything...",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "roleLabels": {
+      "ceo": "CEO / Owner",
+      "rep": "Sales Rep"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Account and platform preferences.",
+    "language": "Language",
+    "languageDescription": "Choose the language for the interface.",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "theme": "Theme",
+    "themeDescription": "Switch between light and dark mode.",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "account": "Account",
+    "accountDescription": "Manage your account settings."
+  },
+  "login": {
+    "appName": "Mr. Short Sale",
+    "appSubtitle": "AI Operations Platform",
+    "footer": "Protected by enterprise-grade security. · Mr. Short Sale · 2026",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode",
+    "hidePassword": "Hide password",
+    "showPassword": "Show password",
+    "signIn": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your account to continue",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "switchToSignUp": "Sign up",
+      "loginFailed": "Login failed. Please try again."
+    },
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "New rep accounts require CEO approval before sign-in. Use your company email (@mrshortsale.net).",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Jane Smith",
+      "email": "Email",
+      "emailPlaceholder": "you@mrshortsale.net",
+      "emailHint": "Must be a @mrshortsale.net address",
+      "password": "Password",
+      "passwordPlaceholder": "Min 8 chars, 1 uppercase, 1 number",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter your password",
+      "submit": "Create account",
+      "submitting": "Creating account...",
+      "haveAccount": "Already have an account?",
+      "switchToSignIn": "Sign in",
+      "signUpFailed": "Sign-up failed. Please try again."
+    },
+    "pending": {
+      "title": "Account submitted",
+      "backToSignIn": "Back to Sign in",
+      "defaultMessage": "Account created. Your signup is pending CEO approval. You can sign in once approved."
+    },
+    "validation": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email address",
+      "passwordMinSignIn": "Password must be at least 6 characters",
+      "passwordMin": "Password must be at least 8 characters",
+      "passwordUppercase": "Must contain at least one uppercase letter",
+      "passwordNumber": "Must contain at least one number",
+      "nameMin": "Name must be at least 2 characters",
+      "emailDomain": "Sign-up requires a @mrshortsale.net email address",
+      "confirmPasswordRequired": "Please confirm your password",
+      "passwordsMismatch": "Passwords do not match"
+    }
+  },
+  "inventory": {
+    "title": "Lead Inventory",
+    "kpi": {
+      "newToday": "New today",
+      "avgContact": "Avg contact attempts",
+      "activeQualified": "Active qualified",
+      "auctionsLt30": "Auctions < 30d",
+      "hotScore": "Hot (score ≥ 8)"
+    },
+    "filters": {
+      "search": "Search owner, address, county…",
+      "scoreMin": "Score ≥",
+      "status": "Status",
+      "filing": "Filing",
+      "saved": "Saved",
+      "allStatuses": "All statuses",
+      "allFiling": "All filing types",
+      "allViews": "All views"
+    },
+    "buttons": {
+      "esOnly": "ES only",
+      "pushToMojo": "Push to Mojo",
+      "assignRep": "Assign rep",
+      "promote": "Promote",
+      "dismiss": "Dismiss",
+      "selectAll": "Select all visible",
+      "rowsPerPage": "Rows per page",
+      "goToPage": "Go to page number",
+      "prev": "Prev",
+      "next": "Next",
+      "manageSyncArrow": "Manage sync →",
+      "openIntegrations": "Open Integrations",
+      "openSyncHistory": "Open Sync History"
+    },
+    "pagination": {
+      "showing": "Showing",
+      "of": "of",
+      "page": "Page",
+      "previousPage": "Previous page",
+      "nextPage": "Next page"
+    },
+    "columns": {
+      "select": "Select",
+      "urgencyScore": "Urgency Score",
+      "owner": "Owner",
+      "address": "Address",
+      "phone": "Phone",
+      "leadType": "Lead Type",
+      "source": "Source",
+      "equityPct": "Equity %",
+      "filingType": "Filing Type",
+      "daysToAuction": "Days to Auction",
+      "assignedRep": "Assigned Rep",
+      "status": "Status",
+      "dateAdded": "Date Added",
+      "apn": "APN",
+      "email": "Email",
+      "ltvPct": "LTV %",
+      "contactAttempts": "Contact Attempts",
+      "lastContact": "Last Contact",
+      "lastOutcome": "Last Outcome",
+      "city": "City",
+      "county": "County",
+      "language": "Language",
+      "batchList": "Batch List"
+    },
+    "toasts": {
+      "syncComplete": "Batch sync complete — {{count}} leads in inventory",
+      "mojoQueued": "{{count}} leads queued in Mojo",
+      "mojoQueuedDesc": "Mojo will dial in order, top first.",
+      "selectAtLeastOne": "Select at least one lead to assign",
+      "noLeadsUpdated": "No leads were updated. Refresh and try again.",
+      "assigned": "Assigned {{count}} lead(s) to {{rep}}",
+      "unassigned": "Unassigned {{count}} lead(s)",
+      "leadsStatus": "{{count}} leads → {{status}}",
+      "leadStatus": "Lead → {{status}}",
+      "mojoQueuedSingle": "{{count}} lead queued in Mojo",
+      "copied": "{{label}} copied"
+    },
+    "empty": {
+      "noMatch": "No Batch leads match your filters",
+      "unassigned": "Unassigned"
+    }
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Manage platform users and their roles.",
+    "addUser": "Add User",
+    "tabs": {
+      "all": "All users",
+      "pending": "Pending approval"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "requested": "Requested",
+      "actions": "Actions",
+      "role": "Role",
+      "status": "Status",
+      "created": "Created",
+      "noPending": "No pending signup requests",
+      "noUsers": "No users found."
+    },
+    "pendingSection": {
+      "description": "Review signup requests from new reps. Approved users can sign in immediately."
+    },
+    "status": {
+      "pending": "Pending",
+      "rejected": "Rejected",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "roles": {
+      "ceo": "CEO",
+      "rep": "Sales Rep"
+    },
+    "buttons": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectRequest": "Reject Request",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "saveChanges": "Save Changes"
+    },
+    "dialogs": {
+      "addTitle": "Add New User",
+      "editTitle": "Edit User",
+      "rejectTitle": "Reject {{name}}?",
+      "rejectDesc": "Their account will be marked as rejected. They will not be able to sign in and cannot re-register with the same email. This action cannot be undone.",
+      "deleteTitle": "Delete {{name}}?",
+      "deleteDesc": "This will permanently remove the user and all their data. This action cannot be undone."
+    },
+    "form": {
+      "fullName": "Full Name",
+      "fullNamePlaceholder": "Jane Smith",
+      "email": "Email",
+      "emailPlaceholder": "jane@mrshortsale.net",
+      "tempPassword": "Temporary Password",
+      "tempPasswordPlaceholder": "Min 8 characters",
+      "role": "Role",
+      "rolePlaceholder": "Select role",
+      "avatarColor": "Avatar Color",
+      "approveImmediately": "Approve immediately",
+      "approveImmediatelyDesc": "If unchecked, account will be created as pending and must be approved separately.",
+      "accountActive": "Account Active",
+      "accountActiveDesc": "Deactivated users cannot log in.",
+      "newPassword": "New Password",
+      "newPasswordOptional": "(optional)",
+      "newPasswordPlaceholder": "Leave blank to keep current",
+      "searchPlaceholder": "Search by name or email…"
+    },
+    "toasts": {
+      "addedApproved": "{{name}} added and approved.",
+      "addedPending": "{{name}} added — pending approval.",
+      "updated": "{{name}} updated.",
+      "approved": "{{name}} approved.",
+      "rejected": "{{name}}'s request rejected.",
+      "deleted": "{{name}} deleted.",
+      "failedApprove": "Failed to approve user"
+    },
+    "validation": {
+      "nameMin": "Name must be at least 2 characters",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email address",
+      "passwordMin": "Password must be at least 8 characters",
+      "roleRequired": "Role is required"
+    }
+  },
+  "sync": {
+    "buttons": {
+      "working": "Working…",
+      "resume": "Resume",
+      "incremental": "Incremental sync",
+      "fullRefresh": "Full refresh",
+      "syncBatch": "Sync Batch",
+      "newSync": "New sync",
+      "pause": "Pause",
+      "stop": "Stop",
+      "history": "History"
+    },
+    "dialog": {
+      "title": "Full refresh — re-fetch all leads?",
+      "description": "This will re-fetch all ~{{count}} leads from Batch Leads and may take several hours. Existing leads will be updated in place and no data will be deleted.",
+      "incrementalNote": "Use Incremental sync instead to fetch only new and changed leads since the last sync — it completes in minutes.",
+      "cancel": "Cancel",
+      "confirm": "Yes, run Full refresh"
+    },
+    "toasts": {
+      "incrementalComplete": "Incremental sync complete — {{count}} leads in DB",
+      "fullComplete": "Full refresh complete — {{count}} leads",
+      "connectFirst": "Connect Batch Leads under Integrations first",
+      "incrementalProgress": "Incremental sync… {{new}} new, {{updated}} updated ({{pages}} pages)",
+      "incrementalScanning": "Incremental sync… scanning for new leads",
+      "syncingLeads": "Syncing… {{count}} leads",
+      "resuming": "Resuming sync…",
+      "paused": "Sync paused",
+      "stopped": "Sync stopped"
+    },
+    "tooltips": {
+      "incremental": "Fetch only new and changed leads since the last successful sync",
+      "fullRefresh": "Re-fetch all leads from Batch Leads (may take hours)",
+      "firstSync": "Start initial sync from Batch Leads"
+    }
+  },
+  "leadQueue": {
+    "today": "Today",
+    "banner": {
+      "calls": "Calls",
+      "connected": "Connected",
+      "qualified": "Qualified"
+    },
+    "sort": {
+      "label": "Sort",
+      "urgency": "Urgency",
+      "auction": "Days to auction",
+      "equity": "Equity",
+      "name": "Name"
+    },
+    "filter": {
+      "lang": "Lang",
+      "all": "All",
+      "allStatuses": "All statuses",
+      "notCalled": "Not Called",
+      "called": "Called",
+      "connected": "Connected",
+      "callbackScheduled": "Callback Scheduled",
+      "smsSent": "SMS Sent",
+      "vmLeft": "VM Left"
+    },
+    "card": {
+      "toAuction": "to auction",
+      "equity": "Equity",
+      "cbScheduled": "CB scheduled",
+      "call": "Call",
+      "sms": "SMS",
+      "aiResearched": "AI Researched",
+      "priorContact": "Prior contact",
+      "highEquity": "High Equity",
+      "taxDelinquent": "Tax Delinquent"
+    },
+    "leads": "leads",
+    "aiNote": "AI pre-researched all {{count}} of your leads · Scripts ready",
+    "batchNote": "You're seeing {{shown}} of {{total}} Batch leads — auto-assigned by AI score + territory."
+  },
+  "repStats": {
+    "title": "My Stats",
+    "callsThisWeek": "Calls This Week",
+    "totalCalls": "Total Calls",
+    "connected": "Connected",
+    "qualified": "Qualified",
+    "leadsInQueue": "Leads in Queue"
+  },
+  "syncRuns": {
+    "title": "Sync History",
+    "description": "Batch Leads import history. Each run pages through saved addresses and upserts into inventory (no duplicates).",
+    "connectBatchLeads": "Connect Batch Leads",
+    "leadsInDatabase": "leads in database",
+    "pagination": "{{start}}–{{end}} of {{total}}",
+    "status": {
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "stopped": "Stopped",
+      "paused": "Paused"
+    },
+    "table": {
+      "started": "Started",
+      "duration": "Duration",
+      "result": "Result",
+      "status": "Status",
+      "newLeads": "New Leads"
+    },
+    "progress": {
+      "page": "Page {{page}}",
+      "new": "+{{count}} new",
+      "updated": "{{count}} updated",
+      "inBatch": "~{{count}} in Batch",
+      "leadsInDb": "{{count}} leads in DB"
+    },
+    "empty": "No sync runs yet.",
+    "syncNow": "Sync now"
+  },
+  "briefing": {
+    "title": "Morning Briefing",
+    "goodMorning": "Good morning",
+    "today": "Today",
+    "pipeline": "Pipeline",
+    "team": "Team",
+    "loading": "Loading briefing…",
+    "newLeadsToday": "New Leads Today",
+    "newLeadsSubtitle": "via Realie.ai + Batch Leads API — same day",
+    "equityQualified": "Equity-Qualified",
+    "readyToCall": "ready to call",
+    "callsCompleted": "Calls Completed",
+    "callsCompletedSubtitle": "across all agents today",
+    "aiInboundHandled": "AI Inbound Handled",
+    "aiInboundSubtitle": "after hours last night",
+    "activePipeline": "Active Short Sale Pipeline",
+    "pipelineNote": "0 denials to date · avg. close 67 days",
+    "taskChecklist": "My Task Checklist",
+    "urgent": "Urgent",
+    "new": "New",
+    "teamPerformanceToday": "Team Performance Today",
+    "teamNote": "4 qualified handed to Cristina",
+    "aiInboundLast24": "AI Inbound Calls — Last 24hrs"
+  },
+  "speed": {
+    "title": "Speed-to-Lead",
+    "newLead": "New Lead",
+    "respond": "Respond",
+    "assign": "Assign",
+    "call": "Call",
+    "sms": "SMS",
+    "responseTime": "Response Time",
+    "avgResponseTime": "Avg Response Time",
+    "leadsToday": "Leads Today",
+    "avgResponse": "Avg Response",
+    "conversion": "Conversion %",
+    "status": "Status",
+    "live": "Live",
+    "howItWorks": "How Speed-to-Lead works",
+    "howItWorksNote": "Note: Mr. Short Sale app does not place calls. All dialing happens inside Mojo Triple Dialer — we just push leads to it via API."
+  },
+  "pipeline": {
+    "title": "Active Pipeline",
+    "summary": "{{count}} active cases · 0 denials · avg close 67d",
+    "promotedToday": "{{count}} promoted from Inventory today",
+    "docsProgress": "Docs {{pct}}%",
+    "daysInStage": "{{days}}d in stage",
+    "footer": "0 denials to date · 12 active cases · avg. close 67 days · Click any card for full case detail",
+    "stages": {
+      "initialContact": "Initial Contact",
+      "docsCollected": "Docs Collected",
+      "bankSubmitted": "Bank Submitted",
+      "pendingApproval": "Pending Approval",
+      "new": "New",
+      "contacted": "Contacted",
+      "qualified": "Qualified",
+      "offer": "Offer",
+      "contract": "Contract",
+      "closed": "Closed"
+    }
+  },
+  "team": {
+    "title": "Team Performance",
+    "calls": "Calls",
+    "connected": "Connected",
+    "qualified": "Qualified",
+    "rank": "Rank",
+    "rep": "Rep",
+    "agent": "Agent",
+    "convRate": "Conv. Rate",
+    "avgDuration": "Avg Duration",
+    "callsByAgent": "Calls by Agent",
+    "drillDownHint": "Click any agent for drill-down →",
+    "today": "Today",
+    "week": "This Week",
+    "month": "This Month"
+  },
+  "roadmap": {
+    "title": "Roadmap & Previews",
+    "upcoming": "Upcoming",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "preview": "Preview"
+  },
+  "realtorQueue": {
+    "title": "Realtor Lead Queue",
+    "search": "Search realtors…",
+    "call": "Call",
+    "sms": "SMS",
+    "stats": {
+      "total": "Total realtor leads",
+      "new": "New",
+      "awaitingFollowup": "Awaiting follow-up",
+      "partnered": "Partnered"
+    },
+    "filters": {
+      "allStates": "All states",
+      "allStatuses": "All statuses",
+      "esOnly": "ES only",
+      "hotOnly": "Hot only"
+    },
+    "sort": {
+      "daysDesc": "Days on market (desc)",
+      "newest": "Newest listing",
+      "priceDesc": "List price (desc)",
+      "mostDrops": "Most price drops",
+      "longestDom": "Longest DOM"
+    },
+    "leadCount": "{{count}} leads",
+    "leadCount_one": "{{count}} lead",
+    "listingsCount": "{{count}} listings",
+    "listingsCount_one": "{{count}} listing",
+    "bulk": {
+      "selected": "{{count}} selected",
+      "assignTo": "Assign to:",
+      "assign": "Assign",
+      "clear": "Clear"
+    },
+    "empty": "No realtor leads match these filters. Try clearing them.",
+    "lastContact": "Last contact:",
+    "list": "List",
+    "dom": "DOM",
+    "drops": "Drops",
+    "hot": "HOT",
+    "pushToMojo": "Push to Mojo",
+    "pushToMojoTitle": "Push agent to Mojo dialer queue",
+    "email": "Email",
+    "emailTitle": "Email agent",
+    "listing": "Listing",
+    "listingTitle": "Open Zillow listing",
+    "assignRep": "Assign to rep",
+    "mojoQueued": "{{name}} queued in Mojo",
+    "status": {
+      "new": "New",
+      "contacted": "Contacted",
+      "partnered": "Partnered",
+      "closedWon": "Closed Won",
+      "declined": "Declined",
+      "active": "Active",
+      "closed": "Closed"
+    }
+  },
+  "realtorPipeline": {
+    "title": "Realtor Pipeline",
+    "chainTitle": "Realtor Short Sale Chain",
+    "chainDescription": "Listings already on Zillow as short sales. We pitch the listing agent realtor-to-realtor — we close the short sale at no cost to them, they keep the commission.",
+    "priceDrops": "↓ {{count}} price drop",
+    "priceDrops_other": "↓ {{count}} price drops"
+  },
+  "realtorScripts": {
+    "title": "Realtor Scripts",
+    "libraryTitle": "Realtor-to-Realtor Script Library",
+    "librarySubtitle": "Bilingual scripts tuned for listing agents — different tone than homeowner outreach",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "realtorReports": {
+    "title": "Realtor Reports",
+    "kpi": {
+      "realtorLeads": "Realtor leads",
+      "thisMonth": "this month",
+      "partnerRate": "Partner rate",
+      "ofTotal": "{{partnered}} of {{total}}",
+      "pipelineValue": "Pipeline value",
+      "partneredListings": "partnered listings",
+      "closedWon": "Closed Won",
+      "deals": "{{count}} deals",
+      "deals_one": "{{count}} deal"
+    },
+    "funnelByStage": "Funnel by stage",
+    "topBrokerages": "Top brokerages by lead volume",
+    "comparisonTitle": "Foreclosure vs Realtor chain",
+    "comparisonSubtitle": "Both pipelines run in parallel. Realtor chain has higher partner rate but lower volume — quality over quantity.",
+    "foreclosure": "Foreclosure",
+    "homeownerConversion": "homeowner conversion",
+    "realtor": "Realtor",
+    "listingAgentPartnership": "listing-agent partnership",
+    "warmerLeads": "Realtor leads are warmer — listing already exists, seller already motivated."
+  },
+  "integrations": {
+    "title": "Integrations",
+    "subtitle": "Connect external services to your platform.",
+    "connectedCount": "{{count}} connected",
+    "searchPlaceholder": "Search integrations...",
+    "noDescription": "No description provided.",
+    "noSearchResults": "No integrations match your search.",
+    "empty": "No integrations configured yet.",
+    "backToIntegrations": "← Back to Integrations",
+    "refresh": "Refresh",
+    "builtIn": "Built-in",
+    "notConfigured": "Not configured",
+    "statusConnected": "Connected",
+    "statusDisabled": "Disabled",
+    "statusError": "Error",
+    "configure": "Configure",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "lastTested": "Last tested",
+    "testConnection": "Test connection",
+    "save": "Save",
+    "cancel": "Cancel",
+    "webhookUrl": "Webhook URL",
+    "verifyToken": "Verify Token",
+    "apiKey": "API Key",
+    "secretKey": "Secret Key",
+    "add": "Add Integration",
+    "apiUsage": "API Usage",
+    "usageDashboard": "Usage Dashboard"
+  },
+  "dataSources": {
+    "title": "Data Sources",
+    "recordsThisWeek": "this week",
+    "configure": "Configure"
+  },
+  "dialer": {
+    "title": "Mojo Dialer",
+    "queue": "Dialer Queue",
+    "start": "Start Session",
+    "stop": "Stop Session",
+    "skip": "Skip",
+    "callback": "Callback",
+    "howItWorks": "How this screen works:",
+    "howItWorksBody": "Mr. Short Sale pushes leads into Mojo via the Mojo Triple Dialer API. Calls are placed by Mojo on your reps' headsets — not by this app. Outcomes sync back here after each call.",
+    "inQueue": "In Queue",
+    "readyToDial": "ready to dial",
+    "callsToday": "Calls Today",
+    "acrossAllAgents": "across all agents",
+    "connectRate": "Connect Rate",
+    "threeLineDialing": "3-line dialing live",
+    "bulkActions": "Mojo Triple Dialer — Bulk Actions",
+    "lastSync": "Last sync:",
+    "sendAllNew": "Send all \"New\" leads",
+    "sendUrgency": "Send urgency ≥8",
+    "sendSpanish": "Send Spanish-only batch",
+    "recentOutcomes": "Recent Mojo Outcomes",
+    "mojoQueued": "{{count}} leads pushed to Mojo Triple Dialer"
+  },
+  "ai": {
+    "inboundCalls": {
+      "title": "AI Inbound Calls",
+      "heroTitle": "24/7 Bilingual AI Voice Agent",
+      "heroSubtitle": "Every after-hours call answered, transcribed, and routed automatically. Spanish accent detection included.",
+      "callsPerDay": "calls / 24h",
+      "caller": "Caller",
+      "dateTime": "Date/Time",
+      "language": "Language",
+      "duration": "Duration",
+      "outcome": "Outcome",
+      "property": "Property"
+    },
+    "agents": {
+      "title": "AI Agents",
+      "workforceTitle": "Your AI Workforce",
+      "workforceSubtitle": "Six specialized AI agents working 24/7 inside your business — finding leads, verifying data, scoring urgency, writing scripts, and following up. So your team focuses on closing.",
+      "allOperational": "All systems operational",
+      "agentsActive": "agents active",
+      "actionsToday": "actions today",
+      "savedThisWeek": "saved this week",
+      "poweredBy": "Powered by",
+      "seeActivity": "See activity",
+      "statusActive": "Active",
+      "statusWorking": "Working",
+      "statusIdle": "Idle"
+    }
+  },
+  "leadDrawer": {
+    "title": "Lead Details",
+    "owner": "Owner",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "filingType": "Filing Type",
+    "daysToAuction": "Days to Auction",
+    "equityPct": "Equity %",
+    "sqft": "Sqft",
+    "estimatedValue": "Estimated Value (AVM)",
+    "purchasePrice": "Purchase Price",
+    "assignedRep": "Assigned Rep",
+    "status": "Status",
+    "call": "Call",
+    "sms": "SMS",
+    "copyPhone": "Copy phone",
+    "copyEmail": "Copy email",
+    "copyAddress": "Copy address"
+  },
+  "realtorLeadDrawer": {
+    "listPrice": "List price",
+    "priceDrops": "Price drops",
+    "amount": "Amount"
+  },
+  "sms": {
+    "title": "SMS Thread",
+    "send": "Send",
+    "placeholder": "Type a message…",
+    "you": "You",
+    "them": "Them"
+  },
+  "activeCall": {
+    "title": "Active Call",
+    "end": "End Call",
+    "notes": "Call Notes",
+    "outcome": "Outcome",
+    "save": "Save & End",
+    "connected": "Connected",
+    "duration": "Duration"
+  },
+  "callHistory": {
+    "title": "Call History",
+    "date": "Date",
+    "duration": "Duration",
+    "outcome": "Outcome",
+    "notes": "Notes",
+    "homeowner": "Homeowner",
+    "followUp": "Follow-up",
+    "sms": "SMS",
+    "empty": "No call history yet."
+  },
+  "realtorQueueRep": {
+    "title": "Realtor Queue",
+    "search": "Search…",
+    "call": "Call",
+    "sms": "SMS",
+    "bannerTitle": "Realtor Short Sale queue.",
+    "bannerBody": "Listing agents on Zillow short-sale listings — pitch realtor-to-realtor. They keep their commission, we close the file.",
+    "sourceSynced": "Source: Zillow · synced 12 min ago",
+    "inQueue": "{{count}} in queue",
+    "empty": "Nothing matches these filters. Clear them to see your full queue.",
+    "last": "Last:",
+    "dropsCount": "{{count}} drops",
+    "pushToMojoDesc": "Mojo will dial from your headset on next pickup",
+    "pushToMojoTitle": "Push agent's number into Mojo Triple Dialer queue",
+    "email": "Email",
+    "listing": "Listing"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist.",
+    "goHome": "Go home"
+  },
+  "proposal": {
+    "title": "Proposal"
+  },
+  "costs": {
+    "title": "Cost Transparency"
+  },
+  "presentation": {
+    "title": "Presentation"
+  },
+  "inventoryDrawer": {
+    "title": "Lead Details",
+    "close": "Close",
+    "sections": {
+      "contact": "Contact",
+      "qualification": "Qualification",
+      "assignmentActivity": "Assignment & Activity",
+      "propertyIdentifiers": "Property Identifiers"
+    },
+    "reassign": "Reassign",
+    "unknown": "Unknown",
+    "homeowner": "Homeowner",
+    "english": "English",
+    "espanol": "Español",
+    "auctionIn": "Auction in {{days}}d",
+    "never": "Never",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "copyTitle": "Copy {{label}}"
+  },
+  "caseDrawer": {
+    "title": "Case Details",
+    "close": "Close"
+  },
+  "agentDrillDown": {
+    "title": "Agent Activity",
+    "close": "Close"
+  },
+  "speedFeed": {
+    "title": "Speed-to-Lead · Meta Ads",
+    "newLead": "New lead",
+    "responded": "Responded",
+    "assigned": "Assigned",
+    "muteAlerts": "Mute alerts",
+    "enableSound": "Enable sound",
+    "live": "Live",
+    "mojoNote": "App pushes leads to Mojo via API — Mojo dials from your headset.",
+    "waiting": "Waiting for next Meta lead…",
+    "overdue": "Overdue",
+    "fresh": "Fresh",
+    "pushToTop": "Push to Top",
+    "pushToTopTitle": "Insert this lead at position 1 in the Mojo dialer queue",
+    "toastTitle": "⚡ Speed-to-Lead: {{name}}",
+    "toastDesc": "{{campaign}} · Call within 5 min",
+    "pushedToMojo": "{{name}} pushed to top of Mojo queue",
+    "pushedToMojoDesc": "Mojo Triple Dialer will dial this lead on your next pickup"
+  },
+  "sourceProvenance": {
+    "title": "Data sources",
+    "openDataSources": "Open Data Sources",
+    "source": "Source",
+    "batchLeads": "Batch Leads",
+    "realie": "Realie.ai",
+    "attom": "Attom"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading…",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "prev": "Previous",
+    "of": "of",
+    "showing": "Showing",
+    "noData": "No data available",
+    "actions": "Actions"
+  }
+}

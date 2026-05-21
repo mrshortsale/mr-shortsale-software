@@ -1,7 +1,20 @@
+import { useTranslation } from 'react-i18next';
 import { realtorLeads, realtorPipelineStages } from '@/data/realtorLeads';
 import { TrendingUp, Building2, DollarSign, Users, Award } from 'lucide-react';
 
+function realtorStatusKey(status: string): string {
+  const map: Record<string, string> = {
+    'New': 'realtorQueue.status.new',
+    'Contacted': 'realtorQueue.status.contacted',
+    'Partnered': 'realtorQueue.status.partnered',
+    'Closed Won': 'realtorQueue.status.closedWon',
+    'Declined': 'realtorQueue.status.declined',
+  };
+  return map[status] ?? status;
+}
+
 export default function RealtorReports() {
+  const { t } = useTranslation();
   const totalLeads = realtorLeads.length;
   const partnered = realtorLeads.filter(l => l.status === 'Partnered').length;
   const closedWon = realtorLeads.filter(l => l.status === 'Closed Won').length;
@@ -20,14 +33,14 @@ export default function RealtorReports() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPI icon={<Building2 size={16} />} label="Realtor leads" value={totalLeads.toString()} sub="this month" />
-        <KPI icon={<Users size={16} />} label="Partner rate" value={`${partnerRate}%`} sub={`${partnered + closedWon} of ${totalLeads}`} accent />
-        <KPI icon={<DollarSign size={16} />} label="Pipeline value" value={`$${(pipelineValue / 1000000).toFixed(2)}M`} sub="partnered listings" />
-        <KPI icon={<Award size={16} />} label="Closed Won" value={`$${(totalValueClosed / 1000000).toFixed(2)}M`} sub={`${closedWon} deal${closedWon === 1 ? '' : 's'}`} accent />
+        <KPI icon={<Building2 size={16} />} label={t('realtorReports.kpi.realtorLeads')} value={totalLeads.toString()} sub={t('realtorReports.kpi.thisMonth')} />
+        <KPI icon={<Users size={16} />} label={t('realtorReports.kpi.partnerRate')} value={`${partnerRate}%`} sub={t('realtorReports.kpi.ofTotal', { partnered: partnered + closedWon, total: totalLeads })} accent />
+        <KPI icon={<DollarSign size={16} />} label={t('realtorReports.kpi.pipelineValue')} value={`$${(pipelineValue / 1000000).toFixed(2)}M`} sub={t('realtorReports.kpi.partneredListings')} />
+        <KPI icon={<Award size={16} />} label={t('realtorReports.kpi.closedWon')} value={`$${(totalValueClosed / 1000000).toFixed(2)}M`} sub={t('realtorReports.kpi.deals', { count: closedWon })} accent />
       </div>
 
       <div className="metric-card">
-        <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><TrendingUp size={16} className="text-secondary" /> Funnel by stage</h3>
+        <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><TrendingUp size={16} className="text-secondary" /> {t('realtorReports.funnelByStage')}</h3>
         <div className="space-y-2">
           {realtorPipelineStages.map(stage => {
             const count = realtorLeads.filter(l => l.status === stage).length;
@@ -35,7 +48,7 @@ export default function RealtorReports() {
             return (
               <div key={stage}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="font-medium text-foreground">{stage}</span>
+                  <span className="font-medium text-foreground">{t(realtorStatusKey(stage))}</span>
                   <span className="text-muted-foreground">{count} ({pct.toFixed(0)}%)</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -49,7 +62,7 @@ export default function RealtorReports() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="metric-card">
-          <h3 className="font-bold text-foreground mb-3">Top brokerages by lead volume</h3>
+          <h3 className="font-bold text-foreground mb-3">{t('realtorReports.topBrokerages')}</h3>
           <div className="space-y-2">
             {topBrokerages.map(([brokerage, count]) => (
               <div key={brokerage} className="flex items-center justify-between text-sm">
@@ -61,21 +74,21 @@ export default function RealtorReports() {
         </div>
 
         <div className="metric-card border-l-4 border-l-accent">
-          <h3 className="font-bold text-foreground mb-2">Foreclosure vs Realtor chain</h3>
-          <p className="text-xs text-muted-foreground mb-3">Both pipelines run in parallel. Realtor chain has higher partner rate but lower volume — quality over quantity.</p>
+          <h3 className="font-bold text-foreground mb-2">{t('realtorReports.comparisonTitle')}</h3>
+          <p className="text-xs text-muted-foreground mb-3">{t('realtorReports.comparisonSubtitle')}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-muted p-3">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Foreclosure</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('realtorReports.foreclosure')}</p>
               <p className="text-lg font-bold text-foreground mt-0.5">~12%</p>
-              <p className="text-[10px] text-muted-foreground">homeowner conversion</p>
+              <p className="text-[10px] text-muted-foreground">{t('realtorReports.homeownerConversion')}</p>
             </div>
             <div className="rounded-lg bg-accent/10 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-accent">Realtor</p>
+              <p className="text-[10px] uppercase tracking-wider text-accent">{t('realtorReports.realtor')}</p>
               <p className="text-lg font-bold text-accent mt-0.5">{partnerRate}%</p>
-              <p className="text-[10px] text-muted-foreground">listing-agent partnership</p>
+              <p className="text-[10px] text-muted-foreground">{t('realtorReports.listingAgentPartnership')}</p>
             </div>
           </div>
-          <p className="text-[11px] text-muted-foreground italic mt-3">Realtor leads are warmer — listing already exists, seller already motivated.</p>
+          <p className="text-[11px] text-muted-foreground italic mt-3">{t('realtorReports.warmerLeads')}</p>
         </div>
       </div>
     </div>

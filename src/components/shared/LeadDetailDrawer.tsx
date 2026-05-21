@@ -5,6 +5,7 @@ import { getSMSThread } from '@/data/sms';
 import { getAttomIntelForLead } from '@/integrations/attom';
 import { Phone, ArrowUpToLine, MessageSquare, Shield, Clock, AlertTriangle, Sparkles, CheckCircle2, Bot, Layers, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import SMSThread from './SMSThread';
 
 interface Props {
@@ -22,6 +23,8 @@ const urgencyColor = (s: number) =>
 
 export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: Props) {
   const [smsOpen, setSmsOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   if (!lead) return null;
 
@@ -49,7 +52,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
               </div>
               <div className="flex gap-2 mt-3 flex-wrap">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent/20 text-accent-foreground">
-                  <Sparkles size={10} /> AI Researched
+                  <Sparkles size={10} /> {t('leadQueue.card.aiResearched')}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${lead.language_preference === 'ES' ? 'bg-warning/30' : 'bg-secondary/30'}`}>
                   {lead.language_preference === 'ES' ? 'Español' : 'English'}
@@ -61,12 +64,12 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
                 )}
                 {attom.highEquity && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent text-accent-foreground">
-                    <TrendingUp size={10} /> High Equity
+                    <TrendingUp size={10} /> {t('leadQueue.card.highEquity')}
                   </span>
                 )}
                 {attom.taxDelinquent && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive text-destructive-foreground">
-                    <AlertTriangle size={10} /> Tax Delinquent
+                    <AlertTriangle size={10} /> {t('leadQueue.card.taxDelinquent')}
                   </span>
                 )}
               </div>
@@ -78,7 +81,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
             <Section title="Property Summary">
               <div className="grid grid-cols-3 gap-3">
                 <Stat label="Beds/Baths" value={`${lead.beds}bd/${lead.baths}ba`} />
-                <Stat label="Sqft" value={lead.sqft.toLocaleString()} />
+                <Stat label="Sqft" value={lead.sqft.toLocaleString(loc)} />
                 <Stat label="Built" value={String(lead.year_built)} />
                 <Stat label="Est. Value" value={`$${(lead.estimated_value / 1000).toFixed(0)}K`} />
                 <Stat label="Mortgage" value={`$${(lead.mortgage_balance / 1000).toFixed(0)}K`} />
@@ -89,7 +92,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
             {/* ATTOM Property Intel */}
             <Section title={<><Layers size={12} className="inline mr-1 text-secondary" />ATTOM Property Intel</>}>
               <div className="rounded-lg border bg-secondary/5 p-3 space-y-1.5">
-                <Info label="Estimated Value (AVM)" value={`$${attom.estimatedValue.toLocaleString()}`} />
+                <Info label="Estimated Value (AVM)" value={`$${attom.estimatedValue.toLocaleString(loc)}`} />
                 <Info label="Equity %" value={`${attom.equityPct}%${attom.highEquity ? ' · HIGH' : ''}`} />
                 <Info label="Owner Name" value={attom.ownerName} />
                 <Info label="Last Sale Date" value={attom.lastSaleDate} />
@@ -108,7 +111,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
             {/* Owner */}
             <Section title="Owner Profile">
               <Info label="Owner since" value={`${lead.purchase_date} (${new Date().getFullYear() - new Date(lead.purchase_date).getFullYear()} yrs)`} />
-              <Info label="Purchase Price" value={`$${lead.purchase_price.toLocaleString()}`} />
+              <Info label="Purchase Price" value={`$${lead.purchase_price.toLocaleString(loc)}`} />
               <Info label="Lender" value={lead.mortgage_lender} />
               <Info label="Phone" value={lead.phone} />
               <Info label="Email" value={lead.email} />
@@ -176,7 +179,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
             <div className="sticky bottom-0 -mx-6 -mb-6 p-4 bg-card border-t flex gap-2">
               {lead.sms_sent && (
                 <button onClick={() => setSmsOpen(true)} className="flex-1 py-2.5 bg-secondary text-secondary-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm">
-                  <MessageSquare size={16} /> SMS Thread
+                  <MessageSquare size={16} /> {t('leadDrawer.sms')}
                 </button>
               )}
               {onCall && (
@@ -185,7 +188,7 @@ export default function LeadDetailDrawer({ lead, open, onOpenChange, onCall }: P
                   className="flex-1 py-2.5 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
                   title="Insert this lead at top of Mojo Triple Dialer queue"
                 >
-                  <ArrowUpToLine size={16} /> Push to Mojo
+                  <ArrowUpToLine size={16} /> {t('inventory.buttons.pushToMojo')}
                 </button>
               )}
             </div>

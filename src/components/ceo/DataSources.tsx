@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, Activity, Zap, Database, Facebook, PhoneCall, Layers, Settings, Building2, AlertTriangle, KeyRound } from 'lucide-react';
 import { getBatchLeadsHealth } from '@/integrations/batchLeads';
 import { getMetaHealth } from '@/integrations/metaAds';
@@ -29,6 +30,8 @@ const dotStyles: Record<DotColor, { bg: string; text: string }> = {
 
 export default function DataSources() {
   const [sources, setSources] = useState<SourceCard[]>([]);
+  const { i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   useEffect(() => {
     (async () => {
@@ -42,7 +45,7 @@ export default function DataSources() {
           icon: <Database size={18} />,
           description: '$3.95/mo flat — distressed property leads nationwide. Key received ✓ — backend wiring pending.',
           lastSync: b.lastSync,
-          records: `${b.recordsThisWeek.toLocaleString()} this week`,
+          records: `${b.recordsThisWeek.toLocaleString(loc)} this week`,
           detail: `${b.monthlyQuotaUsed}% of monthly quota used · acknowledged 3-day data lag from county filings`,
           dot: 'green',
           statusLabel: 'Connected',
