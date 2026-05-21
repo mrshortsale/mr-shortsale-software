@@ -247,6 +247,65 @@ Deno.serve(async (req) => {
 
   const apiKey = getApiKey(credentials);
 
+  // For OAuth sign-in providers (google-signin, microsoft-signin):
+  // Verify credentials are stored and ping the OIDC discovery endpoint.
+  if (integration.slug === "google-signin" || integration.slug === "microsoft-signin") {
+    const hasClientId = !!credentials.clientId?.trim();
+    const hasClientSecret = !!credentials.clientSecret?.trim();
+
+    if (!hasClientId || !hasClientSecret) {
+      // Don't touch the credential status — just report the diagnostic
+      await supabase.from("integration_credentials").update({
+        last_tested_at: new Date().toISOString(),
+        last_test_status: "failure",
+        last_test_error: "clientId and clientSecret must both be configured before testing.",
+      }).eq("id", cred.id);
+      return jsonResponse({ success: false, latency_ms: 0, error: "clientId and clientSecret must both be configured before testing." });
+    }
+
+    const discoveryUrl = integration.slug === "google-signin"
+      ? "https://accounts.google.com/.well-known/openid-configuration"
+      : "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration";
+
+    const start = Date.now();
+    try {
+      const probe = await fetch(discoveryUrl, { method: "GET" });
+      const latencyMs = Date.now() - start;
+      const success = probe.ok;
+      const result: HealthCheckResult = {
+        success,
+        statusCode: probe.status,
+        latencyMs,
+        requestUrl: discoveryUrl,
+        error: success ? undefined : `Discovery endpoint returned HTTP ${probe.status}`,
+      };
+      // For sign-in providers, only promote to "connected" on success.
+      // A failed test must never flip the status to "error" — that would lock users out.
+      await updateOAuthSignInTestResult(integrationId, cred.id, result);
+      await supabase.from("integration_api_logs").insert({
+        integration_id: integrationId,
+        credential_id: cred.id,
+        method: "GET",
+        endpoint: discoveryUrl,
+        status_code: probe.status,
+        latency_ms: latencyMs,
+        error_message: result.error || null,
+        direction: "outbound",
+      });
+      return jsonResponse({ success: result.success, latency_ms: latencyMs, status_code: probe.status, error: result.error });
+    } catch (err) {
+      const latencyMs = Date.now() - start;
+      const error = err instanceof Error ? err.message : "Network error";
+      // Do NOT change the credential status on failure — leave it as the CEO set it.
+      await supabase.from("integration_credentials").update({
+        last_tested_at: new Date().toISOString(),
+        last_test_status: "failure",
+        last_test_error: error,
+      }).eq("id", cred.id);
+      return jsonResponse({ success: false, latency_ms: latencyMs, error });
+    }
+  }
+
   // For inbound_webhook type, just check that the webhook secret exists
   if (integration.auth_method === "inbound_webhook") {
     const result: HealthCheckResult = {
@@ -342,4 +401,20 @@ async function updateTestResult(integrationId: string, credId: string, result: H
       status: newStatus,
     })
     .eq("id", credId);
+}
+
+/** For OAuth sign-in providers (google-signin, microsoft-signin).
+ * A successful test promotes status to "connected".
+ * A failed test ONLY records the diagnostic — it never demotes the status.
+ * This prevents a transient network hiccup from locking users out of sign-in. */
+async function updateOAuthSignInTestResult(_integrationId: string, credId: string, result: HealthCheckResult) {
+  const update: Record<string, unknown> = {
+    last_tested_at: new Date().toISOString(),
+    last_test_status: result.success ? "success" : "failure",
+    last_test_error: result.error || null,
+  };
+  if (result.success) {
+    update.status = "connected";
+  }
+  await supabase.from("integration_credentials").update(update).eq("id", credId);
 }

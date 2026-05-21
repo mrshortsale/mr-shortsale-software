@@ -11,6 +11,7 @@ import {
   Trash2,
   RefreshCw,
   Shield,
+  Link,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -141,6 +142,29 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
 
   const isConnected = credentials?.status === 'connected';
 
+  // OAuth sign-in providers managed by this app's own Edge Functions
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+  const oauthSignInCallbackUrl: string | null =
+    integration.slug === 'google-signin'
+      ? `${SUPABASE_URL}/functions/v1/auth-google-callback`
+      : integration.slug === 'microsoft-signin'
+      ? `${SUPABASE_URL}/functions/v1/auth-microsoft-callback`
+      : null;
+
+  const oauthSignInSetupLink: string | null =
+    integration.slug === 'google-signin'
+      ? 'https://console.cloud.google.com/apis/credentials'
+      : integration.slug === 'microsoft-signin'
+      ? 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade'
+      : null;
+
+  const oauthSignInSetupLabel: string | null =
+    integration.slug === 'google-signin'
+      ? 'Google Cloud Console'
+      : integration.slug === 'microsoft-signin'
+      ? 'Azure Portal'
+      : null;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -199,7 +223,8 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
             )}
 
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || !credentials}>
+              <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || !credentials}
+                title={!credentials ? 'Save credentials before testing' : undefined}>
                 {testing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
                 Test Connection
               </Button>
@@ -331,39 +356,89 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                   )}
                   {integration.auth_method === 'oauth2' && (
                     <>
+                      {oauthSignInSetupLink && (
+                        <div className="rounded-md border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground space-y-1">
+                          <p>
+                            Get your credentials from{' '}
+                            <a
+                              href={oauthSignInSetupLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-primary underline underline-offset-2"
+                            >
+                              {oauthSignInSetupLabel}
+                            </a>
+                            . When registering the app, set the <strong>Authorized Redirect URI</strong> to the Callback URL shown below.
+                          </p>
+                        </div>
+                      )}
                       <div className="space-y-1.5">
-                        <Label>Client ID</Label>
+                        <Label htmlFor={`${integration.slug}-client-id`}>Client ID</Label>
                         <Input
-                          placeholder="OAuth Client ID"
+                          id={`${integration.slug}-client-id`}
+                          name={`integration-${integration.slug}-client-id`}
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                          placeholder={credentials?.credentials?.clientId ? 'Leave blank to keep current Client ID' : 'OAuth Client ID'}
                           value={editFields.clientId || ''}
                           onChange={(e) => setEditFields({ ...editFields, clientId: e.target.value })}
                         />
+                        {credentials?.credentials?.clientId && !editFields.clientId && (
+                          <p className="text-xs text-muted-foreground">
+                            A Client ID is already configured. Leave blank to keep it, or enter a new value to replace it.
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Client Secret</Label>
+                        <Label htmlFor={`${integration.slug}-client-secret`}>Client Secret</Label>
                         <Input
+                          id={`${integration.slug}-client-secret`}
+                          name={`integration-${integration.slug}-client-secret`}
                           type="password"
-                          placeholder="OAuth Client Secret"
+                          autoComplete="new-password"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                          placeholder="Leave blank to keep current secret"
                           value={editFields.clientSecret || ''}
                           onChange={(e) => setEditFields({ ...editFields, clientSecret: e.target.value })}
                         />
+                        {credentials?.credentials?.clientSecret && !editFields.clientSecret && (
+                          <p className="text-xs text-muted-foreground">
+                            A Client Secret is already configured. Leave blank to keep it.
+                          </p>
+                        )}
                       </div>
-                      <div className="space-y-1.5">
-                        <Label>Authorization URL</Label>
-                        <Input
-                          placeholder="https://provider.com/oauth/authorize"
-                          value={editFields.authorizationUrl || ''}
-                          onChange={(e) => setEditFields({ ...editFields, authorizationUrl: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Token URL</Label>
-                        <Input
-                          placeholder="https://provider.com/oauth/token"
-                          value={editFields.tokenUrl || ''}
-                          onChange={(e) => setEditFields({ ...editFields, tokenUrl: e.target.value })}
-                        />
-                      </div>
+                      {!oauthSignInCallbackUrl && (
+                        <>
+                          <div className="space-y-1.5">
+                            <Label>Authorization URL</Label>
+                            <Input
+                              autoComplete="off"
+                              data-1p-ignore
+                              data-lpignore="true"
+                              data-form-type="other"
+                              placeholder="https://provider.com/oauth/authorize"
+                              value={editFields.authorizationUrl || ''}
+                              onChange={(e) => setEditFields({ ...editFields, authorizationUrl: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label>Token URL</Label>
+                            <Input
+                              autoComplete="off"
+                              data-1p-ignore
+                              data-lpignore="true"
+                              data-form-type="other"
+                              placeholder="https://provider.com/oauth/token"
+                              value={editFields.tokenUrl || ''}
+                              onChange={(e) => setEditFields({ ...editFields, tokenUrl: e.target.value })}
+                            />
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
                   {integration.auth_method === 'inbound_webhook' && (
@@ -426,29 +501,31 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                       </div>
                     </>
                   )}
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`${integration.slug}-base-url`}>Base URL</Label>
-                    <Input
-                      id={`${integration.slug}-base-url`}
-                      name={`integration-${integration.slug}-base-url`}
-                      type="url"
-                      autoComplete="off"
-                      data-1p-ignore
-                      data-lpignore="true"
-                      data-form-type="other"
-                      placeholder="https://app.batchleads.io"
-                      value={editFields._baseUrl || ''}
-                      onChange={(e) =>
-                        setEditFields({
-                          ...editFields,
-                          _baseUrl: e.target.value.replace(/\/+$/, ''),
-                        })
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Host only (e.g. https://app.batchleads.io). Do not end with a forward slash or include paths like /api/v1/tags.
-                    </p>
-                  </div>
+                  {!oauthSignInCallbackUrl && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${integration.slug}-base-url`}>Base URL</Label>
+                      <Input
+                        id={`${integration.slug}-base-url`}
+                        name={`integration-${integration.slug}-base-url`}
+                        type="url"
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-form-type="other"
+                        placeholder="https://app.batchleads.io"
+                        value={editFields._baseUrl || ''}
+                        onChange={(e) =>
+                          setEditFields({
+                            ...editFields,
+                            _baseUrl: e.target.value.replace(/\/+$/, ''),
+                          })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Host only (e.g. https://app.batchleads.io). Do not end with a forward slash or include paths like /api/v1/tags.
+                      </p>
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <Button type="submit" size="sm">Save</Button>
                     <Button type="button" size="sm" variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
@@ -456,14 +533,21 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                 </form>
               ) : credentials ? (
                 <div className="space-y-3">
-                  {Object.entries(credentials.credentials).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between rounded-md border px-3 py-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                        <p className="font-mono text-sm">{value}</p>
+                  {Object.entries(credentials.credentials).map(([key, value]) => {
+                    const isSecret = /secret|password|token|key/i.test(key);
+                    return (
+                      <div key={key} className="flex items-center justify-between rounded-md border px-3 py-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
+                          {isSecret ? (
+                            <p className="text-xs text-muted-foreground italic">Configured — value hidden for security</p>
+                          ) : (
+                            <p className="font-mono text-sm">{value}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No credentials configured yet.</p>
@@ -496,8 +580,45 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
           </Card>
         )}
 
-        {/* OAuth Authorize Button */}
-        {integration.auth_method === 'oauth2' && credentials && !isConnected && (
+        {/* OAuth Callback URL — shown for google-signin and microsoft-signin */}
+        {oauthSignInCallbackUrl && (
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Link className="h-4 w-4" />
+                Callback URL
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={oauthSignInCallbackUrl}
+                  className="font-mono text-sm"
+                />
+                <Button size="sm" variant="outline" onClick={() => copyToClipboard(oauthSignInCallbackUrl)}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Copy this URL and register it as an <strong>Authorized Redirect URI</strong> in{' '}
+                <a
+                  href={oauthSignInSetupLink!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-primary underline underline-offset-2 inline-flex items-center gap-1"
+                >
+                  {oauthSignInSetupLabel}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                {' '}before saving credentials.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* OAuth Authorize Button — only for generic oauth2 integrations, not our own sign-in providers */}
+        {integration.auth_method === 'oauth2' && credentials && !isConnected && !oauthSignInCallbackUrl && (
           <Card className="lg:col-span-2">
             <CardContent className="flex items-center justify-between py-4">
               <div>
