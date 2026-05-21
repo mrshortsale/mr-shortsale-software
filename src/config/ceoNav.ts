@@ -1,8 +1,10 @@
 import {
   Activity,
   BarChart3,
+  Bot,
   Briefcase,
   Building2,
+  Cpu,
   Database,
   FileText,
   Home,
@@ -13,6 +15,7 @@ import {
   MessageSquare,
   PhoneCall,
   Plug,
+  ScrollText,
   Settings,
   Sparkles,
   TrendingUp,
@@ -52,6 +55,17 @@ export const ceoNavItems: SidebarNavItem[] = [
       { kind: 'item', id: 'speed', label: 'Speed-to-Lead', icon: Zap, path: `${CEO_BASE}/speed` },
       { kind: 'item', id: 'dialer', label: 'Mojo Dialer', icon: PhoneCall, path: `${CEO_BASE}/dialer` },
       { kind: 'item', id: 'team', label: 'Team Performance', icon: BarChart3, path: `${CEO_BASE}/team` },
+    ],
+  },
+
+  {
+    kind: 'section',
+    id: 'sec-ai',
+    label: 'AI & Automations',
+    icon: Bot,
+    children: [
+      { kind: 'item', id: 'ai-agents', label: 'Agents', icon: Cpu, path: `${CEO_BASE}/ai/agents` },
+      { kind: 'item', id: 'ai-logs', label: 'Logs & Monitor', icon: ScrollText, path: `${CEO_BASE}/ai/logs` },
     ],
   },
 
@@ -108,6 +122,8 @@ export function getCeoPageTitle(pathname: string): string {
 
   if (pathname === `${CEO_BASE}/preview/ai-calls`) return previewLabels['ai-calls'];
   if (pathname === `${CEO_BASE}/preview/ai-agents`) return previewLabels['ai-agents'];
+  if (pathname === `${CEO_BASE}/ai/agents`) return 'Agents';
+  if (pathname === `${CEO_BASE}/ai/logs`) return 'Logs & Monitor';
 
   return 'Dashboard';
 }
@@ -118,6 +134,8 @@ export function getCeoNavItemId(pathname: string): string {
 
   if (pathname === `${CEO_BASE}/preview/ai-calls`) return 'ai-calls';
   if (pathname === `${CEO_BASE}/preview/ai-agents`) return 'ai-agents';
+  if (pathname === `${CEO_BASE}/ai/agents`) return 'ai-agents';
+  if (pathname === `${CEO_BASE}/ai/logs`) return 'ai-logs';
 
   return 'dashboard';
 }
