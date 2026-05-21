@@ -42,11 +42,11 @@ export default function TeamPerformance() {
             {p === 'today' ? t('team.today') : p === 'week' ? t('team.week') : t('team.month')}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">Click any agent for drill-down →</span>
+        <span className="ml-auto text-xs text-muted-foreground">{t('team.drillDownHint')}</span>
       </div>
 
       <div className="metric-card">
-        <h3 className="font-bold text-foreground mb-4">Calls by Agent</h3>
+        <h3 className="font-bold text-foreground mb-4">{t('team.callsByAgent')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data} layout="vertical" onClick={(e) => {
             if (e && e.activePayload && e.activePayload[0]) {
@@ -68,12 +68,12 @@ export default function TeamPerformance() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left">
-              <th className="pb-3 text-muted-foreground font-medium">Agent</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Calls</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Connected</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Qualified</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Conv. Rate</th>
-              <th className="pb-3 text-muted-foreground font-medium text-right">Avg Duration</th>
+              <th className="pb-3 text-muted-foreground font-medium">{t('team.agent')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.calls')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.connected')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.qualified')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.convRate')}</th>
+              <th className="pb-3 text-muted-foreground font-medium text-right">{t('team.avgDuration')}</th>
             </tr>
           </thead>
           <tbody>

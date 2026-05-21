@@ -765,7 +765,7 @@ export default function LeadInventory() {
                             className="text-[10px] text-muted-foreground"
                             title={lead.ingestedAt ? new Date(lead.ingestedAt).toISOString() : ''}
                           >
-                            {formatRelative(lead.ingestedAt ?? lead.receivedAt)}
+                            {formatRelative(lead.ingestedAt ?? lead.receivedAt, t)}
                           </span>
                         );
                       case 'apn':
@@ -777,7 +777,7 @@ export default function LeadInventory() {
                       case 'attempts':
                         return <span key={c.id} className="text-right font-mono text-muted-foreground">{lead.contactAttempts ?? 0}</span>;
                       case 'lastContact':
-                        return <span key={c.id} className="text-[10px] text-muted-foreground">{lead.lastContactDate ? formatRelative(lead.lastContactDate) : '—'}</span>;
+                        return <span key={c.id} className="text-[10px] text-muted-foreground">{lead.lastContactDate ? formatRelative(lead.lastContactDate, t) : '—'}</span>;
                       case 'lastOutcome':
                         return <span key={c.id} className="truncate text-muted-foreground">{lead.lastOutcome ?? '—'}</span>;
                       case 'city':

@@ -410,7 +410,23 @@
     "today": "Hoy",
     "pipeline": "Pipeline",
     "team": "Equipo",
-    "loading": "Cargando resumen…"
+    "loading": "Cargando resumen…",
+    "newLeadsToday": "Nuevos Leads Hoy",
+    "newLeadsSubtitle": "vía Realie.ai + Batch Leads API — el mismo día",
+    "equityQualified": "Calificados por Equidad",
+    "readyToCall": "listos para llamar",
+    "callsCompleted": "Llamadas Completadas",
+    "callsCompletedSubtitle": "de todos los asesores hoy",
+    "aiInboundHandled": "Entrantes IA Atendidos",
+    "aiInboundSubtitle": "fuera de horario anoche",
+    "activePipeline": "Pipeline Activo de Short Sale",
+    "pipelineNote": "0 rechazos hasta la fecha · cierre prom. 67 días",
+    "taskChecklist": "Mi Lista de Tareas",
+    "urgent": "Urgente",
+    "new": "Nuevo",
+    "teamPerformanceToday": "Rendimiento del Equipo Hoy",
+    "teamNote": "4 calificados entregados a Cristina",
+    "aiInboundLast24": "Llamadas Entrantes IA — Últimas 24h"
   },
   "speed": {
     "title": "Velocidad de Respuesta",
@@ -421,7 +437,13 @@
     "sms": "SMS",
     "responseTime": "Tiempo de Respuesta",
     "avgResponseTime": "Tiempo Prom. de Respuesta",
-    "leadsToday": "Leads Hoy"
+    "leadsToday": "Leads Hoy",
+    "avgResponse": "Respuesta Prom.",
+    "conversion": "Conversión %",
+    "status": "Estado",
+    "live": "En vivo",
+    "howItWorks": "Cómo funciona Velocidad de Respuesta",
+    "howItWorksNote": "Nota: La app Mr. Short Sale no realiza llamadas. Todo el marcado ocurre en Mojo Triple Dialer — solo enviamos leads vía API."
   },
   "pipeline": {
     "title": "Pipeline Activo",
@@ -441,9 +463,14 @@
     "qualified": "Calificados",
     "rank": "Rango",
     "rep": "Asesor",
+    "agent": "Asesor",
+    "convRate": "Tasa Conv.",
+    "avgDuration": "Duración Prom.",
+    "callsByAgent": "Llamadas por Asesor",
+    "drillDownHint": "Haz clic en un asesor para ver detalles →",
     "today": "Hoy",
-    "week": "Semana",
-    "month": "Mes"
+    "week": "Esta Semana",
+    "month": "Este Mes"
   },
   "roadmap": {
     "title": "Hoja de Ruta y Vistas Previas",
@@ -475,6 +502,19 @@
   },
   "integrations": {
     "title": "Integraciones",
+    "subtitle": "Conecta servicios externos a tu plataforma.",
+    "connectedCount": "{{count}} conectadas",
+    "searchPlaceholder": "Buscar integraciones...",
+    "noDescription": "Sin descripción.",
+    "noSearchResults": "Ninguna integración coincide con tu búsqueda.",
+    "empty": "Aún no hay integraciones configuradas.",
+    "backToIntegrations": "← Volver a Integraciones",
+    "refresh": "Actualizar",
+    "builtIn": "Integrada",
+    "notConfigured": "No configurada",
+    "statusConnected": "Conectado",
+    "statusDisabled": "Deshabilitado",
+    "statusError": "Error",
     "configure": "Configurar",
     "connected": "Conectado",
     "disconnected": "Desconectado",
@@ -501,15 +541,49 @@
     "start": "Iniciar Sesión",
     "stop": "Detener Sesión",
     "skip": "Omitir",
-    "callback": "Devolver llamada"
+    "callback": "Devolver llamada",
+    "howItWorks": "Cómo funciona esta pantalla:",
+    "howItWorksBody": "Mr. Short Sale envía leads a Mojo vía la API de Mojo Triple Dialer. Mojo realiza las llamadas en los auriculares de tus asesores — no esta app. Los resultados se sincronizan aquí después de cada llamada.",
+    "inQueue": "En Cola",
+    "readyToDial": "listos para marcar",
+    "callsToday": "Llamadas Hoy",
+    "acrossAllAgents": "de todos los asesores",
+    "connectRate": "Tasa de Conexión",
+    "threeLineDialing": "marcado triple activo",
+    "bulkActions": "Mojo Triple Dialer — Acciones Masivas",
+    "lastSync": "Última sync:",
+    "sendAllNew": "Enviar todos los leads \"Nuevo\"",
+    "sendUrgency": "Enviar urgencia ≥8",
+    "sendSpanish": "Enviar lote solo español",
+    "recentOutcomes": "Resultados Recientes de Mojo",
+    "mojoQueued": "{{count}} leads enviados a Mojo Triple Dialer"
   },
   "ai": {
     "inboundCalls": {
-      "title": "Llamadas Entrantes IA"
+      "title": "Llamadas Entrantes IA",
+      "heroTitle": "Agente de Voz IA Bilingüe 24/7",
+      "heroSubtitle": "Cada llamada fuera de horario respondida, transcrita y enrutada automáticamente. Detección de acento en español incluida.",
+      "callsPerDay": "llamadas / 24h",
+      "caller": "Llamante",
+      "dateTime": "Fecha/Hora",
+      "language": "Idioma",
+      "duration": "Duración",
+      "outcome": "Resultado",
+      "property": "Propiedad"
     },
     "agents": {
       "title": "Agentes IA",
-      "actionsToday": "acciones hoy"
+      "workforceTitle": "Tu Fuerza Laboral IA",
+      "workforceSubtitle": "Seis agentes IA especializados trabajando 24/7 en tu negocio — encontrando leads, verificando datos, puntuando urgencia, escribiendo scripts y haciendo seguimiento. Para que tu equipo se enfoque en cerrar.",
+      "allOperational": "Todos los sistemas operativos",
+      "agentsActive": "agentes activos",
+      "actionsToday": "acciones hoy",
+      "savedThisWeek": "ahorrados esta semana",
+      "poweredBy": "Impulsado por",
+      "seeActivity": "Ver actividad",
+      "statusActive": "Activo",
+      "statusWorking": "Trabajando",
+      "statusIdle": "Inactivo"
     }
   },
   "leadDrawer": {
@@ -559,6 +633,9 @@
     "duration": "Duración",
     "outcome": "Resultado",
     "notes": "Notas",
+    "homeowner": "Propietario",
+    "followUp": "Seguimiento",
+    "sms": "SMS",
     "empty": "Sin historial de llamadas aún."
   },
   "realtorQueueRep": {
@@ -583,7 +660,25 @@
   },
   "inventoryDrawer": {
     "title": "Detalles del Lead",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "sections": {
+      "contact": "Contacto",
+      "qualification": "Calificación",
+      "assignmentActivity": "Asignación y Actividad",
+      "propertyIdentifiers": "Identificadores de Propiedad"
+    },
+    "reassign": "Reasignar",
+    "unknown": "Desconocido",
+    "homeowner": "Propietario",
+    "english": "Inglés",
+    "espanol": "Español",
+    "auctionIn": "Subasta en {{days}}d",
+    "never": "Nunca",
+    "justNow": "Justo ahora",
+    "minutesAgo": "hace {{count}}m",
+    "hoursAgo": "hace {{count}}h",
+    "daysAgo": "hace {{count}}d",
+    "copyTitle": "Copiar {{label}}"
   },
   "caseDrawer": {
     "title": "Detalles del Caso",
@@ -594,10 +689,23 @@
     "close": "Cerrar"
   },
   "speedFeed": {
-    "title": "Feed de Velocidad de Respuesta",
+    "title": "Velocidad de Respuesta · Meta Ads",
     "newLead": "Nuevo lead",
     "responded": "Respondido",
-    "assigned": "Asignado"
+    "assigned": "Asignado",
+    "muteAlerts": "Silenciar alertas",
+    "enableSound": "Activar sonido",
+    "live": "En vivo",
+    "mojoNote": "La app envía leads a Mojo vía API — Mojo marca desde tu auricular.",
+    "waiting": "Esperando el próximo lead de Meta…",
+    "overdue": "Atrasado",
+    "fresh": "Reciente",
+    "pushToTop": "Enviar al Top",
+    "pushToTopTitle": "Insertar este lead en la posición 1 de la cola de Mojo",
+    "toastTitle": "⚡ Velocidad de Respuesta: {{name}}",
+    "toastDesc": "{{campaign}} · Llamar en 5 min",
+    "pushedToMojo": "{{name}} enviado al top de la cola de Mojo",
+    "pushedToMojoDesc": "Mojo Triple Dialer marcará este lead en tu próxima recogida"
   },
   "sourceProvenance": {
     "source": "Fuente",

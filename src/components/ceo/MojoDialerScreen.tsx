@@ -24,6 +24,7 @@ const outcomeStyle: Record<MojoOutcome, { icon: React.ReactNode; cls: string }> 
 
 export default function MojoDialerScreen() {
   const [status, setStatus] = useState<MojoQueueStatus | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     getMojoStatus().then(setStatus);
@@ -31,7 +32,7 @@ export default function MojoDialerScreen() {
 
   const handleBulkSend = () => {
     sendToMojo(['l1', 'l2', 'l3']).then(r => {
-      toast.success(`${r.queued} leads pushed to Mojo Triple Dialer`);
+      toast.success(t('dialer.mojoQueued', { count: r.queued }));
     });
   };
 
@@ -40,36 +41,36 @@ export default function MojoDialerScreen() {
       <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 flex items-start gap-2 text-xs text-foreground">
         <Phone size={14} className="text-primary mt-0.5 shrink-0" />
         <div>
-          <strong>How this screen works:</strong> Mr. Short Sale pushes leads into Mojo via the Mojo Triple Dialer API. <strong>Calls are placed by Mojo</strong> on your reps' headsets — not by this app. Outcomes sync back here after each call.
+          <strong>{t('dialer.howItWorks')}</strong> {t('dialer.howItWorksBody')}
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Metric label="In Queue" value={status?.queued ?? '—'} sub="ready to dial" icon={<Phone size={18} />} accent="primary" />
-        <Metric label="Calls Today" value={status?.callsToday ?? '—'} sub="across all agents" icon={<Activity size={18} />} accent="secondary" />
-        <Metric label="Connect Rate" value={`${status?.connectRate ?? '—'}%`} sub="3-line dialing live" icon={<CheckCircle size={18} />} accent="accent" />
+        <Metric label={t('dialer.inQueue')} value={status?.queued ?? '—'} sub={t('dialer.readyToDial')} icon={<Phone size={18} />} accent="primary" />
+        <Metric label={t('dialer.callsToday')} value={status?.callsToday ?? '—'} sub={t('dialer.acrossAllAgents')} icon={<Activity size={18} />} accent="secondary" />
+        <Metric label={t('dialer.connectRate')} value={`${status?.connectRate ?? '—'}%`} sub={t('dialer.threeLineDialing')} icon={<CheckCircle size={18} />} accent="accent" />
       </div>
 
       <div className="metric-card">
         <div className="flex items-center gap-2 mb-3">
-          <h3 className="font-bold text-foreground">Mojo Triple Dialer — Bulk Actions</h3>
-          <span className="ml-auto text-xs text-muted-foreground">Last sync: {status?.lastSync ?? '—'}</span>
+          <h3 className="font-bold text-foreground">{t('dialer.bulkActions')}</h3>
+          <span className="ml-auto text-xs text-muted-foreground">{t('dialer.lastSync')} {status?.lastSync ?? '—'}</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={handleBulkSend} className="px-3 py-2 bg-primary text-primary-foreground rounded-md text-xs font-medium flex items-center gap-1.5 hover:opacity-90">
-            <Send size={12} /> Send all "New" leads
+            <Send size={12} /> {t('dialer.sendAllNew')}
           </button>
           <button onClick={handleBulkSend} className="px-3 py-2 bg-secondary text-secondary-foreground rounded-md text-xs font-medium flex items-center gap-1.5 hover:opacity-90">
-            <Send size={12} /> Send urgency ≥8
+            <Send size={12} /> {t('dialer.sendUrgency')}
           </button>
           <button onClick={handleBulkSend} className="px-3 py-2 border rounded-md text-xs font-medium flex items-center gap-1.5 hover:bg-muted">
-            <Send size={12} /> Send Spanish-only batch
+            <Send size={12} /> {t('dialer.sendSpanish')}
           </button>
         </div>
       </div>
 
       <div className="metric-card">
-        <h3 className="font-bold text-foreground mb-3">Recent Mojo Outcomes</h3>
+        <h3 className="font-bold text-foreground mb-3">{t('dialer.recentOutcomes')}</h3>
         <div className="space-y-2">
           {RECENT.map((r, i) => {
             const s = outcomeStyle[r.outcome];

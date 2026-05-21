@@ -5,6 +5,7 @@ import {
   Flame, Mail, MapPin, Phone, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import type { InventoryLead, InventoryStatus } from '@/data/inventoryLeads';
 
 interface Props {
@@ -35,16 +36,16 @@ const statusColor = (s: InventoryStatus) =>
   s === 'Promoted' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' :
   'bg-muted text-muted-foreground border';
 
-function formatRelative(ms: number | null | undefined): string {
+function formatRelative(ms: number | null | undefined, t: (key: string, opts?: Record<string, unknown>) => string): string {
   if (!ms) return '—';
   const diff = Date.now() - ms;
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('inventoryDrawer.justNow');
+  if (mins < 60) return t('inventoryDrawer.minutesAgo', { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 48) return `${hrs}h ago`;
+  if (hrs < 48) return t('inventoryDrawer.hoursAgo', { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t('inventoryDrawer.daysAgo', { count: days });
 }
 
 export default function InventoryLeadDrawer({
@@ -78,20 +79,20 @@ export default function InventoryLeadDrawer({
             </div>
             <div className="flex gap-2 mt-3 flex-wrap">
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${filingColor(lead.filingType)}`}>
-                {lead.filingType ?? 'Unknown'}
+                {lead.filingType ?? t('inventoryDrawer.unknown')}
               </span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusColor(lead.status)}`}>
                 {lead.status}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-foreground/20">
-                {lead.leadType ?? 'Homeowner'}
+                {lead.leadType ?? t('inventoryDrawer.homeowner')}
               </span>
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${lead.language === 'ES' ? 'bg-amber-300/30' : 'bg-primary-foreground/20'}`}>
-                {lead.language === 'ES' ? 'Español' : 'English'}
+                {lead.language === 'ES' ? t('inventoryDrawer.espanol') : t('inventoryDrawer.english')}
               </span>
               {lead.daysToAuction < 30 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-destructive text-destructive-foreground">
-                  <AlertTriangle size={10} /> Auction in {lead.daysToAuction}d
+                  <AlertTriangle size={10} /> {t('inventoryDrawer.auctionIn', { days: lead.daysToAuction })}
                 </span>
               )}
             </div>
@@ -99,31 +100,31 @@ export default function InventoryLeadDrawer({
         </div>
 
         <div className="p-6 space-y-6">
-          <Section title="Contact">
-            <CopyRow label="Phone" value={lead.phone ?? null} icon={<Phone size={12} />} />
-            <CopyRow label="Email" value={lead.email ?? null} icon={<Mail size={12} />} />
+          <Section title={t('inventoryDrawer.sections.contact')}>
+            <CopyRow label={t('inventory.columns.phone')} value={lead.phone ?? null} icon={<Phone size={12} />} t={t} />
+            <CopyRow label={t('inventory.columns.email')} value={lead.email ?? null} icon={<Mail size={12} />} t={t} />
           </Section>
 
-          <Section title="Qualification">
-            <Info label="Equity %" value={`${lead.equityPct}%`} tone={lead.equityPct <= 25 ? 'good' : 'bad'} />
-            <Info label="LTV %" value={lead.ltvPct != null ? `${lead.ltvPct}%` : '—'} />
-            <Info label="Days to Auction" value={`${lead.daysToAuction}d`} tone={lead.daysToAuction < 30 ? 'bad' : undefined} />
-            <Info label="Filing Type" value={lead.filingType ?? '—'} />
-            <Info label="Batch List" value={lead.batchListName ?? '—'} />
+          <Section title={t('inventoryDrawer.sections.qualification')}>
+            <Info label={t('inventory.columns.equityPct')} value={`${lead.equityPct}%`} tone={lead.equityPct <= 25 ? 'good' : 'bad'} />
+            <Info label={t('inventory.columns.ltvPct')} value={lead.ltvPct != null ? `${lead.ltvPct}%` : '—'} />
+            <Info label={t('inventory.columns.daysToAuction')} value={`${lead.daysToAuction}d`} tone={lead.daysToAuction < 30 ? 'bad' : undefined} />
+            <Info label={t('inventory.columns.filingType')} value={lead.filingType ?? '—'} />
+            <Info label={t('inventory.columns.batchList')} value={lead.batchListName ?? '—'} />
           </Section>
 
-          <Section title="Assignment & Activity">
-            <Info label="Assigned Rep" value={assignedName ?? 'Unassigned'} tone={assignedName ? undefined : 'warn'} />
-            <Info label="Status" value={lead.status} />
-            <Info label="Contact Attempts" value={String(lead.contactAttempts ?? 0)} />
-            <Info label="Last Contact" value={lead.lastContactDate ? formatRelative(lead.lastContactDate) : 'Never'} />
-            <Info label="Last Outcome" value={lead.lastOutcome ?? '—'} />
-            <Info label="Date Added" value={formatRelative(lead.ingestedAt ?? lead.receivedAt)} />
+          <Section title={t('inventoryDrawer.sections.assignmentActivity')}>
+            <Info label={t('inventory.columns.assignedRep')} value={assignedName ?? t('inventory.empty.unassigned')} tone={assignedName ? undefined : 'warn'} />
+            <Info label={t('inventory.columns.status')} value={lead.status} />
+            <Info label={t('inventory.columns.contactAttempts')} value={String(lead.contactAttempts ?? 0)} />
+            <Info label={t('inventory.columns.lastContact')} value={lead.lastContactDate ? formatRelative(lead.lastContactDate, t) : t('inventoryDrawer.never')} />
+            <Info label={t('inventory.columns.lastOutcome')} value={lead.lastOutcome ?? '—'} />
+            <Info label={t('inventory.columns.dateAdded')} value={formatRelative(lead.ingestedAt ?? lead.receivedAt, t)} />
           </Section>
 
-          <Section title="Property Identifiers">
-            <Info label="APN" value={lead.apn ?? '—'} />
-            <Info label="County" value={lead.county || '—'} />
+          <Section title={t('inventoryDrawer.sections.propertyIdentifiers')}>
+            <Info label={t('inventory.columns.apn')} value={lead.apn ?? '—'} />
+            <Info label={t('inventory.columns.county')} value={lead.county || '—'} />
             <Info label="External ID" value={lead.externalId ?? '—'} />
           </Section>
 
@@ -137,7 +138,7 @@ export default function InventoryLeadDrawer({
                   type="button"
                   className="flex-1 min-w-[120px] py-2 bg-muted text-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm hover:bg-muted/80"
                 >
-                  <UserPlus size={14} /> {assignedName ? t('inventory.buttons.assignRep') : t('inventory.buttons.assignRep')}
+                  <UserPlus size={14} /> {assignedName ? t('inventoryDrawer.reassign') : t('inventory.buttons.assignRep')}
                 </button>
               }
             />
@@ -188,7 +189,7 @@ function Info({ label, value, tone }: { label: string; value: string; tone?: 'go
   );
 }
 
-function CopyRow({ label, value, icon }: { label: string; value: string | null; icon: React.ReactNode }) {
+function CopyRow({ label, value, icon, t }: { label: string; value: string | null; icon: React.ReactNode; t: (key: string, opts?: Record<string, unknown>) => string }) {
   return (
     <div className="flex items-center justify-between text-sm py-1.5 border-b last:border-0">
       <span className="text-muted-foreground flex items-center gap-1.5">{icon}{label}</span>
@@ -198,10 +199,10 @@ function CopyRow({ label, value, icon }: { label: string; value: string | null; 
           <button
             type="button"
             onClick={() => {
-              navigator.clipboard?.writeText(value).then(() => toast.success(`${label} copied`)); // label is already translated at call site
+              navigator.clipboard?.writeText(value).then(() => toast.success(t('inventory.toasts.copied', { label })));
             }}
             className="p-1 rounded hover:bg-muted text-muted-foreground"
-            title={`Copy ${label}`}
+            title={t('inventoryDrawer.copyTitle', { label })}
           >
             <Copy size={12} />
           </button>

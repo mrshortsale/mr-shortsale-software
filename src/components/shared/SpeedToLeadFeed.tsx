@@ -17,6 +17,7 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
   const [leads, setLeads] = useState<MetaLead[]>(() => seedMetaLeads());
   const [now, setNow] = useState(Date.now());
   const [soundOn, setSoundOn] = useState(false);
+  const { t } = useTranslation();
 
   // Tick every second
   useEffect(() => {
@@ -31,8 +32,8 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
       return setTimeout(() => {
         const lead = generateMetaLead();
         setLeads(prev => [lead, ...prev].slice(0, 6));
-        toast(`⚡ Speed-to-Lead: ${lead.name}`, {
-          description: `${lead.campaign} · Call within 5 min`,
+        toast(t('speedFeed.toastTitle', { name: lead.name }), {
+          description: t('speedFeed.toastDesc', { campaign: lead.campaign }),
         });
         if (soundOn) {
           try {
@@ -52,8 +53,8 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
   }, [soundOn]);
 
   const handleCallNow = (lead: MetaLead) => {
-    toast.success(`${lead.name} pushed to top of Mojo queue`, {
-      description: 'Mojo Triple Dialer will dial this lead on your next pickup',
+    toast.success(t('speedFeed.pushedToMojo', { name: lead.name }), {
+      description: t('speedFeed.pushedToMojoDesc'),
     });
     setLeads(prev => prev.filter(l => l.id !== lead.id));
   };
@@ -62,24 +63,24 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
     <div className="rounded-xl border-2 border-speed/40 bg-gradient-to-br from-speed/5 to-card overflow-hidden">
       <div className="bg-speed text-speed-foreground px-4 py-2.5 flex items-center gap-2">
         <Zap size={16} className="animate-pulse" fill="currentColor" />
-        <span className="font-bold text-sm uppercase tracking-wider">Speed-to-Lead · Meta Ads</span>
+        <span className="font-bold text-sm uppercase tracking-wider">{t('speedFeed.title')}</span>
         <span className="ml-auto flex items-center gap-3">
-          <button onClick={() => setSoundOn(s => !s)} className="opacity-90 hover:opacity-100" title={soundOn ? 'Mute alerts' : 'Enable sound'}>
+          <button onClick={() => setSoundOn(s => !s)} className="opacity-90 hover:opacity-100" title={soundOn ? t('speedFeed.muteAlerts') : t('speedFeed.enableSound')}>
             {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
           <span className="text-xs font-medium opacity-90 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-            Live
+            {t('speedFeed.live')}
           </span>
         </span>
       </div>
       <div className="px-4 py-1.5 bg-speed/5 border-b border-speed/20 text-[10.5px] text-muted-foreground flex items-center gap-1.5">
         <Info size={10} className="text-speed shrink-0" />
-        <span>App pushes leads to Mojo via API — Mojo dials from your headset.</span>
+        <span>{t('speedFeed.mojoNote')}</span>
       </div>
       <div className={`p-3 space-y-2 ${compact ? 'max-h-72 overflow-y-auto' : ''}`}>
         {leads.length === 0 && (
-          <div className="text-center py-6 text-xs text-muted-foreground">Waiting for next Meta lead…</div>
+          <div className="text-center py-6 text-xs text-muted-foreground">{t('speedFeed.waiting')}</div>
         )}
         {leads.map(lead => {
           const ageMs = now - lead.receivedAt;
@@ -101,14 +102,14 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
                   <Clock size={11} />
                   {fmtAge(ageMs)}
                 </div>
-                <p className="text-[9px] text-muted-foreground uppercase">{overdue ? 'Overdue' : 'Fresh'}</p>
+                <p className="text-[9px] text-muted-foreground uppercase">{overdue ? t('speedFeed.overdue') : t('speedFeed.fresh')}</p>
               </div>
               <button
                 onClick={() => handleCallNow(lead)}
                 className="shrink-0 px-3 py-2 bg-speed text-speed-foreground rounded-lg text-xs font-bold flex items-center gap-1 hover:opacity-90"
-                title="Insert this lead at position 1 in the Mojo dialer queue"
+                title={t('speedFeed.pushToTopTitle')}
               >
-                <ArrowUpToLine size={12} /> Push to Top
+                <ArrowUpToLine size={12} /> {t('speedFeed.pushToTop')}
               </button>
             </div>
           );
