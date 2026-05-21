@@ -8,7 +8,6 @@ import {
   InventoryFilingType,
 } from '@/data/inventoryLeads';
 import { useSavedViews } from '@/hooks/useSavedViews';
-import BatchSyncControls from '@/components/ceo/BatchSyncControls';
 import SourceProvenance from '@/components/shared/SourceProvenance';
 import { sendToMojo } from '@/integrations/mojoDialer';
 import {
@@ -43,7 +42,8 @@ import {
 } from 'lucide-react';
 
 const STATES = ['All', 'FL', 'TX', 'CA', 'AZ', 'NV', 'GA', 'NC', 'IL', 'NY', 'OH'];
-const PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const DEFAULT_PAGE_SIZE = 50;
 const STATUS_OPTIONS: InventoryStatus[] = ['New', 'Contacted', 'Promoted', 'Dismissed'];
 // Lead Inventory only shows leads that match the spec's qualification rule
 // (equity ≤ 25% AND filing type in the distressed set). The baseline is
@@ -92,13 +92,14 @@ export default function LeadInventory() {
   const [leads, setLeads] = useState<InventoryLead[]>([]);
   const [stats, setStats] = useState<InventoryStats>(EMPTY_STATS);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageInput, setPageInput] = useState('1');
   const [totalMatching, setTotalMatching] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [lastSyncLabel, setLastSyncLabel] = useState('Never');
   const [batchConnected, setBatchConnected] = useState(false);
   const [syncStatus, setSyncStatus] = useState<InventorySyncStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [source, setSource] = useState<InventorySource | 'All'>('Batch');
@@ -139,13 +140,17 @@ export default function LeadInventory() {
 
   useEffect(() => {
     setPage(1);
-  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings]);
+  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings, pageSize]);
+
+  useEffect(() => {
+    setPageInput(String(page));
+  }, [page]);
 
   const loadLeads = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
 
-    const offset = (page - 1) * PAGE_SIZE;
+    const offset = (page - 1) * pageSize;
 
     const [{ data: status }, fetchResult] = await Promise.all([
       getBatchSyncStatus(),
@@ -157,7 +162,7 @@ export default function LeadInventory() {
         esOnly,
         statuses: [...activeStatuses],
         filingTypes: [...activeFilings],
-        limit: PAGE_SIZE,
+        limit: pageSize,
         offset,
       }),
     ]);
@@ -195,7 +200,7 @@ export default function LeadInventory() {
     }
 
     setLoading(false);
-  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings, page]);
+  }, [source, state, debouncedSearch, minScore, esOnly, activeStatuses, activeFilings, page, pageSize]);
 
   useEffect(() => {
     loadLeads();
@@ -207,12 +212,10 @@ export default function LeadInventory() {
       const { data } = await getBatchSyncStatus();
       if (cancelled || !data?.syncInProgress) return;
       setSyncStatus(data);
-      setSyncing(true);
       const { leadsInDb, completed, error } = await waitForBatchSyncComplete((s) => {
         if (!cancelled) setSyncStatus(s);
       });
       if (cancelled) return;
-      setSyncing(false);
       if (completed) {
         toast.success(`Batch sync complete — ${leadsInDb.toLocaleString()} leads in inventory`);
         setPage(1);
@@ -226,8 +229,8 @@ export default function LeadInventory() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const rangeStart = totalMatching === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(page * PAGE_SIZE, totalMatching);
+  const rangeStart = totalMatching === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, totalMatching);
 
   const parentRef = useRef<HTMLDivElement>(null);
   const v = useVirtualizer({
@@ -266,11 +269,28 @@ export default function LeadInventory() {
   };
 
   const syncProgressLabel = formatSyncProgress(syncStatus ?? undefined);
+  const syncRunStatus = syncStatus?.lastRun?.status;
+  const showSyncBanner =
+    !!syncProgressLabel &&
+    (syncStatus?.syncInProgress ||
+      syncRunStatus === 'running' ||
+      syncRunStatus === 'paused' ||
+      syncRunStatus === 'partial');
 
   const goToPage = (next: number) => {
     const clamped = Math.min(totalPages, Math.max(1, next));
     setPage(clamped);
+    setPageInput(String(clamped));
     parentRef.current?.scrollTo({ top: 0 });
+  };
+
+  const applyPageInput = () => {
+    const n = parseInt(pageInput.trim(), 10);
+    if (!Number.isFinite(n)) {
+      setPageInput(String(page));
+      return;
+    }
+    goToPage(n);
   };
 
   // Bulk actions wired to admin-leads
@@ -379,19 +399,15 @@ export default function LeadInventory() {
         ]}
       />
 
-      {syncProgressLabel && (
+      {showSyncBanner && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground flex flex-wrap items-center justify-between gap-2">
           <span>{syncProgressLabel}</span>
-          <BatchSyncControls
-            batchConnected={batchConnected}
-            syncStatus={syncStatus}
-            syncing={syncing}
-            onSyncingChange={setSyncing}
-            onStatusChange={setSyncStatus}
-            onComplete={async () => { setPage(1); await loadLeads(); }}
-            showHistoryLink={false}
-            compact
-          />
+          <Link
+            to={`${CEO_BASE}/sync-runs`}
+            className="text-primary font-bold hover:underline shrink-0"
+          >
+            Manage sync →
+          </Link>
         </div>
       )}
 
@@ -442,16 +458,6 @@ export default function LeadInventory() {
             <Globe size={11} /> ES only
           </button>
           <InventoryColumnPicker visible={visibleColumns} onChange={setVisibleColumns} />
-          {!syncProgressLabel && (
-            <BatchSyncControls
-              batchConnected={batchConnected}
-              syncStatus={syncStatus}
-              syncing={syncing || loading}
-              onSyncingChange={setSyncing}
-              onStatusChange={setSyncStatus}
-              onComplete={async () => { setPage(1); await loadLeads(); }}
-            />
-          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t">
@@ -584,9 +590,17 @@ export default function LeadInventory() {
               <p className="font-medium text-foreground">No Batch leads match your filters</p>
               <p className="text-xs mt-1">
                 {batchConnected
-                  ? 'Try Sync Batch or loosen filters (status, score, filing).'
-                  : 'Connect Batch Leads under Integrations, then sync here.'}
+                  ? 'Loosen filters (status, score, filing) or run a sync from Sync History.'
+                  : 'Connect Batch Leads under Integrations, then sync from Sync History.'}
               </p>
+              {batchConnected && (
+                <Link
+                  to={`${CEO_BASE}/sync-runs`}
+                  className="mt-2 text-primary font-bold text-xs hover:underline"
+                >
+                  Open Sync History
+                </Link>
+              )}
               {!batchConnected && (
                 <Link to={`${CEO_BASE}/integrations`} className="mt-2 text-primary font-bold text-xs hover:underline">
                   Go to Integrations
@@ -787,6 +801,40 @@ export default function LeadInventory() {
           </span>
 
           <div className="flex items-center gap-1.5">
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              disabled={loading}
+              title="Rows per page"
+              aria-label="Rows per page"
+              className="px-2 py-1 rounded border bg-card text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+            >
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}/page</option>
+              ))}
+            </select>
+
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="font-medium">Go to</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyPageInput();
+                  }
+                }}
+                disabled={loading || totalPages <= 1}
+                title="Press Enter to jump to page"
+                aria-label="Go to page number"
+                className="w-10 px-1 py-0.5 text-xs text-center font-bold text-foreground border rounded bg-card outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+              />
+            </span>
+
             <button
               type="button"
               onClick={() => goToPage(page - 1)}
@@ -796,8 +844,8 @@ export default function LeadInventory() {
             >
               <ChevronLeft size={14} /> Prev
             </button>
-            <span className="px-2 py-1 font-medium text-foreground tabular-nums">
-              Page {page} of {totalPages.toLocaleString()}
+            <span className="px-2 py-1 font-medium text-foreground tabular-nums whitespace-nowrap">
+              Page {page.toLocaleString()} of {totalPages.toLocaleString()}
             </span>
             <button
               type="button"
