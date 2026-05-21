@@ -22,6 +22,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   marketing: '📢',
   communications: '📞',
   custom: '🔧',
+  ai: '🤖',
 };
 
 function StatusBadge({ status }: { status: IntegrationStatus | null }) {
