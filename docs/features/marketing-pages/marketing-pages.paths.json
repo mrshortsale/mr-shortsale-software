@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "feature_id": "marketing-pages",
+  "title": "Marketing pages",
+  "description": "Public proposal and cost transparency pages (no auth).",
+  "source_paths": [
+    "src/pages/Proposal.tsx",
+    "src/pages/Costs.tsx"
+  ],
+  "related_paths": [
+    "src/config/ceoNav.ts",
+    "docs/mr-short-sale-ai-platform.md"
+  ],
+  "entrypoints": [
+    "src/pages/Proposal.tsx",
+    "src/pages/Costs.tsx"
+  ],
+  "mapping_confidence": "high"
+}

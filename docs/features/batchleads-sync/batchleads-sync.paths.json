@@ -1,0 +1,31 @@
+{
+  "schema_version": "1",
+  "feature_id": "batchleads-sync",
+  "title": "BatchLeads sync",
+  "description": "Incremental and full sync from BatchLeads API into inventory, with cron and CEO controls.",
+  "source_paths": [
+    "supabase/functions/batchleads-sync/",
+    "supabase/functions/batchleads-cron/",
+    "supabase/functions/_shared/batchleads.ts",
+    "supabase/functions/_shared/roundRobin.ts",
+    "src/components/ceo/BatchSyncControls.tsx",
+    "src/pages/ceo/SyncRunsPage.tsx",
+    "src/integrations/batchLeads.ts"
+  ],
+  "related_paths": [
+    "supabase/migrations/004_fix_batchleads_health_endpoint.sql",
+    "supabase/migrations/006_sync_partial_status.sql",
+    "supabase/migrations/007_sync_pause_stop.sql",
+    "supabase/migrations/009_batchleads_nightly_cron.sql",
+    "supabase/migrations/010_fix_batchleads_cron.sql",
+    "supabase/migrations/011_cron_use_vault.sql",
+    "docs/batchleads-incremental-sync.md",
+    "src/services/inventory.ts"
+  ],
+  "entrypoints": [
+    "supabase/functions/batchleads-sync/index.ts",
+    "supabase/functions/batchleads-cron/index.ts",
+    "src/pages/ceo/SyncRunsPage.tsx"
+  ],
+  "mapping_confidence": "high"
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "feature_id": "team-performance",
+  "title": "Team performance",
+  "description": "CEO view of per-rep KPIs with drill-down charts and heatmaps.",
+  "source_paths": [
+    "src/components/ceo/TeamPerformance.tsx",
+    "src/components/ceo/AgentDrillDown.tsx"
+  ],
+  "related_paths": [
+    "src/data/agents.ts",
+    "src/data/calls.ts"
+  ],
+  "entrypoints": [
+    "src/components/ceo/TeamPerformance.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

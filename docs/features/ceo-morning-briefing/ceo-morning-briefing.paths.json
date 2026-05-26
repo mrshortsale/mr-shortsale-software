@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "feature_id": "ceo-morning-briefing",
+  "title": "CEO morning briefing",
+  "description": "Daily CEO landing view with KPI tiles, priority leads, and live activity feel.",
+  "source_paths": [
+    "src/components/ceo/MorningBriefing.tsx"
+  ],
+  "related_paths": [
+    "src/components/ceo/AIActivityTicker.tsx",
+    "src/data/leads.ts",
+    "src/data/activity.ts",
+    "src/hooks/useLiveSimulation.ts"
+  ],
+  "entrypoints": [
+    "src/components/ceo/MorningBriefing.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

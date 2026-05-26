@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "feature_id": "short-sale-pipeline",
+  "title": "Short sale pipeline board",
+  "description": "Kanban view of active short-sale cases with case detail drawer.",
+  "source_paths": [
+    "src/components/ceo/PipelineBoard.tsx",
+    "src/components/ceo/CaseDetailDrawer.tsx"
+  ],
+  "related_paths": [
+    "src/data/pipeline.ts",
+    "src/data/caseDetails.ts"
+  ],
+  "entrypoints": [
+    "src/components/ceo/PipelineBoard.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

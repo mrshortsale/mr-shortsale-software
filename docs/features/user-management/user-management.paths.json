@@ -1,0 +1,20 @@
+{
+  "schema_version": "1",
+  "feature_id": "user-management",
+  "title": "User management (CEO admin)",
+  "description": "CEO-only CRUD for platform users (reps and CEOs).",
+  "source_paths": [
+    "src/components/ceo/UserManagement.tsx",
+    "supabase/functions/admin-users/"
+  ],
+  "related_paths": [
+    "supabase/migrations/001_create_users_table.sql",
+    "supabase/migrations/008_user_approval_status.sql",
+    "src/data/users.ts"
+  ],
+  "entrypoints": [
+    "src/components/ceo/UserManagement.tsx",
+    "supabase/functions/admin-users/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

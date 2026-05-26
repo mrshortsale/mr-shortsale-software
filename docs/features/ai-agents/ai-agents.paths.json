@@ -1,0 +1,28 @@
+{
+  "schema_version": "1",
+  "feature_id": "ai-agents",
+  "title": "AI agents & pipeline",
+  "description": "Configure AI agents and run the processing pipeline (production UI and Edge Functions).",
+  "source_paths": [
+    "src/pages/ceo/ai/",
+    "src/services/aiAgents.ts",
+    "supabase/functions/ai-agents-manage/",
+    "supabase/functions/ai-agent-pipeline/",
+    "src/components/ceo/AIAgentsRoster.tsx",
+    "src/components/ceo/AgentActivityDrawer.tsx",
+    "src/components/ceo/AIActivityTicker.tsx"
+  ],
+  "related_paths": [
+    "supabase/migrations/016_ai_agents.sql",
+    "supabase/migrations/015_openai_integration.sql",
+    "src/data/agents.ts",
+    "docs/mr-short-sale-ai-platform.md",
+    "Spec/01-modules.md"
+  ],
+  "entrypoints": [
+    "src/pages/ceo/ai/AgentsPage.tsx",
+    "supabase/functions/ai-agents-manage/index.ts",
+    "supabase/functions/ai-agent-pipeline/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

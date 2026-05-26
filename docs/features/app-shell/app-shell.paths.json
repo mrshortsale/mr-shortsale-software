@@ -1,0 +1,33 @@
+{
+  "schema_version": "1",
+  "feature_id": "app-shell",
+  "title": "Application shell",
+  "description": "SPA bootstrap, routing, role-based layouts, navigation, theme, and i18n.",
+  "source_paths": [
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/layouts/",
+    "src/config/ceoNav.ts",
+    "src/config/repNav.ts",
+    "src/components/AppSidebar.tsx",
+    "src/components/TopNav.tsx",
+    "src/components/NavLink.tsx",
+    "src/contexts/AppContext.tsx",
+    "src/contexts/ThemeContext.tsx",
+    "src/i18n.ts",
+    "src/locales/",
+    "index.html",
+    "vite.config.ts"
+  ],
+  "related_paths": [
+    "src/index.css",
+    "tailwind.config.ts",
+    "components.json",
+    "src/components/ui/"
+  ],
+  "entrypoints": [
+    "src/main.tsx",
+    "src/App.tsx"
+  ],
+  "mapping_confidence": "high"
+}

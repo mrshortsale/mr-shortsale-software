@@ -1,0 +1,39 @@
+{
+  "schema_version": "1",
+  "feature_id": "user-auth",
+  "title": "User authentication",
+  "description": "Email/password and OAuth sign-in with custom JWT sessions.",
+  "source_paths": [
+    "src/services/auth.ts",
+    "src/contexts/AuthContext.tsx",
+    "src/pages/LoginPage.tsx",
+    "src/pages/GoogleCallbackPage.tsx",
+    "src/pages/MicrosoftCallbackPage.tsx",
+    "src/components/auth/",
+    "supabase/functions/auth-login/",
+    "supabase/functions/auth-signup/",
+    "supabase/functions/auth-me/",
+    "supabase/functions/auth-google-initiate/",
+    "supabase/functions/auth-google-callback/",
+    "supabase/functions/auth-microsoft-initiate/",
+    "supabase/functions/auth-microsoft-callback/",
+    "supabase/functions/_shared/jwt.ts",
+    "supabase/functions/_shared/googleAuth.ts",
+    "supabase/functions/_shared/microsoftAuth.ts"
+  ],
+  "related_paths": [
+    "supabase/migrations/001_create_users_table.sql",
+    "supabase/migrations/002_password_helpers.sql",
+    "supabase/migrations/008_user_approval_status.sql",
+    "supabase/migrations/014_google_auth.sql",
+    "supabase/migrations/015_microsoft_auth.sql",
+    "src/lib/emailValidation.ts",
+    "docs/auth-implementation-prompt.md"
+  ],
+  "entrypoints": [
+    "src/pages/LoginPage.tsx",
+    "supabase/functions/auth-login/index.ts",
+    "supabase/functions/auth-me/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "feature_id": "integrations-hub",
+  "title": "Integrations hub",
+  "description": "Configure, OAuth-connect, and test third-party integrations (BatchLeads, OpenAI, etc.).",
+  "source_paths": [
+    "src/components/integrations/",
+    "src/services/integrations.ts",
+    "supabase/functions/integrations-manage/",
+    "supabase/functions/integrations-oauth-callback/",
+    "supabase/functions/integrations-test/",
+    "supabase/functions/_shared/crypto.ts"
+  ],
+  "related_paths": [
+    "supabase/migrations/003_integrations.sql",
+    "supabase/migrations/015_openai_integration.sql",
+    "supabase/migrations/016_oauth_provider_integrations.sql",
+    "src/integrations/",
+    "docs/integrations-zillow-meta-ads.md"
+  ],
+  "entrypoints": [
+    "src/components/integrations/IntegrationsPage.tsx",
+    "supabase/functions/integrations-manage/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

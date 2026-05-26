@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "feature_id": "ceo-strategy-views",
+  "title": "CEO strategy & preview views",
+  "description": "Roadmap, presentation deck, AI preview screens, and CEO settings.",
+  "source_paths": [
+    "src/components/ceo/RoadmapView.tsx",
+    "src/pages/ceo/CEORoadmapPage.tsx",
+    "src/components/ceo/Presentation.tsx",
+    "src/components/ceo/AIInboundCalls.tsx",
+    "src/pages/ceo/CEOSettingsPage.tsx"
+  ],
+  "related_paths": [
+    "src/pages/Proposal.tsx",
+    "src/pages/Costs.tsx",
+    "docs/mr-short-sale-ai-platform.md",
+    "Spec/05-user-journey.md"
+  ],
+  "entrypoints": [
+    "src/pages/ceo/CEORoadmapPage.tsx",
+    "src/components/ceo/Presentation.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

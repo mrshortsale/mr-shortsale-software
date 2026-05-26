@@ -1,0 +1,30 @@
+{
+  "schema_version": "1",
+  "feature_id": "lead-inventory",
+  "title": "Lead inventory",
+  "description": "CEO lead table, filters, assignment, and inventory APIs backed by Postgres.",
+  "source_paths": [
+    "src/components/ceo/LeadInventory.tsx",
+    "src/components/ceo/InventoryLeadDrawer.tsx",
+    "src/components/ceo/InventoryColumnPicker.tsx",
+    "src/components/ceo/InventoryRepPicker.tsx",
+    "src/services/inventory.ts",
+    "src/data/inventoryLeads.ts",
+    "supabase/functions/inventory-leads/",
+    "supabase/functions/admin-leads/",
+    "src/components/shared/LeadDetailDrawer.tsx",
+    "src/components/shared/SourceProvenance.tsx"
+  ],
+  "related_paths": [
+    "supabase/migrations/005_inventory_leads.sql",
+    "supabase/migrations/012_extend_inventory_leads_batch.sql",
+    "supabase/migrations/013_inventory_round_robin_state.sql",
+    "Spec/MrShortSale_LeadInventory_Spec.pdf",
+    "docs/batchleads-incremental-sync.md"
+  ],
+  "entrypoints": [
+    "src/components/ceo/LeadInventory.tsx",
+    "supabase/functions/inventory-leads/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

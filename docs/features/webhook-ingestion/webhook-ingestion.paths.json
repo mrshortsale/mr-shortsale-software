@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "feature_id": "webhook-ingestion",
+  "title": "Webhook ingestion",
+  "description": "Inbound webhooks (e.g. Meta lead ads) with HMAC verification and lead creation.",
+  "source_paths": [
+    "supabase/functions/webhook-receiver/"
+  ],
+  "related_paths": [
+    "src/integrations/metaAds.ts",
+    "supabase/functions/_shared/crypto.ts",
+    "docs/integrations-zillow-meta-ads.md"
+  ],
+  "entrypoints": [
+    "supabase/functions/webhook-receiver/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

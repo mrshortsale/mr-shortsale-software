@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "feature_id": "supabase-platform",
+  "title": "Supabase platform layer",
+  "description": "Shared database schema, migrations, seed, and Edge Function infrastructure.",
+  "source_paths": [
+    "supabase/migrations/",
+    "supabase/seed.sql",
+    "supabase/config.toml",
+    "supabase/functions/_shared/",
+    "src/integrations/supabase/"
+  ],
+  "related_paths": [
+    ".env.example",
+    "Spec/02-schemas.md",
+    "Spec/03-erd.md",
+    "Spec/04-data-flow.md"
+  ],
+  "entrypoints": [
+    "supabase/config.toml",
+    "src/integrations/supabase/client.ts"
+  ],
+  "mapping_confidence": "high"
+}

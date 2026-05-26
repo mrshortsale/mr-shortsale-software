@@ -1,0 +1,25 @@
+{
+  "schema_version": "1",
+  "feature_id": "realtor-channel",
+  "title": "Realtor channel",
+  "description": "Zillow-sourced listing-agent leads: CEO hub modules and rep realtor queue.",
+  "source_paths": [
+    "src/components/ceo/RealtorLeadQueue.tsx",
+    "src/components/ceo/RealtorPipeline.tsx",
+    "src/components/ceo/RealtorScripts.tsx",
+    "src/components/ceo/RealtorReports.tsx",
+    "src/components/rep/RealtorQueue.tsx",
+    "src/components/shared/RealtorLeadDetailDrawer.tsx",
+    "src/data/realtorLeads.ts"
+  ],
+  "related_paths": [
+    "src/integrations/zillow.ts",
+    "supabase/functions/zillow-sync/",
+    "docs/integrations-zillow-meta-ads.md"
+  ],
+  "entrypoints": [
+    "src/components/ceo/RealtorLeadQueue.tsx",
+    "src/components/rep/RealtorQueue.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

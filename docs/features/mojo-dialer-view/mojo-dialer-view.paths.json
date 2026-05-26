@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "feature_id": "mojo-dialer-view",
+  "title": "Mojo dialer view",
+  "description": "CEO screen for Mojo Power Dialer integration (sessions and dial stats).",
+  "source_paths": [
+    "src/components/ceo/MojoDialerScreen.tsx",
+    "src/integrations/mojoDialer.ts"
+  ],
+  "related_paths": [
+    "Spec/01-modules.md"
+  ],
+  "entrypoints": [
+    "src/components/ceo/MojoDialerScreen.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "feature_id": "zillow-sync",
+  "title": "Zillow sync",
+  "description": "Edge Function to sync listing-agent leads from Zillow into the database.",
+  "source_paths": [
+    "supabase/functions/zillow-sync/",
+    "src/integrations/zillow.ts"
+  ],
+  "related_paths": [
+    "docs/integrations-zillow-meta-ads.md",
+    "src/components/ceo/RealtorLeadQueue.tsx",
+    "supabase/migrations/003_integrations.sql"
+  ],
+  "entrypoints": [
+    "supabase/functions/zillow-sync/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

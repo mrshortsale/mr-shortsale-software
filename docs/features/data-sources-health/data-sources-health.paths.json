@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "feature_id": "data-sources-health",
+  "title": "Data sources health",
+  "description": "CEO dashboard cards for integration sync health (Realie, BatchLeads, ATTOM).",
+  "source_paths": [
+    "src/components/ceo/DataSources.tsx"
+  ],
+  "related_paths": [
+    "src/integrations/attom.ts",
+    "src/integrations/batchLeads.ts",
+    "src/components/integrations/ApiUsageDashboard.tsx",
+    "docs/batchleads-incremental-sync.md"
+  ],
+  "entrypoints": [
+    "src/components/ceo/DataSources.tsx"
+  ],
+  "mapping_confidence": "medium"
+}

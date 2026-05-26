@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "feature_id": "speed-to-lead",
+  "title": "Speed-to-lead",
+  "description": "Real-time feed of newly ingested leads and elapsed time since surfacing.",
+  "source_paths": [
+    "src/components/ceo/SpeedToLeadScreen.tsx",
+    "src/components/shared/SpeedToLeadFeed.tsx"
+  ],
+  "related_paths": [
+    "src/data/activity.ts",
+    "src/hooks/useLiveSimulation.ts",
+    "src/components/rep/LeadQueue.tsx"
+  ],
+  "entrypoints": [
+    "src/components/ceo/SpeedToLeadScreen.tsx"
+  ],
+  "mapping_confidence": "medium"
+}
