@@ -8,8 +8,10 @@ import Proposal from '@/pages/Proposal';
 import Costs from '@/pages/Costs';
 import NotFound from '@/pages/NotFound';
 import CEOLayout from '@/layouts/CEOLayout';
+import AdminLayout from '@/layouts/AdminLayout';
 import RepLayout from '@/layouts/RepLayout';
 import { CEO_BASE } from '@/config/ceoNav';
+import { ADMIN_BASE } from '@/config/adminNav';
 import { REP_BASE } from '@/config/repNav';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
@@ -87,14 +89,22 @@ const App = () => (
               <Route path="team" element={<TeamPerformance />} />
               <Route path="roadmap" element={<CEORoadmapPage />} />
               <Route path="presentation" element={<Presentation />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="integrations" element={<IntegrationsPage />} />
-              <Route path="data" element={<DataSources />} />
-              <Route path="settings" element={<CEOSettingsPage />} />
+              <Route path="users" element={<Navigate to={`${ADMIN_BASE}/users`} replace />} />
+              <Route path="integrations" element={<Navigate to={`${ADMIN_BASE}/integrations`} replace />} />
+              <Route path="data" element={<Navigate to={`${ADMIN_BASE}/data`} replace />} />
+              <Route path="settings" element={<Navigate to={`${ADMIN_BASE}/settings`} replace />} />
               <Route path="ai/agents" element={<AgentsPage />} />
               <Route path="ai/logs" element={<LogsPage />} />
               <Route path="preview/ai-calls" element={<AIInboundCalls />} />
               <Route path="preview/ai-agents" element={<AIAgentsRoster />} />
+            </Route>
+
+            <Route path={ADMIN_BASE} element={<AdminLayout />}>
+              <Route index element={<Navigate to="integrations" replace />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
+              <Route path="data" element={<DataSources />} />
+              <Route path="settings" element={<CEOSettingsPage />} />
             </Route>
 
             <Route path={REP_BASE} element={<RepLayout />}>

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import BatchSyncControls from '@/components/ceo/BatchSyncControls';
 import { CEO_BASE } from '@/config/ceoNav';
+import { ADMIN_BASE } from '@/config/adminNav';
 import {
   formatLastSync,
   getBatchSyncStatus,
@@ -133,7 +134,7 @@ export default function SyncRunsPage() {
               {!syncStatus.batchConnected && (
                 <>
                   {' · '}
-                  <Link to={`${CEO_BASE}/integrations`} className="text-primary font-bold underline">
+                  <Link to={`${ADMIN_BASE}/integrations`} className="text-primary font-bold underline">
                     {t('syncRuns.connectBatchLeads')}
                   </Link>
                 </>

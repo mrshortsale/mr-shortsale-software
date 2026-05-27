@@ -10,7 +10,10 @@
     "repVersionSub": "v1.0.0 · Sales Rep",
     "ceoPlatform": "CEO Console",
     "repPlatform": "Rep Console",
-    "aiPlatform": "AI Operations Platform"
+    "aiPlatform": "AI Operations Platform",
+    "adminSubLabel": "Admin Console",
+    "adminPlatform": "Platform Administration",
+    "adminVersionSub": "v1.0.0 · Production"
   },
   "nav": {
     "briefing": "Morning Briefing",
@@ -44,7 +47,9 @@
     "ai-agents": "AI Agents (Preview)",
     "dashboard": "Dashboard",
     "viewProposal": "View Proposal",
-    "costTransparency": "Cost Transparency"
+    "costTransparency": "Cost Transparency",
+    "admin-console": "Admin Console",
+    "back-ceo": "Back to CEO Console"
   },
   "topNav": {
     "searchPlaceholder": "Search anything...",

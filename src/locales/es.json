@@ -10,7 +10,10 @@
     "repVersionSub": "v1.0.0 · Asesor de Ventas",
     "ceoPlatform": "Consola CEO",
     "repPlatform": "Consola Asesor",
-    "aiPlatform": "Plataforma de Operaciones IA"
+    "aiPlatform": "Plataforma de Operaciones IA",
+    "adminSubLabel": "Consola Admin",
+    "adminPlatform": "Administración de Plataforma",
+    "adminVersionSub": "v1.0.0 · Producción"
   },
   "nav": {
     "briefing": "Resumen Matutino",
@@ -44,7 +47,9 @@
     "ai-agents": "Agentes IA (Vista Previa)",
     "dashboard": "Panel Principal",
     "viewProposal": "Ver Propuesta",
-    "costTransparency": "Transparencia de Costos"
+    "costTransparency": "Transparencia de Costos",
+    "admin-console": "Consola Admin",
+    "back-ceo": "Volver a Consola CEO"
   },
   "topNav": {
     "searchPlaceholder": "Buscar anything...",

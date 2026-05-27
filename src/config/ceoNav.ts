@@ -5,7 +5,6 @@ import {
   Briefcase,
   Building2,
   Cpu,
-  Database,
   FileText,
   Home,
   Kanban,
@@ -14,7 +13,6 @@ import {
   Map,
   MessageSquare,
   PhoneCall,
-  Plug,
   ScrollText,
   Settings,
   Sparkles,
@@ -82,18 +80,7 @@ export const ceoNavItems: SidebarNavItem[] = [
     ],
   },
 
-  {
-    kind: 'section',
-    id: 'sec-admin',
-    label: 'Admin',
-    icon: Settings,
-    children: [
-      { kind: 'item', id: 'users', label: 'User Management', icon: Users, path: `${CEO_BASE}/users` },
-      { kind: 'item', id: 'integrations', label: 'Integrations', icon: Plug, path: `${CEO_BASE}/integrations` },
-      { kind: 'item', id: 'data', label: 'Data Sources', icon: Database, path: `${CEO_BASE}/data` },
-      { kind: 'item', id: 'settings', label: 'Settings', icon: Settings, path: `${CEO_BASE}/settings` },
-    ],
-  },
+  { kind: 'external', id: 'admin-console', label: 'Admin Console', icon: Settings, href: '/admin/integrations' },
 ];
 
 const previewLabels: Record<string, string> = {

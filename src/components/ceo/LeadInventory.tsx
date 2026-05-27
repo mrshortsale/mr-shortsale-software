@@ -25,6 +25,7 @@ import {
   type InventorySyncStatus,
 } from '@/services/inventory';
 import { CEO_BASE } from '@/config/ceoNav';
+import { ADMIN_BASE } from '@/config/adminNav';
 import { toast } from 'sonner';
 import InventoryLeadDrawer, {
   filingColor,
@@ -420,7 +421,7 @@ export default function LeadInventory() {
       {loadError && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive flex flex-wrap items-center gap-2">
           <span>{loadError}</span>
-          <Link to={`${CEO_BASE}/integrations`} className="font-bold underline">{t('inventory.buttons.openIntegrations')}</Link>
+          <Link to={`${ADMIN_BASE}/integrations`} className="font-bold underline">{t('inventory.buttons.openIntegrations')}</Link>
         </div>
       )}
 
@@ -608,7 +609,7 @@ export default function LeadInventory() {
                 </Link>
               )}
               {!batchConnected && (
-                <Link to={`${CEO_BASE}/integrations`} className="mt-2 text-primary font-bold text-xs hover:underline">
+                <Link to={`${ADMIN_BASE}/integrations`} className="mt-2 text-primary font-bold text-xs hover:underline">
                   {t('inventory.buttons.openIntegrations')}
                 </Link>
               )}
