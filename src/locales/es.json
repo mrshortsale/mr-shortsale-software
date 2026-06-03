@@ -125,6 +125,30 @@
       "backToSignIn": "Volver al inicio de sesión",
       "defaultMessage": "Cuenta creada. Tu registro está pendiente de aprobación del CEO. Puedes iniciar sesión una vez aprobado."
     },
+    "forgot": {
+      "title": "Restablecer contraseña",
+      "subtitle": "Ingresa tu correo y te enviaremos un enlace de restablecimiento",
+      "submit": "Enviar enlace",
+      "submitting": "Enviando...",
+      "backToSignIn": "Volver al inicio de sesión",
+      "sentTitle": "Revisa tu correo",
+      "sentDefault": "Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña en breve.",
+      "requestFailed": "No se pudo enviar el enlace. Por favor intenta de nuevo."
+    },
+    "reset": {
+      "title": "Elige una nueva contraseña",
+      "subtitle": "Ingresa y confirma tu nueva contraseña",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "submit": "Actualizar contraseña",
+      "submitting": "Actualizando...",
+      "resetFailed": "No se pudo restablecer la contraseña. Por favor intenta de nuevo.",
+      "successTitle": "Contraseña actualizada",
+      "successDesc": "Tu contraseña ha sido cambiada. Ya puedes iniciar sesión con tu nueva contraseña.",
+      "invalidLinkTitle": "Enlace inválido",
+      "invalidLinkDesc": "Este enlace de restablecimiento falta o es inválido. Por favor solicita uno nuevo.",
+      "backToSignIn": "Volver al inicio de sesión"
+    },
     "validation": {
       "emailRequired": "El correo electrónico es obligatorio",
       "emailInvalid": "Dirección de correo inválida",

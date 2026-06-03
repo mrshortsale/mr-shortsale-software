@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { AppProvider } from '@/contexts/AppContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import LoginPage from '@/pages/LoginPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import Proposal from '@/pages/Proposal';
 import Costs from '@/pages/Costs';
 import NotFound from '@/pages/NotFound';
@@ -73,6 +74,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             <Route path={CEO_BASE} element={<CEOLayout />}>
               <Route index element={<Navigate to="briefing" replace />} />

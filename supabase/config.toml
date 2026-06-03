@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.auth-microsoft-callback]
 verify_jwt = false
+
+[functions.auth-forgot-password]
+verify_jwt = false
+
+[functions.auth-reset-password]
+verify_jwt = false

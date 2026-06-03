@@ -86,6 +86,43 @@ export async function signup(email: string, password: string, name: string): Pro
   }
 }
 
+export async function forgotPassword(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth-forgot-password`, {
+      method: 'POST',
+      headers: baseHeaders(),
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error ?? 'Request failed' };
+
+    return { success: true, message: data.message };
+  } catch {
+    return { success: false, error: 'Network error — please check your connection' };
+  }
+}
+
+export async function resetPassword(
+  token: string,
+  password: string,
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth-reset-password`, {
+      method: 'POST',
+      headers: baseHeaders(),
+      body: JSON.stringify({ token, password }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error ?? 'Reset failed' };
+
+    return { success: true, message: data.message };
+  } catch {
+    return { success: false, error: 'Network error — please check your connection' };
+  }
+}
+
 export async function getMe(): Promise<AuthResponse> {
   const token = getStoredToken();
   if (!token) return { success: false, error: 'No token' };

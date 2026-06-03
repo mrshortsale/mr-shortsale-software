@@ -8,8 +8,6 @@ import {
   AlertCircle,
   Brain,
   CheckCircle2,
-  Eye,
-  EyeOff,
   Loader2,
   Moon,
   Sun,
@@ -19,6 +17,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { isSignupDomainEmail } from '@/lib/emailValidation';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { MicrosoftSignInButton } from '@/components/auth/MicrosoftSignInButton';
+import { PasswordInput } from '@/components/auth/PasswordInput';
+import * as authService from '@/services/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -88,37 +88,17 @@ function buildSignUpSchema(t: (key: string) => string) {
 
 type SignInValues = { email: string; password: string };
 type SignUpValues = { name: string; email: string; password: string; confirmPassword: string };
-
-// ─── Password input with toggle ──────────────────────────────────────────────
-
-interface PasswordInputProps extends React.ComponentPropsWithoutRef<typeof Input> {}
-
-function PasswordInput({ className, ...props }: PasswordInputProps) {
-  const [show, setShow] = useState(false);
-  const { t } = useTranslation();
-  return (
-    <div className="relative">
-      <Input
-        {...props}
-        type={show ? 'text' : 'password'}
-        className={`pr-10 ${className ?? ''}`}
-      />
-      <button
-        type="button"
-        onClick={() => setShow((v) => !v)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-        aria-label={show ? t('login.hidePassword') : t('login.showPassword')}
-        tabIndex={-1}
-      >
-        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-      </button>
-    </div>
-  );
-}
+type ForgotPasswordValues = { email: string };
 
 // ─── Sign In form ─────────────────────────────────────────────────────────────
 
-function SignInForm({ onSwitch }: { onSwitch: () => void }) {
+function SignInForm({
+  onSwitch,
+  onForgotPassword,
+}: {
+  onSwitch: () => void;
+  onForgotPassword: () => void;
+}) {
   const { login } = useAuth();
   const { t } = useTranslation();
   const [serverError, setServerError] = useState('');
@@ -208,6 +188,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
                       </FormLabel>
                       <button
                         type="button"
+                        onClick={onForgotPassword}
                         className="text-xs font-medium text-primary hover:underline"
                       >
                         {t('login.signIn.forgotPassword')}
@@ -269,6 +250,143 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ─── Forgot password form ─────────────────────────────────────────────────────
+
+function buildForgotPasswordSchema(t: (key: string) => string) {
+  return z.object({
+    email: z
+      .string()
+      .min(1, t('login.validation.emailRequired'))
+      .email(t('login.validation.emailInvalid')),
+  });
+}
+
+function ForgotPasswordForm({
+  onBack,
+  onSent,
+}: {
+  onBack: () => void;
+  onSent: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [serverError, setServerError] = useState('');
+
+  const schema = buildForgotPasswordSchema(t);
+  const form = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: '' },
+  });
+
+  const isSubmitting = form.formState.isSubmitting;
+
+  const onSubmit = async (values: ForgotPasswordValues) => {
+    setServerError('');
+    const result = await authService.forgotPassword(values.email);
+    if (!result.success) {
+      setServerError(result.error ?? t('login.forgot.requestFailed'));
+      return;
+    }
+    onSent(result.message ?? t('login.forgot.sentDefault'));
+  };
+
+  return (
+    <Card className="shadow-premium">
+      <CardHeader>
+        <CardTitle className="text-xl">{t('login.forgot.title')}</CardTitle>
+        <CardDescription>{t('login.forgot.subtitle')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {serverError && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{serverError}</span>
+          </div>
+        )}
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.signIn.email')}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t('login.signIn.emailPlaceholder')}
+                      type="email"
+                      autoComplete="email"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="h-10 w-full font-medium" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('login.forgot.submitting')}
+                </>
+              ) : (
+                t('login.forgot.submit')
+              )}
+            </Button>
+          </form>
+        </Form>
+
+        <p className="text-center text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={onBack}
+            className="font-semibold text-primary hover:underline"
+          >
+            {t('login.forgot.backToSignIn')}
+          </button>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ForgotPasswordSentCard({
+  message,
+  onBack,
+}: {
+  message: string;
+  onBack: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Card className="shadow-premium">
+      <CardContent className="pt-8 pb-8">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+            <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">{t('login.forgot.sentTitle')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-2 text-sm font-semibold text-primary hover:underline"
+          >
+            {t('login.forgot.backToSignIn')}
+          </button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -509,7 +627,8 @@ function PendingApprovalCard({ onBack }: { onBack: () => void }) {
 // ─── Page shell ───────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'forgot-sent'>('signin');
+  const [forgotMessage, setForgotMessage] = useState('');
   const { theme, toggleTheme } = useTheme();
   const { t } = useTranslation();
   const [urlParams, setUrlParams] = useSearchParams();
@@ -555,8 +674,27 @@ export default function LoginPage() {
         <div className="w-full space-y-6">
           {isPending ? (
             <PendingApprovalCard onBack={clearPending} />
+          ) : mode === 'forgot-sent' ? (
+            <ForgotPasswordSentCard
+              message={forgotMessage}
+              onBack={() => {
+                setMode('signin');
+                setForgotMessage('');
+              }}
+            />
+          ) : mode === 'forgot' ? (
+            <ForgotPasswordForm
+              onBack={() => setMode('signin')}
+              onSent={(message) => {
+                setForgotMessage(message);
+                setMode('forgot-sent');
+              }}
+            />
           ) : mode === 'signin' ? (
-            <SignInForm onSwitch={() => setMode('signup')} />
+            <SignInForm
+              onSwitch={() => setMode('signup')}
+              onForgotPassword={() => setMode('forgot')}
+            />
           ) : (
             <SignUpForm onSwitch={() => setMode('signin')} />
           )}

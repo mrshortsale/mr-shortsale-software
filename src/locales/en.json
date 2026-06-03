@@ -125,6 +125,30 @@
       "backToSignIn": "Back to Sign in",
       "defaultMessage": "Account created. Your signup is pending CEO approval. You can sign in once approved."
     },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "submit": "Send reset link",
+      "submitting": "Sending...",
+      "backToSignIn": "Back to sign in",
+      "sentTitle": "Check your email",
+      "sentDefault": "If an account exists for that email, you will receive a password reset link shortly.",
+      "requestFailed": "Could not send reset link. Please try again."
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "subtitle": "Enter and confirm your new password below",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "resetFailed": "Could not reset password. Please try again.",
+      "successTitle": "Password updated",
+      "successDesc": "Your password has been changed. You can now sign in with your new password.",
+      "invalidLinkTitle": "Invalid reset link",
+      "invalidLinkDesc": "This password reset link is missing or invalid. Please request a new one.",
+      "backToSignIn": "Back to sign in"
+    },
     "validation": {
       "emailRequired": "Email is required",
       "emailInvalid": "Invalid email address",
