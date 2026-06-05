@@ -13,7 +13,7 @@ function agentToLead(a: RealtorAgent): RealtorLead {
     mlsNumber: a.latestListingId, propertyAddress: a.latestPropertyAddress,
     city: a.latestCity, state: a.latestState,
     listPrice: a.latestListPrice, daysOnMarket: a.latestDaysOnMarket,
-    priceDrops: [], listingUrl: '',
+    priceDrops: [], listingUrl: a.latestPropertyAddress ? `https://www.zillow.com/homes/${encodeURIComponent(`${a.latestPropertyAddress} ${a.latestCity} ${a.latestState}`.replace(/[,#]/g,'').replace(/\s+/g,'-'))}/` : '',
     status: a.status as RealtorLeadStatus, lastContactAt: a.lastContactAt,
     language: a.language as 'EN' | 'ES', source: 'zillow',
   };

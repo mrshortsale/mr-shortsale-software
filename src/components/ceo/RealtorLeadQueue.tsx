@@ -24,6 +24,16 @@ import SourceProvenance from '@/components/shared/SourceProvenance';
 
 type SortKey = 'days' | 'price' | 'drops' | 'newest';
 
+function zillowUrl(address: string, city: string, state: string): string {
+  // Zillow address-based URL: spaces/commas → hyphens, lowercase
+  const slug = `${address} ${city} ${state}`
+    .replace(/[,#]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim();
+  return `https://www.zillow.com/homes/${encodeURIComponent(slug)}/`;
+}
+
 function agentToLead(a: RealtorAgent): RealtorLead {
   return {
     id: a.id,
@@ -38,7 +48,9 @@ function agentToLead(a: RealtorAgent): RealtorLead {
     listPrice: a.latestListPrice,
     daysOnMarket: a.latestDaysOnMarket,
     priceDrops: [],
-    listingUrl: '',
+    listingUrl: a.latestPropertyAddress
+      ? zillowUrl(a.latestPropertyAddress, a.latestCity, a.latestState)
+      : '',
     status: a.status as RealtorLeadStatus,
     lastContactAt: a.lastContactAt,
     language: a.language as 'EN' | 'ES',
