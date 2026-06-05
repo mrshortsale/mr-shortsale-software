@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "feature_id": "bridge-mls-sync",
+  "title": "Bridge MLS Sync",
+  "description": "Config-driven OData worker that ingests MLS listing-agent data from Bridge Data Output and upserts agent-primary leads for the realtor pitch workflow.",
+  "source_paths": [
+    "supabase/functions/bridge-mls-sync/",
+    "supabase/functions/bridge-mls-cron/",
+    "supabase/functions/_shared/bridge.ts",
+    "supabase/functions/integrations-manage/index.ts",
+    "src/components/integrations/MlsProfilesPanel.tsx",
+    "src/components/ceo/MlsSyncControls.tsx",
+    "src/services/bridgeMls.ts"
+  ],
+  "related_paths": [
+    "supabase/migrations/018_bridge_mls_sync.sql",
+    "supabase/migrations/019_bridge_mls_cron.sql",
+    "supabase/functions/zillow-sync/index.ts",
+    "src/components/integrations/IntegrationConfigPanel.tsx",
+    "src/pages/ceo/SyncRunsPage.tsx",
+    "docs/integrations-zillow-meta-ads.md",
+    "docs/features/realtor-channel/"
+  ],
+  "entrypoints": [
+    "supabase/functions/bridge-mls-sync/index.ts",
+    "supabase/functions/bridge-mls-cron/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

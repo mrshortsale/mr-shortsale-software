@@ -13,6 +13,7 @@ import {
   Shield,
   Link,
 } from 'lucide-react';
+import MlsProfilesPanel from './MlsProfilesPanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -635,6 +636,11 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
           </Card>
         )}
       </div>
+
+      {/* MLS Feeds — Bridge / Zillow only */}
+      {integration.slug === 'zillow' && (
+        <MlsProfilesPanel integrationConnected={isConnected} />
+      )}
 
       {/* Delete */}
       {!integration.is_builtin && (

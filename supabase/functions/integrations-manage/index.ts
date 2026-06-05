@@ -2,6 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyJwt } from "../_shared/jwt.ts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { encrypt, decrypt } from "../_shared/crypto.ts";
+import {
+  loadBridgeCredentials,
+  discoverDatasets,
+  testMlsProfile,
+  type MlsSyncProfile,
+} from "../_shared/bridge.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -395,6 +401,164 @@ Deno.serve(async (req) => {
     if (logsErr) return jsonResponse({ error: "Failed to fetch API logs" }, 500);
 
     return jsonResponse({ logs: logs || [], total: count || 0 });
+  }
+
+  // ── MLS PROFILE ACTIONS ─────────────────────────────────────────────────────
+
+  // LIST_MLS_PROFILES: all profiles attached to the zillow integration
+  if (action === "list_mls_profiles") {
+    const { data: profiles, error: listErr } = await supabase
+      .from("bridge_mls_sync_profiles")
+      .select("*")
+      .order("created_at");
+
+    if (listErr) return jsonResponse({ error: "Failed to fetch MLS profiles" }, 500);
+    return jsonResponse({ profiles: profiles ?? [] });
+  }
+
+  // CREATE_MLS_PROFILE: add a new MLS dataset feed
+  if (action === "create_mls_profile") {
+    const { datasetId, displayName } = body as { datasetId?: string; displayName?: string };
+    if (!datasetId || !/^[a-z0-9_]+$/i.test(datasetId.trim())) {
+      return jsonResponse({ error: "datasetId is required and must match [a-zA-Z0-9_]+" }, 400);
+    }
+
+    const { data: integration } = await supabase
+      .from("integrations")
+      .select("id")
+      .eq("slug", "zillow")
+      .single();
+
+    if (!integration) return jsonResponse({ error: "Zillow integration not found" }, 404);
+
+    const { data: profile, error: insertErr } = await supabase
+      .from("bridge_mls_sync_profiles")
+      .insert({
+        integration_id: integration.id,
+        dataset_id: datasetId.trim(),
+        display_name: (displayName ?? datasetId).trim(),
+        enabled: false,
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      if (insertErr.code === "23505") return jsonResponse({ error: "A profile for this dataset_id already exists" }, 409);
+      return jsonResponse({ error: "Failed to create MLS profile" }, 500);
+    }
+    return jsonResponse({ profile }, 201);
+  }
+
+  // UPDATE_MLS_PROFILE: edit any config field on a profile
+  if (action === "update_mls_profile") {
+    const {
+      profileId,
+      displayName,
+      enabled,
+      stateAllowlist,
+      keywordFilters,
+      conditionFilters,
+      odataFilterOverride,
+      selectFields,
+      pageSize,
+      sortOrder,
+    } = body as {
+      profileId?: string;
+      displayName?: string;
+      enabled?: boolean;
+      stateAllowlist?: string[];
+      keywordFilters?: string[];
+      conditionFilters?: string[];
+      odataFilterOverride?: string | null;
+      selectFields?: string[];
+      pageSize?: number;
+      sortOrder?: string;
+    };
+
+    if (!profileId) return jsonResponse({ error: "profileId is required" }, 400);
+
+    const updates: Record<string, unknown> = {};
+    if (displayName !== undefined) updates.display_name = displayName.trim();
+    if (enabled !== undefined) updates.enabled = enabled;
+    if (stateAllowlist !== undefined) updates.state_allowlist = stateAllowlist;
+    if (keywordFilters !== undefined) updates.keyword_filters = keywordFilters;
+    if (conditionFilters !== undefined) updates.condition_filters = conditionFilters;
+    if (odataFilterOverride !== undefined) updates.odata_filter_override = odataFilterOverride || null;
+    if (selectFields !== undefined) updates.select_fields = selectFields;
+    if (pageSize !== undefined) updates.page_size = Math.min(200, Math.max(1, pageSize));
+    if (sortOrder !== undefined) updates.sort_order = sortOrder.trim();
+
+    if (Object.keys(updates).length === 0) return jsonResponse({ error: "No fields to update" }, 400);
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("bridge_mls_sync_profiles")
+      .update(updates)
+      .eq("id", profileId)
+      .select()
+      .single();
+
+    if (updateErr) return jsonResponse({ error: "Failed to update MLS profile" }, 500);
+    return jsonResponse({ profile: updated });
+  }
+
+  // DELETE_MLS_PROFILE: remove profile + cascade (raw, agent leads, runs)
+  if (action === "delete_mls_profile") {
+    const { profileId } = body as { profileId?: string };
+    if (!profileId) return jsonResponse({ error: "profileId is required" }, 400);
+
+    const { error: deleteErr } = await supabase
+      .from("bridge_mls_sync_profiles")
+      .delete()
+      .eq("id", profileId);
+
+    if (deleteErr) return jsonResponse({ error: "Failed to delete MLS profile" }, 500);
+    return jsonResponse({ success: true });
+  }
+
+  // TEST_MLS_PROFILE: fire a $top=1 probe and update last_test_*
+  if (action === "test_mls_profile") {
+    const { profileId } = body as { profileId?: string };
+    if (!profileId) return jsonResponse({ error: "profileId is required" }, 400);
+
+    const { data: profile, error: profErr } = await supabase
+      .from("bridge_mls_sync_profiles")
+      .select("*")
+      .eq("id", profileId)
+      .single();
+
+    if (profErr || !profile) return jsonResponse({ error: "MLS profile not found" }, 404);
+
+    const { credentials, error: credErr } = await loadBridgeCredentials(supabase);
+    if (credErr) return jsonResponse({ error: credErr }, 400);
+
+    const result = await testMlsProfile(profile as MlsSyncProfile, credentials);
+
+    await supabase
+      .from("bridge_mls_sync_profiles")
+      .update({
+        last_tested_at: new Date().toISOString(),
+        last_test_status: result.success ? "success" : "failure",
+        last_test_error: result.error ?? null,
+      })
+      .eq("id", profileId);
+
+    return jsonResponse({
+      success: result.success,
+      latency_ms: result.latencyMs,
+      sample: result.sample,
+      error: result.error,
+      debug: result.debug,
+    });
+  }
+
+  // DISCOVER_MLS_DATASETS: proxy Bridge /datasets endpoint for the dropdown
+  if (action === "discover_mls_datasets") {
+    const { credentials, error: credErr } = await loadBridgeCredentials(supabase);
+    if (credErr) return jsonResponse({ error: credErr }, 400);
+
+    const { datasets, error: discErr } = await discoverDatasets(credentials.baseUrl, credentials.apiKey);
+    if (discErr) return jsonResponse({ error: discErr }, 502);
+    return jsonResponse({ datasets });
   }
 
   return jsonResponse({ error: "Unknown action" }, 400);

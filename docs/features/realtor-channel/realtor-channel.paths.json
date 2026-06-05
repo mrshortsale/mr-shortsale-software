@@ -2,24 +2,23 @@
   "schema_version": "1",
   "feature_id": "realtor-channel",
   "title": "Realtor channel",
-  "description": "Zillow-sourced listing-agent leads: CEO hub modules and rep realtor queue.",
+  "description": "CEO and rep UX for the listing-agent short-sale pitch workflow, backed by Bridge MLS agent leads.",
   "source_paths": [
     "src/components/ceo/RealtorLeadQueue.tsx",
     "src/components/ceo/RealtorPipeline.tsx",
-    "src/components/ceo/RealtorScripts.tsx",
     "src/components/ceo/RealtorReports.tsx",
     "src/components/rep/RealtorQueue.tsx",
     "src/components/shared/RealtorLeadDetailDrawer.tsx",
-    "src/data/realtorLeads.ts"
+    "src/services/realtor.ts",
+    "supabase/functions/realtor-leads/"
   ],
   "related_paths": [
-    "src/integrations/zillow.ts",
-    "supabase/functions/zillow-sync/",
-    "docs/integrations-zillow-meta-ads.md"
+    "src/data/realtorLeads.ts",
+    "supabase/migrations/018_bridge_mls_sync.sql",
+    "docs/features/bridge-mls-sync/"
   ],
   "entrypoints": [
-    "src/components/ceo/RealtorLeadQueue.tsx",
-    "src/components/rep/RealtorQueue.tsx"
+    "supabase/functions/realtor-leads/index.ts"
   ],
-  "mapping_confidence": "medium"
+  "mapping_confidence": "high"
 }

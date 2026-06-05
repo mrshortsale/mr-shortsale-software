@@ -335,6 +335,53 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Bridge Data Output (zillow slug): use access_token query param + test /api/v2/datasets
+  if (integration.slug === "zillow") {
+    if (!apiKey) {
+      return jsonResponse({
+        success: false,
+        latency_ms: 0,
+        error: "No API key stored. Edit credentials, paste your Bridge Data Output access token, save, then test again.",
+        debug: { request_url: `${baseUrl}/api/v2/datasets`, api_key_length: 0 },
+      }, 400);
+    }
+    // Bridge supports Bearer header AND access_token query param; use both for maximum compatibility
+    const bridgeUrl = `${baseUrl}/api/v2/datasets?access_token=${encodeURIComponent(apiKey)}`;
+    const startTime = Date.now();
+    let bridgeResult: HealthCheckResult;
+    try {
+      const resp = await fetch(bridgeUrl, {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      const latencyMs = Date.now() - startTime;
+      let errMsg: string | undefined;
+      if (!resp.ok) {
+        try {
+          const b = await resp.json() as { message?: string; error?: string };
+          errMsg = b.message || b.error || `HTTP ${resp.status}: ${resp.statusText}`;
+        } catch {
+          errMsg = `HTTP ${resp.status}: ${resp.statusText}`;
+        }
+      }
+      bridgeResult = { success: resp.ok, statusCode: resp.status, latencyMs, requestUrl: bridgeUrl, error: errMsg };
+    } catch (err) {
+      const latencyMs = Date.now() - startTime;
+      bridgeResult = { success: false, latencyMs, requestUrl: bridgeUrl, error: err instanceof Error ? err.message : "Network error" };
+    }
+    await updateTestResult(integrationId, cred.id, bridgeResult);
+    await supabase.from("integration_api_logs").insert({
+      integration_id: integrationId, credential_id: cred.id, method: "GET",
+      endpoint: "/api/v2/datasets", status_code: bridgeResult.statusCode || null,
+      latency_ms: bridgeResult.latencyMs, error_message: bridgeResult.error || null, direction: "outbound",
+    });
+    return jsonResponse({
+      success: bridgeResult.success, latency_ms: bridgeResult.latencyMs,
+      status_code: bridgeResult.statusCode, error: bridgeResult.error,
+      debug: { request_url: bridgeUrl, api_key_length: apiKey.length },
+    });
+  }
+
   // Batch Leads: match official docs (GET app.batchleads.io/api/v1/tags, header api-key)
   const batchLeads = isBatchLeads(integration);
   const builtin = batchLeads ? BUILTIN_HEALTH.batchleads : BUILTIN_HEALTH[integration.slug as string];

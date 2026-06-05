@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import BatchSyncControls from '@/components/ceo/BatchSyncControls';
+import MlsSyncControls from '@/components/ceo/MlsSyncControls';
 import { CEO_BASE } from '@/config/ceoNav';
 import { ADMIN_BASE } from '@/config/adminNav';
 import {
@@ -14,6 +15,12 @@ import {
   type InventorySyncRun,
   type InventorySyncStatus,
 } from '@/services/inventory';
+import {
+  getMlsSyncStatus,
+  listMlsSyncRuns,
+  type MlsSyncStatus,
+  type MlsSyncRun,
+} from '@/services/bridgeMls';
 
 const PAGE_SIZE = 15;
 
@@ -81,6 +88,9 @@ export default function SyncRunsPage() {
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<InventorySyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [mlsStatus, setMlsStatus] = useState<MlsSyncStatus | null>(null);
+  const [mlsRuns, setMlsRuns] = useState<MlsSyncRun[]>([]);
+  const [mlsRunsTotal, setMlsRunsTotal] = useState(0);
   const { t, i18n } = useTranslation();
   const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
@@ -90,10 +100,15 @@ export default function SyncRunsPage() {
     setLoading(true);
     setError(null);
     const offset = (page - 1) * PAGE_SIZE;
-    const [{ runs: fetched, total: count, error: listErr }, { data: status }] = await Promise.all([
+    const [{ runs: fetched, total: count, error: listErr }, { data: status }, mlsStatusData, mlsRunsData] = await Promise.all([
       listInventorySyncRuns({ limit: PAGE_SIZE, offset }),
       getBatchSyncStatus(),
+      getMlsSyncStatus(),
+      listMlsSyncRuns({ limit: PAGE_SIZE, offset: 0 }),
     ]);
+    if (mlsStatusData.data) setMlsStatus(mlsStatusData.data);
+    setMlsRuns(mlsRunsData.runs);
+    setMlsRunsTotal(mlsRunsData.total);
     if (listErr) {
       setError(listErr);
       setRuns([]);
@@ -120,6 +135,19 @@ export default function SyncRunsPage() {
     }, 3000);
     return () => clearInterval(t);
   }, [syncStatus?.syncInProgress, loadRuns]);
+
+  // Poll MLS status while any profile is syncing
+  const mlsAnyRunning = mlsStatus?.profiles.some((p) => p.syncInProgress) ?? false;
+  useEffect(() => {
+    if (!mlsAnyRunning) return;
+    const timer = setInterval(() => {
+      getMlsSyncStatus().then(({ data }) => { if (data) setMlsStatus(data); });
+      listMlsSyncRuns({ limit: PAGE_SIZE, offset: 0 }).then(({ runs: r, total: tot }) => {
+        setMlsRuns(r); setMlsRunsTotal(tot);
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [mlsAnyRunning]);
 
   return (
     <div className="space-y-4 max-w-5xl">
@@ -248,6 +276,75 @@ export default function SyncRunsPage() {
           </div>
         </div>
       )}
+
+      {/* ── MLS / Bridge sync section ───────────────────────────────────── */}
+      <div className="border-t pt-6 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-semibold">MLS / Realtor Sync</p>
+            <p className="text-xs text-muted-foreground">
+              {mlsStatus
+                ? `${mlsStatus.profiles.filter((p) => p.enabled).length} enabled feed(s) · ${mlsStatus.profiles.reduce((n, p) => n + p.agentsInDb, 0).toLocaleString(loc)} agents in DB`
+                : 'Loading…'}
+            </p>
+          </div>
+          {mlsStatus && (
+            <MlsSyncControls
+              status={mlsStatus}
+              onStatusChange={setMlsStatus}
+            />
+          )}
+        </div>
+
+        {mlsRuns.length > 0 && (
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <div className="grid grid-cols-[1.2fr_88px_1fr_1.5fr_1.2fr] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted font-bold border-b">
+              <span>Started</span>
+              <span>Status</span>
+              <span>Agents</span>
+              <span>Feed</span>
+              <span>Progress</span>
+            </div>
+            {mlsRuns.map((run) => {
+              const meta = run.metadata ?? {};
+              const agentCount = run.leads_upserted;
+              const feedLabel = run.dataset_id;
+              const progress = [
+                meta.pagesProcessedTotal ? `Page ${meta.pagesProcessedTotal}` : null,
+                meta.cumulativeNew ? `+${Number(meta.cumulativeNew).toLocaleString(loc)} new` : null,
+                meta.cumulativeUpdated ? `${Number(meta.cumulativeUpdated).toLocaleString(loc)} updated` : null,
+              ].filter(Boolean).join(' · ');
+              return (
+                <div
+                  key={run.id}
+                  className="grid grid-cols-[1.2fr_88px_1fr_1.5fr_1.2fr] gap-2 px-3 py-2.5 text-xs border-b last:border-b-0 items-center hover:bg-muted/40"
+                >
+                  <span className="font-mono text-[11px]">{new Date(run.started_at).toLocaleString(loc)}</span>
+                  <StatusBadge status={run.status} />
+                  <span className="font-bold tabular-nums">{agentCount.toLocaleString(loc)}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground">{feedLabel}</span>
+                  <span className="text-[11px] text-muted-foreground truncate" title={run.error_message ?? undefined}>
+                    {run.error_message ?? progress ?? '—'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {mlsRuns.length === 0 && mlsStatus && (
+          <p className="text-xs text-muted-foreground">
+            No MLS sync runs yet.{' '}
+            {mlsStatus.profiles.filter((p) => p.enabled).length === 0
+              ? 'Enable a feed in Integrations → Zillow Listings → MLS Feeds.'
+              : 'Click "Full sync" to start.'}
+          </p>
+        )}
+
+        {mlsRunsTotal > PAGE_SIZE && (
+          <p className="text-xs text-muted-foreground">Showing {mlsRuns.length} of {mlsRunsTotal.toLocaleString(loc)} MLS runs.</p>
+        )}
+      </div>
     </div>
   );
 }

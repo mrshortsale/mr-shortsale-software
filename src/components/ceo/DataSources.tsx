@@ -4,7 +4,7 @@ import { CheckCircle, Activity, Zap, Database, Facebook, PhoneCall, Layers, Sett
 import { getBatchLeadsHealth } from '@/integrations/batchLeads';
 import { getMetaHealth } from '@/integrations/metaAds';
 import { getMojoStatus } from '@/integrations/mojoDialer';
-import { getZillowHealth } from '@/integrations/zillow';
+import { getMlsSyncStatus } from '@/services/bridgeMls';
 
 type DotColor = 'green' | 'orange' | 'gray';
 
@@ -35,7 +35,16 @@ export default function DataSources() {
 
   useEffect(() => {
     (async () => {
-      const [b, m, mojo, z] = await Promise.all([getBatchLeadsHealth(), getMetaHealth(), getMojoStatus(), getZillowHealth()]);
+      const [b, m, mojo, mlsStatusResult] = await Promise.all([getBatchLeadsHealth(), getMetaHealth(), getMojoStatus(), getMlsSyncStatus()]);
+      const mls = mlsStatusResult.data;
+      const mlsConnected = mls?.bridgeConnected ?? false;
+      const mlsEnabledFeeds = mls?.profiles.filter((p) => p.enabled).length ?? 0;
+      const mlsAgentsInDb = mls?.profiles.reduce((n, p) => n + p.agentsInDb, 0) ?? 0;
+      const mlsLastSync = mls?.profiles
+        .map((p) => p.lastRun?.completed_at)
+        .filter(Boolean)
+        .sort()
+        .reverse()[0] ?? null;
       setSources([
         {
           id: 'batch',
@@ -52,16 +61,18 @@ export default function DataSources() {
         },
         {
           id: 'zillow',
-          name: 'Zillow Listings (Realtor Chain)',
-          badge: 'Realtor leads · keyword: "short sale" · nationwide',
+          name: 'Bridge MLS (Realtor Chain)',
+          badge: `Realtor agents · ${mlsEnabledFeeds} feed${mlsEnabledFeeds !== 1 ? 's' : ''} enabled · short-sale filter`,
           badgeColor: 'bg-secondary/15 text-secondary',
           icon: <Building2 size={18} />,
-          description: 'Pulls listings already on Zillow as short sales. Feeds the Realtor Short Sale chain — pitch listing agents directly.',
-          lastSync: z.lastSync,
-          records: `${z.totalActive} active listings · ${z.newToday} new today`,
-          detail: `${z.statesCovered} states tracked · keyword filters: ${z.keywordsTracked.join(', ')}`,
-          dot: 'orange',
-          statusLabel: 'API key pending',
+          description: 'Bridge Data Output RESO API — pulls listing agents from short-sale / distressed MLS entries. Agent-primary dedup feeds the Realtor pitch queue.',
+          lastSync: mlsLastSync ? new Date(mlsLastSync).toLocaleString(loc) : 'Never',
+          records: `${mlsAgentsInDb.toLocaleString(loc)} agents in DB`,
+          detail: mlsEnabledFeeds > 0
+            ? `${mlsEnabledFeeds} MLS feed(s) active · Configure at Integrations → Zillow Listings`
+            : 'No feeds enabled yet — add a dataset_id in Integrations → Zillow Listings',
+          dot: mlsConnected ? (mlsEnabledFeeds > 0 ? 'green' : 'orange') : 'orange',
+          statusLabel: mlsConnected ? (mlsEnabledFeeds > 0 ? 'Active' : 'Connected') : 'API key pending',
         },
         {
           id: 'attom',

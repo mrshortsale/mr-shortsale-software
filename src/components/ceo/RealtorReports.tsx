@@ -1,6 +1,22 @@
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { realtorLeads, realtorPipelineStages } from '@/data/realtorLeads';
+import { realtorPipelineStages, realtorLeads as mockLeads, type RealtorLead } from '@/data/realtorLeads';
+import { fetchRealtorLeads, type RealtorAgent } from '@/services/realtor';
 import { TrendingUp, Building2, DollarSign, Users, Award } from 'lucide-react';
+
+function agentToLead(a: RealtorAgent): RealtorLead {
+  return {
+    id: a.id, agentName: a.agentName, brokerage: a.brokerage,
+    agentPhone: a.agentPhone, agentEmail: a.agentEmail,
+    mlsNumber: a.latestListingId, propertyAddress: a.latestPropertyAddress,
+    city: a.latestCity, state: a.latestState,
+    listPrice: a.latestListPrice, daysOnMarket: a.latestDaysOnMarket,
+    priceDrops: [], listingUrl: '',
+    status: a.status as import('@/data/realtorLeads').RealtorLeadStatus,
+    lastContactAt: a.lastContactAt,
+    language: a.language as 'EN' | 'ES', source: 'zillow',
+  };
+}
 
 function realtorStatusKey(status: string): string {
   const map: Record<string, string> = {
@@ -14,17 +30,24 @@ function realtorStatusKey(status: string): string {
 }
 
 export default function RealtorReports() {
+  const [allLeads, setAllLeads] = useState<RealtorLead[]>(mockLeads);
   const { t } = useTranslation();
-  const totalLeads = realtorLeads.length;
-  const partnered = realtorLeads.filter(l => l.status === 'Partnered').length;
-  const closedWon = realtorLeads.filter(l => l.status === 'Closed Won').length;
-  const declined  = realtorLeads.filter(l => l.status === 'Declined').length;
-  const partnerRate = ((partnered + closedWon) / totalLeads * 100).toFixed(1);
 
-  const totalValueClosed = realtorLeads.filter(l => l.status === 'Closed Won').reduce((s, l) => s + l.listPrice, 0);
-  const pipelineValue = realtorLeads.filter(l => l.status === 'Partnered').reduce((s, l) => s + l.listPrice, 0);
+  const load = useCallback(async () => {
+    const { leads: agents, error } = await fetchRealtorLeads({ limit: 200 });
+    if (!error && agents.length > 0) setAllLeads(agents.map(agentToLead));
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const byBrokerage = realtorLeads.reduce<Record<string, number>>((acc, l) => {
+  const totalLeads = allLeads.length;
+  const partnered = allLeads.filter(l => l.status === 'Partnered').length;
+  const closedWon = allLeads.filter(l => l.status === 'Closed Won').length;
+  const partnerRate = totalLeads > 0 ? ((partnered + closedWon) / totalLeads * 100).toFixed(1) : '0.0';
+
+  const totalValueClosed = allLeads.filter(l => l.status === 'Closed Won').reduce((s, l) => s + l.listPrice, 0);
+  const pipelineValue = allLeads.filter(l => l.status === 'Partnered').reduce((s, l) => s + l.listPrice, 0);
+
+  const byBrokerage = allLeads.reduce<Record<string, number>>((acc, l) => {
     acc[l.brokerage] = (acc[l.brokerage] || 0) + 1;
     return acc;
   }, {});
@@ -43,7 +66,7 @@ export default function RealtorReports() {
         <h3 className="font-bold text-foreground mb-4 flex items-center gap-2"><TrendingUp size={16} className="text-secondary" /> {t('realtorReports.funnelByStage')}</h3>
         <div className="space-y-2">
           {realtorPipelineStages.map(stage => {
-            const count = realtorLeads.filter(l => l.status === stage).length;
+            const count = allLeads.filter(l => l.status === stage).length;
             const pct = (count / totalLeads) * 100;
             return (
               <div key={stage}>

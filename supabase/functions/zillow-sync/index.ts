@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use bridge-mls-sync instead.
+ * Kept as a thin redirect for any callers still using this endpoint.
+ */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyJwt } from "../_shared/jwt.ts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";

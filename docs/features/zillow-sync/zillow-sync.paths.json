@@ -1,16 +1,14 @@
 {
   "schema_version": "1",
   "feature_id": "zillow-sync",
-  "title": "Zillow sync",
-  "description": "Edge Function to sync listing-agent leads from Zillow into the database.",
+  "title": "Zillow sync (deprecated)",
+  "description": "Deprecated Edge Function stub superseded by bridge-mls-sync.",
   "source_paths": [
-    "supabase/functions/zillow-sync/",
-    "src/integrations/zillow.ts"
+    "supabase/functions/zillow-sync/"
   ],
   "related_paths": [
-    "docs/integrations-zillow-meta-ads.md",
-    "src/components/ceo/RealtorLeadQueue.tsx",
-    "supabase/migrations/003_integrations.sql"
+    "src/integrations/zillow.ts",
+    "docs/features/bridge-mls-sync/"
   ],
   "entrypoints": [
     "supabase/functions/zillow-sync/index.ts"

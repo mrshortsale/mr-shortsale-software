@@ -2,31 +2,42 @@
 
 ## Summary
 
-End-to-end UX for listing-agent / realtor leads (primarily Zillow-sourced): CEO kanban queue, partner pipeline, outreach scripts (EN/ES), performance reports, and the rep’s realtor queue with detail drawer.
+End-to-end workflow for the listing-agent / realtor short-sale pitch channel. Ingests MLS agents from Bridge Data Output (via `bridge-mls-sync`), exposes them through the `realtor-leads` read API, and drives the CEO kanban queue, partner pipeline, outreach scripts (EN/ES), performance reports, and the rep's realtor queue.
+
+UI components now read live data from `mls_agent_leads` via `src/services/realtor.ts`, falling back to mock data when the DB is empty (development or pre-first-sync).
 
 ## Scope
 
-**In scope:** All `Realtor*` CEO components, rep `RealtorQueue`, shared `RealtorLeadDetailDrawer`, mock realtor lead data.
+**In scope:**
+- All `Realtor*` CEO components, rep `RealtorQueue`, shared `RealtorLeadDetailDrawer`.
+- `realtor-leads` Edge Function (list, stats, PATCH status/notes).
+- `src/services/realtor.ts` client service.
+- `mls_agent_leads` as the canonical agent lead table.
 
-**Out of scope:** Zillow sync worker details (`zillow-sync`); foreclosure inventory (`lead-inventory`).
+**Out of scope:** MLS sync details (`bridge-mls-sync`); foreclosure inventory (`lead-inventory`).
 
 ## Primary responsibilities
 
-- Track realtor leads from new through partnered/closed.
-- Provide scripts and channel metrics for CEOs.
-- Let reps work assigned realtor leads.
+- Track realtor agents from `New` through `Partnered` / `Closed Won`.
+- Provide scripts and channel metrics for CEOs and reps.
+- Allow status updates and notes inline from queue and pipeline views.
 
 ## Dependencies
 
-- **Features:** `zillow-sync`, `integrations-hub`, `app-shell`, `rep-workspace`.
-- **External:** Zillow integration (when sync is enabled).
+- **Features:** `bridge-mls-sync` (populates `mls_agent_leads`), `integrations-hub`, `app-shell`, `rep-workspace`.
+- **DB:** `mls_agent_leads`, `realtor_sync_runs`, `bridge_mls_sync_profiles`.
+- **Edge Functions:** `realtor-leads`.
 
 ## How to navigate the code
 
-- CEO: `src/components/ceo/Realtor*.tsx` under `/ceo/realtor-*` routes.
-- Rep: `src/components/rep/RealtorQueue.tsx` (`/rep/realtor`).
-- Data: `src/data/realtorLeads.ts`.
+- CEO queue: `src/components/ceo/RealtorLeadQueue.tsx`.
+- CEO pipeline (kanban): `src/components/ceo/RealtorPipeline.tsx`.
+- CEO reports: `src/components/ceo/RealtorReports.tsx`.
+- Rep queue: `src/components/rep/RealtorQueue.tsx`.
+- Shared drawer: `src/components/shared/RealtorLeadDetailDrawer.tsx`.
+- Live data service: `src/services/realtor.ts` → calls `supabase/functions/realtor-leads/`.
+- Mock fallback (dev): `src/data/realtorLeads.ts` (types always exported; mock array used when DB returns empty).
 
-## Open questions / gaps
+## Agent-primary data model
 
-- UI still uses mock realtor leads; align with tables populated by `zillow-sync` when available.
+Each row in `mls_agent_leads` represents one unique agent per MLS feed (`UNIQUE(dataset_id, list_agent_key)`). `listing_count` and `latest_*` fields are refreshed on every sync; the row with the highest `latest_days_on_market` value surfaces as the lead's primary property context.

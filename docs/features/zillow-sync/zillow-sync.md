@@ -1,30 +1,28 @@
-# Zillow sync
+# Zillow sync (deprecated — see bridge-mls-sync)
 
 ## Summary
 
-Backend worker that pulls Zillow listing-agent / short-sale keyword leads into storage for the realtor channel UI. Client stub and docs describe expected API usage.
+Original Edge Function stub that fetched Bridge Data Output listings using a hardcoded filter and returned JSON. Now superseded by `bridge-mls-sync`, which provides multi-profile fan-out, database persistence, and frontend-managed config.
+
+The `zillow-sync` function is retained as a thin backward-compat endpoint with a `@deprecated` notice; all new callers should use `bridge-mls-sync`.
 
 ## Scope
 
-**In scope:** `zillow-sync` Edge Function and `src/integrations/zillow.ts`.
+**In scope:** `supabase/functions/zillow-sync/index.ts` (deprecated stub).
 
-**Out of scope:** Realtor kanban and scripts UI (`realtor-channel`).
+**Out of scope:** Everything — see `bridge-mls-sync` for the live implementation.
 
-## Primary responsibilities
+## Primary responsibilities (historical)
 
-- Authenticate using stored integration credentials.
-- Upsert realtor leads for CEO/rep queues.
+- Authenticate using stored `zillow` integration credentials.
+- Fetch one page from Bridge OData API with a hardcoded `short sale` filter.
+- Return JSON lead array to the calling client (no DB persistence).
 
 ## Dependencies
 
-- **Features:** `integrations-hub`, `realtor-channel`.
-- **External:** Zillow (or proxy) API per integration config.
+- **Features:** `bridge-mls-sync` (replacement), `integrations-hub`.
 
 ## How to navigate the code
 
-- `supabase/functions/zillow-sync/index.ts`
-- `docs/integrations-zillow-meta-ads.md`
-
-## Open questions / gaps
-
-- Confirm target table schema matches `realtorLeads` shape used in the UI.
+- The active implementation is in `supabase/functions/bridge-mls-sync/` and `supabase/functions/_shared/bridge.ts`.
+- Original stub: `supabase/functions/zillow-sync/index.ts`.

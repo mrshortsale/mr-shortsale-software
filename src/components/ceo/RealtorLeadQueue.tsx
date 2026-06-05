@@ -1,16 +1,21 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  realtorLeads,
   RealtorLead,
   RealtorLeadStatus,
-  isHotRealtorLead,
   relativeTime,
-  realtorQueueStats,
+  realtorLeads as mockLeads,
 } from '@/data/realtorLeads';
 import {
+  fetchRealtorLeads,
+  updateRealtorLeadStatus,
+  isHotAgent,
+  type RealtorAgent,
+  type RealtorStats,
+} from '@/services/realtor';
+import {
   Phone, Mail, ExternalLink, Filter, ArrowUpDown, Calendar, MapPin,
-  TrendingDown, Flame, Building2, Globe, Users, RefreshCw, ArrowUpToLine,
+  TrendingDown, Flame, Building2, Globe, Users, RefreshCw, ArrowUpToLine, Loader2,
 } from 'lucide-react';
 import { sendToMojo } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
@@ -18,6 +23,29 @@ import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer
 import SourceProvenance from '@/components/shared/SourceProvenance';
 
 type SortKey = 'days' | 'price' | 'drops' | 'newest';
+
+function agentToLead(a: RealtorAgent): RealtorLead {
+  return {
+    id: a.id,
+    agentName: a.agentName,
+    brokerage: a.brokerage,
+    agentPhone: a.agentPhone,
+    agentEmail: a.agentEmail,
+    mlsNumber: a.latestListingId,
+    propertyAddress: a.latestPropertyAddress,
+    city: a.latestCity,
+    state: a.latestState,
+    listPrice: a.latestListPrice,
+    daysOnMarket: a.latestDaysOnMarket,
+    priceDrops: [],
+    listingUrl: '',
+    status: a.status as RealtorLeadStatus,
+    lastContactAt: a.lastContactAt,
+    language: a.language as 'EN' | 'ES',
+    notes: a.notes ?? undefined,
+    source: 'zillow',
+  };
+}
 
 const statusBadge: Record<RealtorLeadStatus, string> = {
   'New':         'bg-secondary/15 text-secondary',
@@ -41,32 +69,69 @@ function realtorStatusKey(status: RealtorLeadStatus): string {
 }
 
 export default function RealtorLeadQueue() {
+  const [agents, setAgents] = useState<RealtorAgent[]>([]);
+  const [stats, setStats] = useState<RealtorStats>({ total: 0, newToday: 0, hotLeads: 0, awaitingFollowup: 0, lastSyncAt: null });
+  const [loading, setLoading] = useState(true);
+  const [usingMocks, setUsingMocks] = useState(false);
   const [selected, setSelected] = useState<RealtorLead | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('days');
-  const [filterState, setFilterState] = useState<'all' | 'FL' | 'NY' | 'CA'>('all');
+  const [filterState, setFilterState] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RealtorLeadStatus>('all');
   const [esOnly, setEsOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [bulk, setBulk] = useState<Set<string>>(new Set());
   const [bulkRep, setBulkRep] = useState('Carlos M.');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { leads, stats: s, error } = await fetchRealtorLeads({
+      statuses: filterStatus === 'all' ? undefined : [filterStatus],
+      state: filterState === 'all' ? undefined : filterState,
+      language: esOnly ? 'ES' : undefined,
+      hotOnly,
+      limit: 200,
+    });
+    setLoading(false);
+
+    // Only fall back to mocks when the API itself is unreachable (local dev without edge functions)
+    // An empty result is a valid state — it just means no sync has run yet.
+    if (error && leads.length === 0) {
+      const mapped = mockLeads.map((l) => ({
+        id: l.id, profileId: '', datasetId: 'mock', externalId: l.id,
+        listAgentKey: null, agentName: l.agentName, brokerage: l.brokerage,
+        agentPhone: l.agentPhone, agentEmail: l.agentEmail,
+        language: l.language, listingCount: l.priceDrops.length + 1,
+        latestListingId: l.mlsNumber, latestPropertyAddress: l.propertyAddress,
+        latestCity: l.city, latestState: l.state, latestListPrice: l.listPrice,
+        latestDaysOnMarket: l.daysOnMarket, latestPublicRemarks: '',
+        status: l.status as RealtorLeadStatus, lastContactAt: l.lastContactAt,
+        notes: l.notes ?? null, createdAt: '', updatedAt: '',
+      }) as RealtorAgent);
+      setAgents(mapped);
+      setStats({ total: mockLeads.length, newToday: mockLeads.filter(l => l.status === 'New').length, hotLeads: 0, awaitingFollowup: mockLeads.filter(l => l.status === 'Contacted').length, lastSyncAt: null });
+      setUsingMocks(true);
+    } else {
+      setAgents(leads);
+      setStats(s);
+      setUsingMocks(false);
+    }
+  }, [filterStatus, filterState, esOnly, hotOnly]);
+
+  useEffect(() => { load(); }, [load]);
 
   const list = useMemo(() => {
-    let l = [...realtorLeads];
-    if (filterState !== 'all') l = l.filter(x => x.state === filterState);
-    if (filterStatus !== 'all') l = l.filter(x => x.status === filterStatus);
-    if (esOnly) l = l.filter(x => x.language === 'ES');
-    if (hotOnly) l = l.filter(isHotRealtorLead);
+    let l = [...agents];
     l.sort((a, b) => {
-      if (sortKey === 'days') return b.daysOnMarket - a.daysOnMarket;
-      if (sortKey === 'price') return b.listPrice - a.listPrice;
-      if (sortKey === 'drops') return b.priceDrops.length - a.priceDrops.length;
-      // newest = lowest DOM
-      return a.daysOnMarket - b.daysOnMarket;
+      if (sortKey === 'days') return b.latestDaysOnMarket - a.latestDaysOnMarket;
+      if (sortKey === 'price') return b.latestListPrice - a.latestListPrice;
+      if (sortKey === 'drops') return b.listingCount - a.listingCount;
+      return a.latestDaysOnMarket - b.latestDaysOnMarket;
     });
     return l;
-  }, [sortKey, filterState, filterStatus, esOnly, hotOnly]);
+  }, [agents, sortKey]);
 
   const toggleBulk = (id: string) => {
     setBulk(prev => {
@@ -83,18 +148,39 @@ export default function RealtorLeadQueue() {
     setBulk(new Set());
   };
 
+  const handleStatusChange = async (agent: RealtorAgent, status: RealtorLeadStatus) => {
+    if (usingMocks) return;
+    const { error } = await updateRealtorLeadStatus(agent.id, status);
+    if (error) { toast.error(error); return; }
+    setAgents((prev) => prev.map((a) => a.id === agent.id ? { ...a, status } : a));
+    toast.success('Status updated');
+  };
+
+  const lastSyncLabel = stats.lastSyncAt
+    ? new Date(stats.lastSyncAt).toLocaleString(loc)
+    : usingMocks ? 'Mock data' : 'Never';
+
   return (
     <div className="space-y-4">
       {/* Header strip — stats + freshness */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat icon={<Building2 size={14} />} label={t('realtorQueue.stats.total')} value={realtorQueueStats.total} />
-        <Stat icon={<Flame size={14} />}     label={t('realtorQueue.stats.new')} value={realtorQueueStats.newToday} accent="secondary" />
-        <Stat icon={<Phone size={14} />}     label={t('realtorQueue.stats.awaitingFollowup')} value={realtorQueueStats.awaitingFollowup} accent="amber" />
-        <Stat icon={<Users size={14} />}     label={t('realtorQueue.stats.partnered')} value={realtorQueueStats.partneredThisWeek} accent="accent" />
+        <Stat icon={<Building2 size={14} />} label={t('realtorQueue.stats.total')} value={stats.total} />
+        <Stat icon={<Flame size={14} />}     label={t('realtorQueue.stats.new')} value={stats.newToday} accent="secondary" />
+        <Stat icon={<Phone size={14} />}     label={t('realtorQueue.stats.awaitingFollowup')} value={stats.awaitingFollowup} accent="amber" />
+        <Stat icon={<Users size={14} />}     label="Hot agents" value={stats.hotLeads} accent="accent" />
       </div>
 
       <SourceProvenance
-        chips={[{ source: 'Zillow', count: t('realtorQueue.listingsCount', { count: realtorQueueStats.total }), lastSync: '12m ago', status: 'pending' }]}
+        chips={[{
+          source: usingMocks ? 'Zillow' : 'Bridge MLS',
+          count: usingMocks
+            ? `${stats.total} listings · Mock data`
+            : stats.total === 0
+              ? 'No sync yet'
+              : `${stats.total} agents`,
+          lastSync: lastSyncLabel,
+          status: usingMocks ? 'pending' : stats.total > 0 ? 'connected' : 'pending',
+        }]}
       />
 
       {/* Filter bar */}
@@ -155,26 +241,34 @@ export default function RealtorLeadQueue() {
 
       {/* Lead rows */}
       <div className="space-y-2">
-        {list.length === 0 && (
-          <div className="metric-card text-center text-sm text-muted-foreground py-8">
-            {t('realtorQueue.empty')}
+        {loading && (
+          <div className="metric-card text-center py-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" /> Loading agents…
           </div>
         )}
-        {list.map(lead => {
-          const hot = isHotRealtorLead(lead);
-          const checked = bulk.has(lead.id);
+        {!loading && list.length === 0 && !usingMocks && (
+          <div className="metric-card text-center text-sm text-muted-foreground py-10 space-y-2">
+            <p className="font-semibold text-foreground">No agent leads yet</p>
+            <p className="text-xs">Run a Bridge MLS sync to populate this queue.</p>
+            <p className="text-xs">Go to <a href="/ceo/sync-runs" className="text-secondary underline underline-offset-2">Sync Runs</a> → Bridge MLS → Start Sync, or enable a feed in <a href="/integrations" className="text-secondary underline underline-offset-2">Integrations → Zillow Listings → MLS Feeds</a>.</p>
+          </div>
+        )}
+        {!loading && list.map(agent => {
+          const hot = isHotAgent(agent);
+          const checked = bulk.has(agent.id);
+          const lead = agentToLead(agent);
           return (
             <div
-              key={lead.id}
+              key={agent.id}
               className={`metric-card flex flex-col md:flex-row md:items-center gap-3 transition-shadow hover:shadow-md ${checked ? 'ring-2 ring-secondary' : ''}`}
             >
               <input
                 type="checkbox"
                 checked={checked}
-                onChange={() => toggleBulk(lead.id)}
+                onChange={() => toggleBulk(agent.id)}
                 onClick={e => e.stopPropagation()}
                 className="shrink-0 h-4 w-4 accent-current text-secondary"
-                aria-label={`Select ${lead.agentName}`}
+                aria-label={`Select ${agent.agentName}`}
               />
 
               <button
@@ -182,79 +276,86 @@ export default function RealtorLeadQueue() {
                 className="flex-1 min-w-0 text-left"
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-foreground">{lead.agentName}</span>
-                  <span className="text-xs text-muted-foreground">· {lead.brokerage}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${statusBadge[lead.status]}`}>{t(realtorStatusKey(lead.status))}</span>
+                  <span className="font-bold text-foreground">{agent.agentName}</span>
+                  <span className="text-xs text-muted-foreground">· {agent.brokerage}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${statusBadge[agent.status as RealtorLeadStatus]}`}>{t(realtorStatusKey(agent.status as RealtorLeadStatus))}</span>
                   {hot && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-speed text-white font-bold flex items-center gap-1">
                       <Flame size={9} /> {t('realtorQueue.hot')}
                     </span>
                   )}
-                  {lead.language === 'ES' && (
+                  {agent.language === 'ES' && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/10 text-secondary font-bold">ES</span>
                   )}
-                  <span className="text-[10px] text-muted-foreground">MLS# {lead.mlsNumber}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {agent.listingCount > 1 ? `${agent.listingCount} listings` : `MLS# ${agent.latestListingId}`}
+                  </span>
+                  {!usingMocks && (
+                    <span className="text-[10px] font-mono text-muted-foreground">{agent.datasetId}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                  <MapPin size={11} /> {lead.propertyAddress}, {lead.city}, {lead.state}
+                  <MapPin size={11} /> {agent.latestPropertyAddress}, {agent.latestCity}, {agent.latestState}
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-0.5">
-                  {t('realtorQueue.lastContact')} {relativeTime(lead.lastContactAt)}
+                  {t('realtorQueue.lastContact')} {relativeTime(agent.lastContactAt)}
                 </div>
               </button>
 
               <div className="flex items-center gap-4 text-xs">
                 <div className="text-right">
                   <p className="text-muted-foreground">{t('realtorQueue.list')}</p>
-                  <p className="font-bold text-foreground">${(lead.listPrice / 1000).toFixed(0)}k</p>
+                  <p className="font-bold text-foreground">${(agent.latestListPrice / 1000).toFixed(0)}k</p>
                 </div>
                 <div className="text-right">
                   <p className="text-muted-foreground flex items-center gap-1 justify-end"><Calendar size={10} /> {t('realtorQueue.dom')}</p>
-                  <p className={`font-bold ${lead.daysOnMarket >= 90 ? 'text-speed' : 'text-foreground'}`}>{lead.daysOnMarket}d</p>
+                  <p className={`font-bold ${agent.latestDaysOnMarket >= 90 ? 'text-speed' : 'text-foreground'}`}>{agent.latestDaysOnMarket}d</p>
                 </div>
-                {lead.priceDrops.length > 0 && (
+                {agent.listingCount > 1 && (
                   <div className="text-right">
-                    <p className="text-muted-foreground flex items-center gap-1 justify-end"><TrendingDown size={10} /> {t('realtorQueue.drops')}</p>
-                    <p className="font-bold text-speed">{lead.priceDrops.length}</p>
+                    <p className="text-muted-foreground flex items-center gap-1 justify-end"><TrendingDown size={10} /> listings</p>
+                    <p className="font-bold text-speed">{agent.listingCount}</p>
                   </div>
                 )}
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={e => { e.stopPropagation(); sendToMojo([lead.id]).then(() => toast.success(t('realtorQueue.mojoQueued', { name: lead.agentName }))); }}
+                  onClick={e => { e.stopPropagation(); sendToMojo([agent.id]).then(() => toast.success(t('realtorQueue.mojoQueued', { name: agent.agentName }))); }}
                   className="w-8 h-8 rounded-md bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground flex items-center justify-center"
                   title={t('realtorQueue.pushToMojoTitle')}
                 >
                   <ArrowUpToLine size={13} />
                 </button>
                 <a
-                  href={`mailto:${lead.agentEmail}`}
+                  href={`mailto:${agent.agentEmail}`}
                   onClick={e => e.stopPropagation()}
                   className="w-8 h-8 rounded-md bg-secondary/15 text-secondary hover:bg-secondary hover:text-secondary-foreground flex items-center justify-center"
                   title={t('realtorQueue.emailTitle')}
                 >
                   <Mail size={13} />
                 </a>
-                <a
-                  href={lead.listingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  className="w-8 h-8 rounded-md bg-muted text-foreground hover:bg-muted/70 flex items-center justify-center"
-                  title={t('realtorQueue.listingTitle')}
-                >
-                  <ExternalLink size={13} />
-                </a>
                 <select
-                  value={assignments[lead.id] ?? 'Unassigned'}
-                  onChange={e => { setAssignments(a => ({ ...a, [lead.id]: e.target.value })); }}
+                  value={assignments[agent.id] ?? 'Unassigned'}
+                  onChange={e => { setAssignments(a => ({ ...a, [agent.id]: e.target.value })); }}
                   onClick={e => e.stopPropagation()}
                   className="text-[11px] bg-muted rounded px-1.5 py-1 border-0 outline-none max-w-[110px]"
                   title={t('realtorQueue.assignRep')}
                 >
                   {reps.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
+                {!usingMocks && (
+                  <select
+                    value={agent.status}
+                    onChange={e => { e.stopPropagation(); handleStatusChange(agent, e.target.value as RealtorLeadStatus); }}
+                    onClick={e => e.stopPropagation()}
+                    className="text-[11px] bg-muted rounded px-1.5 py-1 border-0 outline-none max-w-[100px]"
+                  >
+                    {(['New', 'Contacted', 'Partnered', 'Closed Won', 'Declined'] as RealtorLeadStatus[]).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           );
