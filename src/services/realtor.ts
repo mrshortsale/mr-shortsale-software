@@ -37,6 +37,7 @@ export interface RealtorAgent {
   latestDaysOnMarket: number;
   latestPublicRemarks: string;
   status: RealtorLeadStatus;
+  assignedRep: string | null;
   lastContactAt: string | null;
   notes: string | null;
   createdAt: string;
@@ -108,9 +109,16 @@ export async function updateRealtorLeadStatus(
 
 export async function updateRealtorLead(
   id: string,
-  fields: { status?: RealtorLeadStatus; notes?: string; lastContactAt?: string | null },
+  fields: { status?: RealtorLeadStatus; notes?: string; lastContactAt?: string | null; assignedRep?: string | null },
 ): Promise<{ lead: RealtorAgent | null; error: string | null }> {
   return patchLead(id, fields);
+}
+
+export async function assignRealtorRep(
+  id: string,
+  assignedRep: string | null,
+): Promise<{ lead: RealtorAgent | null; error: string | null }> {
+  return patchLead(id, { assignedRep });
 }
 
 async function patchLead(

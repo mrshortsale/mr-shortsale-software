@@ -1,23 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { realtorPipelineStages, RealtorLead, RealtorLeadStatus, realtorLeads as mockLeads } from '@/data/realtorLeads';
+import { realtorPipelineStages, RealtorLeadStatus, realtorLeads as mockLeads } from '@/data/realtorLeads';
 import { fetchRealtorLeads, type RealtorAgent } from '@/services/realtor';
-import { Building2, Phone, Calendar, Home, ExternalLink } from 'lucide-react';
+import { Building2, Calendar, Home } from 'lucide-react';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
 import SourceProvenance from '@/components/shared/SourceProvenance';
-
-function agentToLead(a: RealtorAgent): RealtorLead {
-  return {
-    id: a.id, agentName: a.agentName, brokerage: a.brokerage,
-    agentPhone: a.agentPhone, agentEmail: a.agentEmail,
-    mlsNumber: a.latestListingId, propertyAddress: a.latestPropertyAddress,
-    city: a.latestCity, state: a.latestState,
-    listPrice: a.latestListPrice, daysOnMarket: a.latestDaysOnMarket,
-    priceDrops: [], listingUrl: a.latestPropertyAddress ? `https://www.zillow.com/homes/${encodeURIComponent(`${a.latestPropertyAddress} ${a.latestCity} ${a.latestState}`.replace(/[,#]/g,'').replace(/\s+/g,'-'))}/` : '',
-    status: a.status as RealtorLeadStatus, lastContactAt: a.lastContactAt,
-    language: a.language as 'EN' | 'ES', source: 'zillow',
-  };
-}
 
 const stageColor: Record<RealtorLeadStatus, string> = {
   'New':         'border-l-secondary',
@@ -36,18 +23,30 @@ const stageBadge: Record<RealtorLeadStatus, string> = {
 };
 
 export default function RealtorPipeline() {
-  const [leads, setLeads] = useState<RealtorLead[]>([]);
+  const [agents, setAgents] = useState<RealtorAgent[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [selected, setSelected] = useState<RealtorLead | null>(null);
+  const [drawerAgent, setDrawerAgent] = useState<RealtorAgent | null>(null);
   const { t } = useTranslation();
 
   const load = useCallback(async () => {
-    const { leads: agents, total, error } = await fetchRealtorLeads({ limit: 200 });
-    if (error || agents.length === 0) {
-      setLeads(mockLeads);
+    const { leads, total, error } = await fetchRealtorLeads({ limit: 200 });
+    if (error || leads.length === 0) {
+      // Map mock leads to minimal RealtorAgent shape for pipeline display
+      const mapped = mockLeads.map(l => ({
+        id: l.id, profileId: '', datasetId: 'mock', externalId: l.id,
+        listAgentKey: null, agentName: l.agentName, brokerage: l.brokerage,
+        agentPhone: l.agentPhone, agentEmail: l.agentEmail,
+        language: l.language as 'EN' | 'ES', listingCount: l.priceDrops.length + 1,
+        latestListingId: l.mlsNumber, latestPropertyAddress: l.propertyAddress,
+        latestCity: l.city, latestState: l.state, latestListPrice: l.listPrice,
+        latestDaysOnMarket: l.daysOnMarket, latestPublicRemarks: '',
+        status: l.status as RealtorLeadStatus, lastContactAt: l.lastContactAt,
+        notes: l.notes ?? null, createdAt: '', updatedAt: '',
+      }) as RealtorAgent);
+      setAgents(mapped);
       setTotalCount(mockLeads.length);
     } else {
-      setLeads(agents.map(agentToLead));
+      setAgents(leads);
       setTotalCount(total);
     }
   }, []);
@@ -56,7 +55,7 @@ export default function RealtorPipeline() {
 
   return (
     <div className="space-y-4">
-      <SourceProvenance chips={[{ source: 'Zillow', count: t('realtorQueue.listingsCount', { count: totalCount }), lastSync: 'live', status: totalCount > 0 ? 'connected' : 'pending' }]} />
+      <SourceProvenance chips={[{ source: 'Bridge MLS', count: t('realtorQueue.listingsCount', { count: totalCount }), lastSync: 'live', status: totalCount > 0 ? 'connected' : 'pending' }]} />
       <div className="rounded-xl bg-gradient-to-r from-secondary/10 to-accent/10 border border-secondary/20 p-4">
         <div className="flex items-start gap-3">
           <Building2 className="text-secondary mt-0.5" size={20} />
@@ -71,7 +70,7 @@ export default function RealtorPipeline() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3">
         {realtorPipelineStages.map(stage => {
-          const items = leads.filter(l => l.status === stage);
+          const items = agents.filter(a => a.status === stage);
           return (
             <div key={stage} className="bg-muted/40 rounded-xl p-3 min-h-[400px]">
               <div className="flex items-center justify-between mb-3">
@@ -79,24 +78,24 @@ export default function RealtorPipeline() {
                 <span className="text-xs font-bold text-muted-foreground">{items.length}</span>
               </div>
               <div className="space-y-2">
-                {items.map(lead => (
+                {items.map(agent => (
                   <button
-                    key={lead.id}
-                    onClick={() => setSelected(lead)}
+                    key={agent.id}
+                    onClick={() => setDrawerAgent(agent)}
                     className={`w-full text-left bg-card border-l-4 ${stageColor[stage]} rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow`}
                   >
-                    <p className="text-sm font-bold text-foreground truncate">{lead.agentName}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{lead.brokerage}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{agent.agentName}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{agent.brokerage}</p>
                     <div className="flex items-center gap-1 mt-2 text-[11px] text-muted-foreground">
                       <Home size={10} />
-                      <span className="truncate">{lead.propertyAddress}, {lead.city}</span>
+                      <span className="truncate">{agent.latestPropertyAddress}, {agent.latestCity}</span>
                     </div>
                     <div className="flex items-center justify-between mt-2 text-[11px]">
-                      <span className="text-foreground font-medium">${(lead.listPrice / 1000).toFixed(0)}k</span>
-                      <span className="text-muted-foreground flex items-center gap-1"><Calendar size={10} /> {lead.daysOnMarket}d</span>
+                      <span className="text-foreground font-medium">${(agent.latestListPrice / 1000).toFixed(0)}k</span>
+                      <span className="text-muted-foreground flex items-center gap-1"><Calendar size={10} /> {agent.latestDaysOnMarket}d</span>
                     </div>
-                    {lead.priceDrops.length > 0 && (
-                      <span className="inline-block mt-1 text-[10px] text-speed">{t('realtorPipeline.priceDrops', { count: lead.priceDrops.length })}</span>
+                    {agent.listingCount > 1 && (
+                      <span className="inline-block mt-1 text-[10px] text-speed">{t('realtorPipeline.priceDrops', { count: agent.listingCount - 1 })}</span>
                     )}
                   </button>
                 ))}
@@ -106,7 +105,11 @@ export default function RealtorPipeline() {
         })}
       </div>
 
-      {selected && <RealtorLeadDetailDrawer lead={selected} onClose={() => setSelected(null)} />}
+      <RealtorLeadDetailDrawer
+        agent={drawerAgent ?? ({} as RealtorAgent)}
+        open={!!drawerAgent}
+        onOpenChange={(open) => { if (!open) setDrawerAgent(null); }}
+      />
     </div>
   );
 }

@@ -2,13 +2,13 @@ import { Database, Building2, Facebook, Layers, ArrowRight } from 'lucide-react'
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export type ProvenanceSource = 'Batch' | 'Zillow' | 'Meta' | 'ATOM';
+export type ProvenanceSource = 'Batch' | 'Zillow' | 'Meta' | 'ATOM' | 'Bridge MLS';
 
 interface ChipDef {
   source: ProvenanceSource;
   count?: string | number;
   lastSync: string;
-  status?: 'live' | 'ok' | 'pending' | 'pilot';
+  status?: 'live' | 'ok' | 'pending' | 'pilot' | 'connected';
 }
 
 interface Props {
@@ -21,11 +21,13 @@ const ICONS: Record<ProvenanceSource, ReactNode> = {
   Zillow: <Building2 size={12} />,
   Meta: <Facebook size={12} />,
   ATOM: <Layers size={12} />,
+  'Bridge MLS': <Building2 size={12} />,
 };
 
 const STATUS_DOT: Record<NonNullable<ChipDef['status']>, string> = {
   live: 'bg-speed animate-pulse',
   ok: 'bg-accent',
+  connected: 'bg-accent',
   pending: 'bg-amber-500',
   pilot: 'bg-secondary',
 };

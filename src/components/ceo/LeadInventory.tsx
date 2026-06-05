@@ -302,8 +302,25 @@ export default function LeadInventory() {
   const clearSelection = () => setSelected(new Set());
 
   const bulkPushMojo = () => {
-    sendToMojo([...selected]).then((r) =>
-      toast.success(t('inventory.toasts.mojoQueued', { count: r.queued }), {
+    const targets = leads
+      .filter((l) => selected.has(l.id))
+      .map((l) => ({
+        id: l.id,
+        agentName: l.owner,
+        agentPhone: l.phone ?? '',
+        agentEmail: '',
+        brokerage: l.source ?? '',
+        latestPropertyAddress: l.address,
+        latestCity: l.city,
+        latestState: l.state,
+        latestListPrice: 0,
+        latestDaysOnMarket: 0,
+        latestListingId: l.id,
+        datasetId: 'inventory',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any);
+    sendToMojo(targets).then((r) =>
+      toast.success(t('inventory.toasts.mojoQueued', { count: r.sent ?? 0 }), {
         description: t('inventory.toasts.mojoQueuedDesc'),
       }),
     );
@@ -364,7 +381,9 @@ export default function LeadInventory() {
     loadLeads();
   };
   const drawerMojo = (lead: InventoryLead) => {
-    sendToMojo([lead.id]).then((r) => toast.success(t('inventory.toasts.mojoQueuedSingle', { count: r.queued })));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const target: any = { id: lead.id, agentName: lead.owner, agentPhone: lead.phone ?? '', agentEmail: '', brokerage: lead.source ?? '', latestPropertyAddress: lead.address, latestCity: lead.city, latestState: lead.state, latestListPrice: 0, latestDaysOnMarket: 0, latestListingId: lead.id, datasetId: 'inventory' };
+    sendToMojo([target]).then((r) => toast.success(t('inventory.toasts.mojoQueuedSingle', { count: r.sent ?? 0 })));
     setDrawerOpen(false);
   };
 

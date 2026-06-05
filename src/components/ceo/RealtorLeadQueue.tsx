@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  RealtorLead,
   RealtorLeadStatus,
   relativeTime,
   realtorLeads as mockLeads,
@@ -9,13 +8,15 @@ import {
 import {
   fetchRealtorLeads,
   updateRealtorLeadStatus,
+  assignRealtorRep,
   isHotAgent,
   type RealtorAgent,
   type RealtorStats,
 } from '@/services/realtor';
 import {
-  Phone, Mail, ExternalLink, Filter, ArrowUpDown, Calendar, MapPin,
-  TrendingDown, Flame, Building2, Globe, Users, RefreshCw, ArrowUpToLine, Loader2,
+  Filter, ArrowUpDown, Calendar, MapPin, Phone,
+  TrendingDown, Flame, Building2, Globe, Users, RefreshCw, ArrowUpToLine, Loader2, Send,
+  Mail,
 } from 'lucide-react';
 import { sendToMojo } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
@@ -23,41 +24,6 @@ import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer
 import SourceProvenance from '@/components/shared/SourceProvenance';
 
 type SortKey = 'days' | 'price' | 'drops' | 'newest';
-
-function zillowUrl(address: string, city: string, state: string): string {
-  // Zillow address-based URL: spaces/commas → hyphens, lowercase
-  const slug = `${address} ${city} ${state}`
-    .replace(/[,#]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim();
-  return `https://www.zillow.com/homes/${encodeURIComponent(slug)}/`;
-}
-
-function agentToLead(a: RealtorAgent): RealtorLead {
-  return {
-    id: a.id,
-    agentName: a.agentName,
-    brokerage: a.brokerage,
-    agentPhone: a.agentPhone,
-    agentEmail: a.agentEmail,
-    mlsNumber: a.latestListingId,
-    propertyAddress: a.latestPropertyAddress,
-    city: a.latestCity,
-    state: a.latestState,
-    listPrice: a.latestListPrice,
-    daysOnMarket: a.latestDaysOnMarket,
-    priceDrops: [],
-    listingUrl: a.latestPropertyAddress
-      ? zillowUrl(a.latestPropertyAddress, a.latestCity, a.latestState)
-      : '',
-    status: a.status as RealtorLeadStatus,
-    lastContactAt: a.lastContactAt,
-    language: a.language as 'EN' | 'ES',
-    notes: a.notes ?? undefined,
-    source: 'zillow',
-  };
-}
 
 const statusBadge: Record<RealtorLeadStatus, string> = {
   'New':         'bg-secondary/15 text-secondary',
@@ -85,15 +51,15 @@ export default function RealtorLeadQueue() {
   const [stats, setStats] = useState<RealtorStats>({ total: 0, newToday: 0, hotLeads: 0, awaitingFollowup: 0, lastSyncAt: null });
   const [loading, setLoading] = useState(true);
   const [usingMocks, setUsingMocks] = useState(false);
-  const [selected, setSelected] = useState<RealtorLead | null>(null);
+  const [drawerAgent, setDrawerAgent] = useState<RealtorAgent | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('days');
   const [filterState, setFilterState] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RealtorLeadStatus>('all');
   const [esOnly, setEsOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [bulk, setBulk] = useState<Set<string>>(new Set());
   const [bulkRep, setBulkRep] = useState('Carlos M.');
+  const [mojoPushing, setMojoPushing] = useState<Set<string>>(new Set());
   const { t, i18n } = useTranslation();
   const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
@@ -119,8 +85,9 @@ export default function RealtorLeadQueue() {
         latestListingId: l.mlsNumber, latestPropertyAddress: l.propertyAddress,
         latestCity: l.city, latestState: l.state, latestListPrice: l.listPrice,
         latestDaysOnMarket: l.daysOnMarket, latestPublicRemarks: '',
-        status: l.status as RealtorLeadStatus, lastContactAt: l.lastContactAt,
-        notes: l.notes ?? null, createdAt: '', updatedAt: '',
+        status: l.status as RealtorLeadStatus, assignedRep: null,
+        lastContactAt: l.lastContactAt, notes: l.notes ?? null,
+        createdAt: '', updatedAt: '',
       }) as RealtorAgent);
       setAgents(mapped);
       setStats({ total: mockLeads.length, newToday: mockLeads.filter(l => l.status === 'New').length, hotLeads: 0, awaitingFollowup: mockLeads.filter(l => l.status === 'Contacted').length, lastSyncAt: null });
@@ -154,10 +121,28 @@ export default function RealtorLeadQueue() {
   };
 
   const applyBulk = () => {
-    const next = { ...assignments };
-    bulk.forEach(id => { next[id] = bulkRep; });
-    setAssignments(next);
+    const targets = list.filter(a => bulk.has(a.id));
+    targets.forEach(agent => handleAssignRep(agent, bulkRep));
     setBulk(new Set());
+  };
+
+  const pushToMojo = async (targets: RealtorAgent[]) => {
+    const ids = new Set(targets.map(a => a.id));
+    setMojoPushing(prev => new Set([...prev, ...ids]));
+    try {
+      const result = await sendToMojo(targets);
+      if (result.ok) {
+        toast.success(`Sent ${result.sent} agent${result.sent !== 1 ? 's' : ''} to Mojo`);
+      } else if (result.sent > 0) {
+        toast.warning(`Sent ${result.sent}, failed ${result.failed}: ${result.errors[0] ?? ''}`);
+      } else {
+        toast.error(`Push failed: ${result.errors[0] ?? 'Unknown error'}`);
+      }
+    } catch (e) {
+      toast.error(`Push failed: ${(e as Error).message}`);
+    } finally {
+      setMojoPushing(prev => { const next = new Set(prev); ids.forEach(id => next.delete(id)); return next; });
+    }
   };
 
   const handleStatusChange = async (agent: RealtorAgent, status: RealtorLeadStatus) => {
@@ -166,6 +151,20 @@ export default function RealtorLeadQueue() {
     if (error) { toast.error(error); return; }
     setAgents((prev) => prev.map((a) => a.id === agent.id ? { ...a, status } : a));
     toast.success('Status updated');
+  };
+
+  const handleAssignRep = async (agent: RealtorAgent, rep: string) => {
+    const repValue = rep === 'Unassigned' ? null : rep;
+    // Optimistic update
+    setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, assignedRep: repValue } : a));
+    if (!usingMocks) {
+      const { error } = await assignRealtorRep(agent.id, repValue);
+      if (error) {
+        toast.error(`Failed to assign rep: ${error}`);
+        // Revert on failure
+        setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, assignedRep: agent.assignedRep } : a));
+      }
+    }
   };
 
   const lastSyncLabel = stats.lastSyncAt
@@ -247,6 +246,15 @@ export default function RealtorLeadQueue() {
             {reps.filter(r => r !== 'Unassigned').map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           <button onClick={applyBulk} className="ml-auto bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold hover:opacity-90">{t('realtorQueue.bulk.assign')}</button>
+          <button
+            onClick={() => {
+              const targets = list.filter(a => bulk.has(a.id));
+              pushToMojo(targets).then(() => setBulk(new Set()));
+            }}
+            className="flex items-center gap-1 bg-card text-foreground px-3 py-1 rounded text-xs font-bold hover:bg-muted"
+          >
+            <Send size={11} /> Push to Mojo
+          </button>
           <button onClick={() => setBulk(new Set())} className="text-xs opacity-70 hover:opacity-100">{t('realtorQueue.bulk.clear')}</button>
         </div>
       )}
@@ -268,7 +276,6 @@ export default function RealtorLeadQueue() {
         {!loading && list.map(agent => {
           const hot = isHotAgent(agent);
           const checked = bulk.has(agent.id);
-          const lead = agentToLead(agent);
           return (
             <div
               key={agent.id}
@@ -284,7 +291,7 @@ export default function RealtorLeadQueue() {
               />
 
               <button
-                onClick={() => setSelected(lead)}
+                onClick={() => setDrawerAgent(agent)}
                 className="flex-1 min-w-0 text-left"
               >
                 <div className="flex items-center gap-2 flex-wrap">
@@ -333,11 +340,12 @@ export default function RealtorLeadQueue() {
 
               <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={e => { e.stopPropagation(); sendToMojo([agent.id]).then(() => toast.success(t('realtorQueue.mojoQueued', { name: agent.agentName }))); }}
-                  className="w-8 h-8 rounded-md bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground flex items-center justify-center"
+                  onClick={e => { e.stopPropagation(); pushToMojo([agent]); }}
+                  disabled={mojoPushing.has(agent.id)}
+                  className="w-8 h-8 rounded-md bg-accent/15 text-accent hover:bg-accent hover:text-accent-foreground flex items-center justify-center disabled:opacity-50"
                   title={t('realtorQueue.pushToMojoTitle')}
                 >
-                  <ArrowUpToLine size={13} />
+                  {mojoPushing.has(agent.id) ? <Loader2 size={13} className="animate-spin" /> : <ArrowUpToLine size={13} />}
                 </button>
                 <a
                   href={`mailto:${agent.agentEmail}`}
@@ -348,8 +356,8 @@ export default function RealtorLeadQueue() {
                   <Mail size={13} />
                 </a>
                 <select
-                  value={assignments[agent.id] ?? 'Unassigned'}
-                  onChange={e => { setAssignments(a => ({ ...a, [agent.id]: e.target.value })); }}
+                  value={agent.assignedRep ?? 'Unassigned'}
+                  onChange={e => { e.stopPropagation(); handleAssignRep(agent, e.target.value); }}
                   onClick={e => e.stopPropagation()}
                   className="text-[11px] bg-muted rounded px-1.5 py-1 border-0 outline-none max-w-[110px]"
                   title={t('realtorQueue.assignRep')}
@@ -374,7 +382,16 @@ export default function RealtorLeadQueue() {
         })}
       </div>
 
-      {selected && <RealtorLeadDetailDrawer lead={selected} onClose={() => setSelected(null)} />}
+      <RealtorLeadDetailDrawer
+        key={drawerAgent?.id ?? 'none'}
+        agent={drawerAgent ?? ({} as RealtorAgent)}
+        open={!!drawerAgent}
+        onOpenChange={(open) => { if (!open) setDrawerAgent(null); }}
+        assignedRep={drawerAgent?.assignedRep ?? undefined}
+        reps={reps}
+        onStatusChange={handleStatusChange}
+        onAssignRep={handleAssignRep}
+      />
     </div>
   );
 }

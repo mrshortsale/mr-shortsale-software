@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  RealtorLead,
   RealtorLeadStatus,
   relativeTime,
   realtorLeads as mockLeads,
@@ -21,19 +20,6 @@ import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer
 
 type SortKey = 'days' | 'newest' | 'drops';
 
-function agentToLead(a: RealtorAgent): RealtorLead {
-  return {
-    id: a.id, agentName: a.agentName, brokerage: a.brokerage,
-    agentPhone: a.agentPhone, agentEmail: a.agentEmail,
-    mlsNumber: a.latestListingId, propertyAddress: a.latestPropertyAddress,
-    city: a.latestCity, state: a.latestState,
-    listPrice: a.latestListPrice, daysOnMarket: a.latestDaysOnMarket,
-    priceDrops: [], listingUrl: a.latestPropertyAddress ? `https://www.zillow.com/homes/${encodeURIComponent(`${a.latestPropertyAddress} ${a.latestCity} ${a.latestState}`.replace(/[,#]/g,'').replace(/\s+/g,'-'))}/` : '',
-    status: a.status as RealtorLeadStatus, lastContactAt: a.lastContactAt,
-    language: a.language as 'EN' | 'ES', source: 'zillow',
-  };
-}
-
 const statusBadge: Record<RealtorLeadStatus, string> = {
   'New':         'bg-secondary/15 text-secondary',
   'Contacted':   'bg-amber-100 text-amber-700',
@@ -45,11 +31,28 @@ const statusBadge: Record<RealtorLeadStatus, string> = {
 export default function RealtorQueue() {
   const [agents, setAgents] = useState<RealtorAgent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<RealtorLead | null>(null);
+  const [drawerAgent, setDrawerAgent] = useState<RealtorAgent | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('days');
   const [esOnly, setEsOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
+  const [mojoPushing, setMojoPushing] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
+
+  const pushToMojo = async (agent: RealtorAgent) => {
+    setMojoPushing(prev => new Set([...prev, agent.id]));
+    try {
+      const result = await sendToMojo([agent]);
+      if (result.ok) {
+        toast.success(t('realtorQueue.mojoQueued', { name: agent.agentName }), { description: t('realtorQueueRep.pushToMojoDesc') });
+      } else {
+        toast.error(`Push failed: ${result.errors[0] ?? 'Unknown error'}`);
+      }
+    } catch (e) {
+      toast.error(`Push failed: ${(e as Error).message}`);
+    } finally {
+      setMojoPushing(prev => { const next = new Set(prev); next.delete(agent.id); return next; });
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,13 +148,12 @@ export default function RealtorQueue() {
 
       {!loading && queue.map(agent => {
         const hot = isHotAgent(agent);
-        const lead = agentToLead(agent);
         return (
           <div
             key={agent.id}
             className="bg-card border rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow"
           >
-            <button onClick={() => setSelected(lead)} className="w-full text-left">
+            <button onClick={() => setDrawerAgent(agent)} className="w-full text-left">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span className="font-bold text-foreground">{agent.agentName}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${statusBadge[agent.status as RealtorLeadStatus]}`}>{t(`realtorQueue.status.${agent.status === 'Closed Won' ? 'closedWon' : agent.status.toLowerCase()}`)}</span>
@@ -180,11 +182,12 @@ export default function RealtorQueue() {
 
             <div className="flex items-center gap-2 mt-3 pt-3 border-t">
               <button
-                onClick={() => sendToMojo([agent.id]).then(() => toast.success(t('realtorQueue.mojoQueued', { name: agent.agentName }), { description: t('realtorQueueRep.pushToMojoDesc') }))}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-accent text-accent-foreground text-xs font-bold hover:opacity-90"
+                onClick={() => pushToMojo(agent)}
+                disabled={mojoPushing.has(agent.id)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-accent text-accent-foreground text-xs font-bold hover:opacity-90 disabled:opacity-50"
                 title={t('realtorQueueRep.pushToMojoTitle')}
               >
-                <ArrowUpToLine size={12} /> {t('realtorQueue.pushToMojo')}
+                {mojoPushing.has(agent.id) ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpToLine size={12} />} {t('realtorQueue.pushToMojo')}
               </button>
               <a
                 href={`mailto:${agent.agentEmail}`}
@@ -197,7 +200,11 @@ export default function RealtorQueue() {
         );
       })}
 
-      {selected && <RealtorLeadDetailDrawer lead={selected} onClose={() => setSelected(null)} />}
+      <RealtorLeadDetailDrawer
+        agent={drawerAgent ?? ({} as RealtorAgent)}
+        open={!!drawerAgent}
+        onOpenChange={(open) => { if (!open) setDrawerAgent(null); }}
+      />
     </div>
   );
 }

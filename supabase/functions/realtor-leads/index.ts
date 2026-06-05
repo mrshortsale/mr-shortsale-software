@@ -62,6 +62,7 @@ function rowToAgent(row: Record<string, unknown>) {
     latestDaysOnMarket: row.latest_days_on_market,
     latestPublicRemarks: row.latest_public_remarks,
     status: row.status,
+    assignedRep: row.assigned_rep ?? null,
     lastContactAt: row.last_contact_at,
     notes: row.notes,
     createdAt: row.created_at,
@@ -85,11 +86,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Invalid JSON body" }, 400);
     }
 
-    const { id, status, notes, lastContactAt } = body as {
+    const { id, status, notes, lastContactAt, assignedRep } = body as {
       id?: string;
       status?: string;
       notes?: string;
       lastContactAt?: string | null;
+      assignedRep?: string | null;
     };
 
     if (!id) return jsonResponse({ error: "id is required" }, 400);
@@ -103,6 +105,7 @@ Deno.serve(async (req) => {
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = notes;
     if (lastContactAt !== undefined) updates.last_contact_at = lastContactAt;
+    if (assignedRep !== undefined) updates.assigned_rep = assignedRep || null;
 
     if (Object.keys(updates).length === 0) return jsonResponse({ error: "No fields to update" }, 400);
 
