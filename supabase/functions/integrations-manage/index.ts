@@ -561,5 +561,33 @@ Deno.serve(async (req) => {
     return jsonResponse({ datasets });
   }
 
+  // TEST_MEMBER_API: probe Bridge /Member resource to check contact field availability
+  if (action === "test_member_api") {
+    const { datasetId, agentKey } = body as { datasetId?: string; agentKey?: string };
+    if (!datasetId || !agentKey) return jsonResponse({ error: "datasetId and agentKey are required" }, 400);
+
+    const { credentials, error: credErr } = await loadBridgeCredentials(supabase);
+    if (credErr) return jsonResponse({ error: credErr }, 400);
+
+    const url = new URL(`${credentials.baseUrl}/api/v2/OData/${datasetId}/Member`);
+    url.searchParams.set("access_token", credentials.apiKey);
+    url.searchParams.set("$filter", `MemberKey eq '${agentKey}'`);
+    url.searchParams.set("$top", "1");
+
+    try {
+      const resp = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${credentials.apiKey}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      const statusCode = resp.status;
+      let responseBody: unknown = null;
+      try { responseBody = await resp.json(); } catch { responseBody = await resp.text().catch(() => null); }
+      const debugUrl = url.toString().replace(/access_token=[^&]+/, "access_token=REDACTED");
+      return jsonResponse({ statusCode, responseBody, url: debugUrl });
+    } catch (err) {
+      return jsonResponse({ error: (err as Error).message }, 502);
+    }
+  }
+
   return jsonResponse({ error: "Unknown action" }, 400);
 });

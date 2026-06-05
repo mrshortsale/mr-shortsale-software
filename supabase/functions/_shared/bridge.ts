@@ -362,6 +362,71 @@ export async function testMlsProfile(
   };
 }
 
+// ─── Member (agent) contact enrichment ───────────────────────────────────────
+
+export interface MemberContact {
+  memberKey: string;
+  phone: string;
+  email: string;
+}
+
+/**
+ * Batch-fetch agent contact info from the Bridge /Member resource.
+ * Falls back gracefully if the dataset doesn't expose Member data.
+ */
+export async function fetchMemberContacts(
+  baseUrl: string,
+  datasetId: string,
+  apiKey: string,
+  agentKeys: string[],
+): Promise<Map<string, MemberContact>> {
+  const result = new Map<string, MemberContact>();
+  if (agentKeys.length === 0) return result;
+
+  // De-dup and chunk into batches of 20 (OData filter length limits)
+  const unique = [...new Set(agentKeys)];
+  const CHUNK = 20;
+
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    const filterParts = chunk.map((k) => `MemberKey eq '${k.replace(/'/g, "''")}'`);
+    const filter = filterParts.join(" or ");
+    const url = new URL(`${baseUrl}/api/v2/OData/${datasetId}/Member`);
+    url.searchParams.set("access_token", apiKey);
+    url.searchParams.set("$filter", filter);
+    url.searchParams.set("$top", String(CHUNK));
+
+    try {
+      const resp = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!resp.ok) continue; // Member resource may not exist for this dataset
+      const data = await resp.json() as { value?: unknown[]; bundle?: unknown[] };
+      const members: unknown[] = data.value ?? data.bundle ?? [];
+      for (const m of members) {
+        const member = m as Record<string, unknown>;
+        const key = String(member.MemberKey ?? "");
+        if (!key) continue;
+        result.set(key, {
+          memberKey: key,
+          phone: String(
+            member.MemberDirectPhone ?? member.MemberOfficePhone ??
+            member.MemberPreferredPhone ?? member.MemberCellPhone ?? ""
+          ).trim(),
+          email: String(
+            member.MemberEmail ?? member.MemberEmailAddress ?? ""
+          ).trim(),
+        });
+      }
+    } catch {
+      // Member API unavailable for this dataset — skip silently
+    }
+  }
+
+  return result;
+}
+
 // ─── Agent lead mapper ────────────────────────────────────────────────────────
 
 /**

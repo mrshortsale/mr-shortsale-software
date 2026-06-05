@@ -17,6 +17,7 @@ import {
   buildODataFilter,
   buildPropertyUrl,
   fetchPropertyPage,
+  fetchMemberContacts,
   logBridgeApiCall,
   mapPropertyToAgentLead,
   type MlsSyncProfile,
@@ -336,6 +337,25 @@ async function syncProfile(params: {
 
     // Map to agent rows (one per property)
     const agentRows = properties.map((p) => mapPropertyToAgentLead(p, profile));
+
+    // Enrich with Member contact data for agents missing phone/email
+    const agentKeysToEnrich = agentRows
+      .filter((r) => !r.agent_phone && !r.agent_email && r.list_agent_key)
+      .map((r) => r.list_agent_key as string);
+
+    if (agentKeysToEnrich.length > 0) {
+      const memberContacts = await fetchMemberContacts(
+        creds.baseUrl, profile.dataset_id, creds.apiKey, agentKeysToEnrich,
+      );
+      for (const row of agentRows) {
+        if (row.list_agent_key && memberContacts.has(row.list_agent_key)) {
+          const contact = memberContacts.get(row.list_agent_key)!;
+          if (!row.agent_phone) row.agent_phone = contact.phone;
+          if (!row.agent_email) row.agent_email = contact.email;
+        }
+      }
+    }
+
     const { newCount, updatedCount } = await upsertAgentLeads(agentRows);
     cumulativeNew += newCount;
     cumulativeUpdated += updatedCount;
