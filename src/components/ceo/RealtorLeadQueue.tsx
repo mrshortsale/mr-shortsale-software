@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   RealtorLeadStatus,
   relativeTime,
-  realtorLeads as mockLeads,
 } from '@/data/realtorLeads';
 import {
   fetchRealtorLeads,
@@ -16,7 +15,7 @@ import {
 import {
   Filter, ArrowUpDown, Calendar, MapPin, Phone,
   TrendingDown, Flame, Building2, Globe, Users, RefreshCw, ArrowUpToLine, Loader2, Send,
-  Mail,
+  Mail, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { sendToMojo } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
@@ -50,13 +49,17 @@ export default function RealtorLeadQueue() {
   const [agents, setAgents] = useState<RealtorAgent[]>([]);
   const [stats, setStats] = useState<RealtorStats>({ total: 0, newToday: 0, hotLeads: 0, awaitingFollowup: 0, lastSyncAt: null });
   const [loading, setLoading] = useState(true);
-  const [usingMocks, setUsingMocks] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [drawerAgent, setDrawerAgent] = useState<RealtorAgent | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('days');
   const [filterState, setFilterState] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RealtorLeadStatus>('all');
   const [esOnly, setEsOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState('1');
+  const [totalMatching, setTotalMatching] = useState(0);
+  const pageSize = 50;
   const [bulk, setBulk] = useState<Set<string>>(new Set());
   const [bulkRep, setBulkRep] = useState('Carlos M.');
   const [mojoPushing, setMojoPushing] = useState<Set<string>>(new Set());
@@ -64,42 +67,55 @@ export default function RealtorLeadQueue() {
   const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
 
   const load = useCallback(async () => {
+    const offset = (page - 1) * pageSize;
     setLoading(true);
-    const { leads, stats: s, error } = await fetchRealtorLeads({
+    const { leads, stats: s, error, total } = await fetchRealtorLeads({
       statuses: filterStatus === 'all' ? undefined : [filterStatus],
       state: filterState === 'all' ? undefined : filterState,
       language: esOnly ? 'ES' : undefined,
       hotOnly,
-      limit: 200,
+      limit: pageSize,
+      offset,
     });
     setLoading(false);
 
-    // Only fall back to mocks when the API itself is unreachable (local dev without edge functions)
-    // An empty result is a valid state — it just means no sync has run yet.
-    if (error && leads.length === 0) {
-      const mapped = mockLeads.map((l) => ({
-        id: l.id, profileId: '', datasetId: 'mock', externalId: l.id,
-        listAgentKey: null, agentName: l.agentName, brokerage: l.brokerage,
-        agentPhone: l.agentPhone, agentEmail: l.agentEmail,
-        language: l.language, listingCount: l.priceDrops.length + 1,
-        latestListingId: l.mlsNumber, latestPropertyAddress: l.propertyAddress,
-        latestCity: l.city, latestState: l.state, latestListPrice: l.listPrice,
-        latestDaysOnMarket: l.daysOnMarket, latestPublicRemarks: '',
-        status: l.status as RealtorLeadStatus, assignedRep: null,
-        lastContactAt: l.lastContactAt, notes: l.notes ?? null,
-        createdAt: '', updatedAt: '',
-      }) as RealtorAgent);
-      setAgents(mapped);
-      setStats({ total: mockLeads.length, newToday: mockLeads.filter(l => l.status === 'New').length, hotLeads: 0, awaitingFollowup: mockLeads.filter(l => l.status === 'Contacted').length, lastSyncAt: null });
-      setUsingMocks(true);
-    } else {
-      setAgents(leads);
-      setStats(s);
-      setUsingMocks(false);
+    if (error) {
+      setLoadError(error);
+      setAgents([]);
+      setTotalMatching(0);
+      setStats({ total: 0, newToday: 0, hotLeads: 0, awaitingFollowup: 0, lastSyncAt: null });
+      return;
     }
-  }, [filterStatus, filterState, esOnly, hotOnly]);
+
+    setLoadError(null);
+    setAgents(leads);
+    setStats(s);
+    setTotalMatching(total ?? 0);
+  }, [filterStatus, filterState, esOnly, hotOnly, page]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPageInput(String(page)); }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(totalMatching / pageSize));
+  const offset = (page - 1) * pageSize;
+  const rangeStart = totalMatching === 0 ? 0 : offset + 1;
+  const rangeEnd = Math.min(offset + agents.length, totalMatching);
+
+  const goToPage = (next: number) => {
+    const clamped = Math.min(totalPages, Math.max(1, next));
+    setPage(clamped);
+    setPageInput(String(clamped));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const applyPageInput = () => {
+    const n = parseInt(pageInput.trim(), 10);
+    if (!Number.isFinite(n)) {
+      setPageInput(String(page));
+      return;
+    }
+    goToPage(n);
+  };
 
   const list = useMemo(() => {
     let l = [...agents];
@@ -146,7 +162,6 @@ export default function RealtorLeadQueue() {
   };
 
   const handleStatusChange = async (agent: RealtorAgent, status: RealtorLeadStatus) => {
-    if (usingMocks) return;
     const { error } = await updateRealtorLeadStatus(agent.id, status);
     if (error) { toast.error(error); return; }
     setAgents((prev) => prev.map((a) => a.id === agent.id ? { ...a, status } : a));
@@ -157,19 +172,16 @@ export default function RealtorLeadQueue() {
     const repValue = rep === 'Unassigned' ? null : rep;
     // Optimistic update
     setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, assignedRep: repValue } : a));
-    if (!usingMocks) {
-      const { error } = await assignRealtorRep(agent.id, repValue);
-      if (error) {
-        toast.error(`Failed to assign rep: ${error}`);
-        // Revert on failure
-        setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, assignedRep: agent.assignedRep } : a));
-      }
+    const { error } = await assignRealtorRep(agent.id, repValue);
+    if (error) {
+      toast.error(`Failed to assign rep: ${error}`);
+      setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, assignedRep: agent.assignedRep } : a));
     }
   };
 
   const lastSyncLabel = stats.lastSyncAt
     ? new Date(stats.lastSyncAt).toLocaleString(loc)
-    : usingMocks ? 'Mock data' : 'Never';
+    : 'Never';
 
   return (
     <div className="space-y-4">
@@ -183,28 +195,45 @@ export default function RealtorLeadQueue() {
 
       <SourceProvenance
         chips={[{
-          source: usingMocks ? 'Zillow' : 'Bridge MLS',
-          count: usingMocks
-            ? `${stats.total} listings · Mock data`
-            : stats.total === 0
-              ? 'No sync yet'
-              : `${stats.total} agents`,
+          source: 'Bridge MLS',
+          count: stats.total === 0 ? 'No sync yet' : `${stats.total} agents`,
           lastSync: lastSyncLabel,
-          status: usingMocks ? 'pending' : stats.total > 0 ? 'connected' : 'pending',
+          status: loadError ? 'pending' : stats.total > 0 ? 'connected' : 'pending',
         }]}
       />
+
+      {loadError && (
+        <div className="metric-card border-destructive/30 bg-destructive/5 text-sm text-destructive flex items-center justify-between gap-3">
+          <span>Failed to load agents: {loadError}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card border text-foreground text-xs font-semibold hover:bg-muted"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
 
       {/* Filter bar */}
       <div className="metric-card flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-xs">
           <Filter size={14} className="text-muted-foreground" />
-          <select value={filterState} onChange={e => setFilterState(e.target.value as 'all' | 'FL' | 'NY' | 'CA')} className="bg-muted rounded px-2 py-1 border-0 outline-none">
+          <select
+            value={filterState}
+            onChange={e => { setPage(1); setFilterState(e.target.value as 'all' | 'FL' | 'NY' | 'CA'); }}
+            className="bg-muted rounded px-2 py-1 border-0 outline-none"
+          >
             <option value="all">{t('realtorQueue.filters.allStates')}</option>
             <option value="FL">Florida</option>
             <option value="NY">New York</option>
             <option value="CA">California</option>
           </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as 'all' | RealtorLeadStatus)} className="bg-muted rounded px-2 py-1 border-0 outline-none">
+          <select
+            value={filterStatus}
+            onChange={e => { setPage(1); setFilterStatus(e.target.value as 'all' | RealtorLeadStatus); }}
+            className="bg-muted rounded px-2 py-1 border-0 outline-none"
+          >
             <option value="all">{t('realtorQueue.filters.allStatuses')}</option>
             <option value="New">{t('realtorQueue.status.new')}</option>
             <option value="Contacted">{t('realtorQueue.status.contacted')}</option>
@@ -213,13 +242,13 @@ export default function RealtorLeadQueue() {
             <option value="Declined">{t('realtorQueue.status.declined')}</option>
           </select>
           <button
-            onClick={() => setEsOnly(v => !v)}
+            onClick={() => { setPage(1); setEsOnly(v => !v); }}
             className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition-colors ${esOnly ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}
           >
             <Globe size={11} /> {t('realtorQueue.filters.esOnly')}
           </button>
           <button
-            onClick={() => setHotOnly(v => !v)}
+            onClick={() => { setPage(1); setHotOnly(v => !v); }}
             className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition-colors ${hotOnly ? 'bg-speed text-white' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}
           >
             <Flame size={11} /> {t('realtorQueue.filters.hotOnly')}
@@ -234,7 +263,6 @@ export default function RealtorLeadQueue() {
             <option value="drops">{t('realtorQueue.sort.mostDrops')}</option>
           </select>
         </div>
-        <span className="text-xs text-muted-foreground">{t('realtorQueue.leadCount', { count: list.length })}</span>
       </div>
 
       {/* Bulk action bar */}
@@ -260,14 +288,15 @@ export default function RealtorLeadQueue() {
       )}
 
       {/* Lead rows */}
-      <div className="space-y-2">
+      <div className="metric-card p-0 overflow-hidden">
+        <div className="space-y-2 p-3">
         {loading && (
-          <div className="metric-card text-center py-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="text-center py-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Loader2 size={14} className="animate-spin" /> Loading agents…
           </div>
         )}
-        {!loading && list.length === 0 && !usingMocks && (
-          <div className="metric-card text-center text-sm text-muted-foreground py-10 space-y-2">
+        {!loading && !loadError && list.length === 0 && (
+          <div className="text-center text-sm text-muted-foreground py-10 space-y-2">
             <p className="font-semibold text-foreground">No agent leads yet</p>
             <p className="text-xs">Run a Bridge MLS sync to populate this queue.</p>
             <p className="text-xs">Go to <a href="/ceo/sync-runs" className="text-secondary underline underline-offset-2">Sync Runs</a> → Bridge MLS → Start Sync, or enable a feed in <a href="/integrations" className="text-secondary underline underline-offset-2">Integrations → Zillow Listings → MLS Feeds</a>.</p>
@@ -279,7 +308,7 @@ export default function RealtorLeadQueue() {
           return (
             <div
               key={agent.id}
-              className={`metric-card flex flex-col md:flex-row md:items-center gap-3 transition-shadow hover:shadow-md ${checked ? 'ring-2 ring-secondary' : ''}`}
+              className={`rounded-xl border bg-card p-3 flex flex-col md:flex-row md:items-center gap-3 transition-shadow hover:shadow-md ${checked ? 'ring-2 ring-secondary' : ''}`}
             >
               <input
                 type="checkbox"
@@ -309,9 +338,7 @@ export default function RealtorLeadQueue() {
                   <span className="text-[10px] text-muted-foreground">
                     {agent.listingCount > 1 ? `${agent.listingCount} listings` : `MLS# ${agent.latestListingId}`}
                   </span>
-                  {!usingMocks && (
-                    <span className="text-[10px] font-mono text-muted-foreground">{agent.datasetId}</span>
-                  )}
+                  <span className="text-[10px] font-mono text-muted-foreground">{agent.datasetId}</span>
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                   <MapPin size={11} /> {agent.latestPropertyAddress}, {agent.latestCity}, {agent.latestState}
@@ -364,22 +391,73 @@ export default function RealtorLeadQueue() {
                 >
                   {reps.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
-                {!usingMocks && (
-                  <select
-                    value={agent.status}
-                    onChange={e => { e.stopPropagation(); handleStatusChange(agent, e.target.value as RealtorLeadStatus); }}
-                    onClick={e => e.stopPropagation()}
-                    className="text-[11px] bg-muted rounded px-1.5 py-1 border-0 outline-none max-w-[100px]"
-                  >
-                    {(['New', 'Contacted', 'Partnered', 'Closed Won', 'Declined'] as RealtorLeadStatus[]).map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                )}
+                <select
+                  value={agent.status}
+                  onChange={e => { e.stopPropagation(); handleStatusChange(agent, e.target.value as RealtorLeadStatus); }}
+                  onClick={e => e.stopPropagation()}
+                  className="text-[11px] bg-muted rounded px-1.5 py-1 border-0 outline-none max-w-[100px]"
+                >
+                  {(['New', 'Contacted', 'Partnered', 'Closed Won', 'Declined'] as RealtorLeadStatus[]).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
               </div>
             </div>
           );
         })}
+        </div>
+
+        {!loadError && totalMatching > 0 && (
+          <div className="px-3 py-2.5 text-[11px] text-muted-foreground bg-muted border-t flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {t('inventory.pagination.showing')} {rangeStart.toLocaleString(loc)}–{rangeEnd.toLocaleString(loc)} {t('inventory.pagination.of')} {totalMatching.toLocaleString(loc)}
+            </span>
+
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <span className="font-medium">{t('inventory.pagination.page')}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      applyPageInput();
+                    }
+                  }}
+                  disabled={loading || totalPages <= 1}
+                  aria-label={t('inventory.buttons.goToPage')}
+                  className="w-10 px-1 py-0.5 text-xs text-center font-bold text-foreground border rounded bg-card outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
+                />
+              </span>
+
+              <button
+                type="button"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1 || loading}
+                className="px-2 py-1 rounded border bg-card hover:bg-background disabled:opacity-40 flex items-center gap-0.5 font-bold text-foreground"
+                aria-label={t('inventory.pagination.previousPage')}
+              >
+                <ChevronLeft size={14} /> {t('inventory.buttons.prev')}
+              </button>
+              <span className="px-2 py-1 font-medium text-foreground tabular-nums whitespace-nowrap">
+                {t('inventory.pagination.page')} {page.toLocaleString(loc)} {t('inventory.pagination.of')} {totalPages.toLocaleString(loc)}
+              </span>
+              <button
+                type="button"
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages || loading}
+                className="px-2 py-1 rounded border bg-card hover:bg-background disabled:opacity-40 flex items-center gap-0.5 font-bold text-foreground"
+                aria-label={t('inventory.pagination.nextPage')}
+              >
+                {t('inventory.buttons.next')} <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <RealtorLeadDetailDrawer

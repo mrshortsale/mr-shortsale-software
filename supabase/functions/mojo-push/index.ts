@@ -153,28 +153,28 @@ async function loadZapierWebhookUrl(): Promise<{ url: string; error: string | nu
     return { url: "", error: "Mojo Dialer credentials not configured. Add the Zapier webhook URL in Integrations → Mojo Dialer." };
   }
 
-  // base_url can hold a pre-seeded plaintext webhook URL (used when no encrypted creds exist yet)
-  if (cred.base_url?.startsWith("http")) {
-    return { url: cred.base_url, error: null };
-  }
+  // Prefer encrypted credentials (CEO-updated URL) over legacy seed in base_url.
+  if (cred.encrypted_credentials && cred.credentials_iv) {
+    try {
+      const decrypted = JSON.parse(
+        await decrypt(cred.encrypted_credentials, cred.credentials_iv),
+      ) as Record<string, string>;
 
-  if (!cred.encrypted_credentials || !cred.credentials_iv) {
-    return { url: "", error: "No Zapier webhook URL configured. Edit credentials in Integrations → Mojo Dialer and paste your Zapier catch-hook URL." };
-  }
-
-  try {
-    const decrypted = JSON.parse(
-      await decrypt(cred.encrypted_credentials, cred.credentials_iv),
-    ) as Record<string, string>;
-
-    const webhookUrl = decrypted.zapierWebhookUrl || decrypted.apiKey || "";
-    if (!webhookUrl || !webhookUrl.startsWith("http")) {
-      return { url: "", error: "No Zapier webhook URL configured. Edit credentials in Integrations → Mojo Dialer and paste your Zapier catch-hook URL." };
+      const webhookUrl = decrypted.zapierWebhookUrl || decrypted.apiKey || "";
+      if (webhookUrl.startsWith("http")) {
+        return { url: webhookUrl.trim(), error: null };
+      }
+    } catch {
+      return { url: "", error: "Failed to decrypt Mojo Dialer credentials" };
     }
-    return { url: webhookUrl, error: null };
-  } catch {
-    return { url: "", error: "Failed to decrypt Mojo Dialer credentials" };
   }
+
+  // Fallback: pre-seeded plaintext URL in base_url (initial migration only)
+  if (cred.base_url?.startsWith("http")) {
+    return { url: cred.base_url.trim(), error: null };
+  }
+
+  return { url: "", error: "No Zapier webhook URL configured. Edit credentials in Integrations → Mojo Dialer and paste your Zapier catch-hook URL." };
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -224,7 +224,10 @@ Deno.serve(async (req) => {
       } else {
         failed++;
         const body = await resp.text().catch(() => "");
-        errors.push(`${agent.agentName}: HTTP ${resp.status} — ${body.slice(0, 100)}`);
+        const hint = resp.status === 404 && /unsubscribe/i.test(body)
+          ? " — Zapier webhook is off or expired. Copy a fresh Catch Hook URL from your Zap and save it in Integrations → Mojo Dialer."
+          : "";
+        errors.push(`${agent.agentName}: HTTP ${resp.status} — ${body.slice(0, 100)}${hint}`);
       }
     } catch (err) {
       failed++;

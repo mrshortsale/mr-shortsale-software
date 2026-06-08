@@ -313,6 +313,28 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                     handleSaveCredentials();
                   }}
                 >
+                  {integration.auth_method === 'outbound_webhook' && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`${integration.slug}-zapier-webhook`}>Zapier Webhook URL</Label>
+                      <Input
+                        id={`${integration.slug}-zapier-webhook`}
+                        name={`integration-${integration.slug}-zapier-webhook`}
+                        type="url"
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-form-type="other"
+                        className="font-mono text-sm"
+                        placeholder="https://hooks.zapier.com/hooks/catch/..."
+                        value={editFields.zapierWebhookUrl || ''}
+                        onChange={(e) => setEditFields({ ...editFields, zapierWebhookUrl: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Paste the Catch Hook URL from your Zapier Zap (Trigger → Webhooks by Zapier → Catch Hook).
+                        Leave blank to keep the current URL. If you see &quot;please unsubscribe me&quot; errors, the old hook was turned off — create a new Zap or re-copy the hook URL.
+                      </p>
+                    </div>
+                  )}
                   {integration.auth_method === 'api_key' && (
                     <div className="space-y-1.5">
                       <Label htmlFor={`${integration.slug}-api-token`}>API Key</Label>
@@ -502,7 +524,7 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                       </div>
                     </>
                   )}
-                  {!oauthSignInCallbackUrl && (
+                  {!oauthSignInCallbackUrl && integration.auth_method !== 'outbound_webhook' && (
                     <div className="space-y-1.5">
                       <Label htmlFor={`${integration.slug}-base-url`}>Base URL</Label>
                       <Input

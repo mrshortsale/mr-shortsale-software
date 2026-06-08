@@ -222,7 +222,20 @@ Deno.serve(async (req) => {
     }
     if (!mergedCreds.apiKey) delete mergedCreds.apiKey;
 
-    const cleanBaseUrl = sanitizeBaseUrl(baseUrl);
+    // Outbound webhook (e.g. Mojo → Zapier): store catch-hook URL in encrypted creds, not base_url.
+    if (integration.auth_method === "outbound_webhook") {
+      const webhook = mergedCreds.zapierWebhookUrl || mergedCreds.apiKey || "";
+      if (webhook) {
+        mergedCreds.zapierWebhookUrl = webhook.trim();
+        delete mergedCreds.apiKey;
+      }
+    }
+
+    let cleanBaseUrl = sanitizeBaseUrl(baseUrl);
+    if (integration.auth_method === "outbound_webhook" && mergedCreds.zapierWebhookUrl) {
+      // Clear stale seed URL so mojo-push does not prefer a dead base_url.
+      cleanBaseUrl = null;
+    }
 
     // For inbound_webhook integrations, appSecret is stored as the HMAC key
     // (webhook_secret column) rather than in the encrypted blob.
