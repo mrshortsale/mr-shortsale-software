@@ -58,6 +58,7 @@ function rowToLead(row: Record<string, unknown>) {
     lastContactDate: row.last_contact_date ? new Date(String(row.last_contact_date)).getTime() : null,
     lastOutcome: row.last_outcome ?? null,
     ingestedAt,
+    pipelineStage: row.pipeline_stage ?? null,
   };
 }
 
@@ -101,6 +102,8 @@ Deno.serve(async (req) => {
   const maxEquityRaw = url.searchParams.get("max_equity");
   const minEquity = minEquityRaw !== null && minEquityRaw !== "" ? Number(minEquityRaw) : null;
   const maxEquity = maxEquityRaw !== null && maxEquityRaw !== "" ? Number(maxEquityRaw) : null;
+  const pipelineOnly = url.searchParams.get("pipeline") === "true";
+  const pipelineStage = url.searchParams.get("pipeline_stage");
 
   // Qualification (equity <= 25% AND filing in NOD/NTS/LP) is enforced at
   // ingest time by batchleads-sync, so every row in inventory_leads is
@@ -112,7 +115,12 @@ Deno.serve(async (req) => {
     qb = qb.eq("source", source);
     if (state && state !== "All") qb = qb.eq("state", state);
     if (esOnly) qb = qb.eq("language", "ES");
-    if (statuses.length > 0) {
+    if (pipelineOnly) {
+      qb = qb.in("status", ["New", "Contacted", "Promoted"]);
+      if (pipelineStage) {
+        qb = qb.eq("pipeline_stage", pipelineStage);
+      }
+    } else if (statuses.length > 0) {
       qb = qb.in("status", statuses);
     } else {
       // Default: hide Dismissed in the table view unless explicitly requested

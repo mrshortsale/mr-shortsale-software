@@ -4,6 +4,19 @@ export type InventoryStatus = 'New' | 'Contacted' | 'Promoted' | 'Dismissed';
 export type InventoryFilingType = 'NOD' | 'NTS' | 'LP' | 'Short Sale' | 'Inbound' | 'REO' | 'Other';
 export type InventoryLeadType = 'Homeowner' | 'Realtor' | 'Inbound';
 
+export type PipelineStage =
+  | 'Initial Contact'
+  | 'Docs Collected'
+  | 'Bank Submitted'
+  | 'Pending Approval';
+
+export const PIPELINE_STAGES: PipelineStage[] = [
+  'Initial Contact',
+  'Docs Collected',
+  'Bank Submitted',
+  'Pending Approval',
+];
+
 export interface InventoryLead {
   id: string;
   source: InventorySource;
@@ -32,4 +45,5 @@ export interface InventoryLead {
   lastContactDate?: number | null;
   lastOutcome?: string | null;
   ingestedAt?: number | null;
+  pipelineStage?: PipelineStage | null;
 }

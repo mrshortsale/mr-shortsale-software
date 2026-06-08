@@ -377,7 +377,12 @@ export default function LeadInventory() {
     const { error } = await setLeadStatus([lead.id], status);
     if (error) { toast.error(error); return; }
     toast.success(t('inventory.toasts.leadStatus', { status }));
-    setDrawerOpen(false);
+    if (status === 'Dismissed') {
+      setDrawerOpen(false);
+      setDrawerLead(null);
+    } else {
+      setDrawerLead((prev) => (prev?.id === lead.id ? { ...prev, status } : prev));
+    }
     loadLeads();
   };
   const drawerMojo = (lead: InventoryLead) => {
@@ -887,6 +892,7 @@ export default function LeadInventory() {
       </div>
 
       <InventoryLeadDrawer
+        key={drawerLead?.id ?? 'none'}
         lead={drawerLead}
         open={drawerOpen}
         onOpenChange={(o) => { setDrawerOpen(o); if (!o) setDrawerLead(null); }}

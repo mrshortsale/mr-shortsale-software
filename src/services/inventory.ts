@@ -1,10 +1,12 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { getStoredToken } from './auth';
-import type {
-  InventoryLead,
-  InventorySource,
-  InventoryStatus,
-  InventoryFilingType,
+import {
+  PIPELINE_STAGES,
+  type InventoryLead,
+  type InventorySource,
+  type InventoryStatus,
+  type InventoryFilingType,
+  type PipelineStage,
 } from '@/data/inventoryLeads';
 
 const BASE_URL = `${SUPABASE_URL}/functions/v1`;
@@ -143,6 +145,15 @@ export interface FetchInventoryParams {
   maxEquity?: number;
   limit?: number;
   offset?: number;
+  pipelineOnly?: boolean;
+  pipelineStage?: PipelineStage;
+}
+
+export function resolvePipelineStage(lead: InventoryLead): PipelineStage {
+  if (lead.pipelineStage) return lead.pipelineStage;
+  if (lead.status === 'Promoted') return 'Bank Submitted';
+  if (lead.status === 'Contacted') return 'Initial Contact';
+  return 'Initial Contact';
 }
 
 export interface InventoryRep {
@@ -395,6 +406,8 @@ export async function fetchInventoryLeads(
     if (params.maxEquity !== undefined && params.maxEquity !== null) {
       query.set('max_equity', String(params.maxEquity));
     }
+    if (params.pipelineOnly) query.set('pipeline', 'true');
+    if (params.pipelineStage) query.set('pipeline_stage', params.pipelineStage);
     if (params.limit) query.set('limit', String(params.limit));
     if (params.offset !== undefined) query.set('offset', String(params.offset));
 
@@ -522,6 +535,60 @@ export async function assignRep(
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error ?? 'Failed to assign' };
+    return { updated: data.updated };
+  } catch {
+    return { error: 'Network error' };
+  }
+}
+
+const PIPELINE_COLUMN_LIMIT = 100;
+
+export async function fetchAllPipelineLeads(): Promise<{
+  leads: InventoryLead[];
+  total: number;
+  stageCounts: Record<PipelineStage, number>;
+  error?: string;
+}> {
+  const stageCounts = {} as Record<PipelineStage, number>;
+  const all: InventoryLead[] = [];
+
+  const pages = await Promise.all(
+    PIPELINE_STAGES.map((stage) =>
+      fetchInventoryLeads({
+        source: 'Batch',
+        pipelineOnly: true,
+        pipelineStage: stage,
+        limit: PIPELINE_COLUMN_LIMIT,
+        offset: 0,
+      }),
+    ),
+  );
+
+  for (let i = 0; i < PIPELINE_STAGES.length; i++) {
+    const page = pages[i];
+    const stage = PIPELINE_STAGES[i];
+    if (page.error) return { leads: [], total: 0, stageCounts, error: page.error };
+    stageCounts[stage] = page.total ?? 0;
+    all.push(...(page.leads ?? []));
+  }
+
+  const total = Object.values(stageCounts).reduce((sum, n) => sum + n, 0);
+  return { leads: all, total, stageCounts };
+}
+
+export async function setPipelineStage(
+  leadIds: string[],
+  pipelineStage: PipelineStage,
+): Promise<{ updated?: number; error?: string }> {
+  if (leadIds.length === 0) return { updated: 0 };
+  try {
+    const res = await fetch(`${BASE_URL}/admin-leads?action=pipeline_stage`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ leadIds, pipelineStage }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error ?? 'Failed to update pipeline stage' };
     return { updated: data.updated };
   } catch {
     return { error: 'Network error' };

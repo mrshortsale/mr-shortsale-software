@@ -8,6 +8,17 @@ const supabase = createClient(
 );
 
 const VALID_STATUSES = new Set(["New", "Contacted", "Promoted", "Dismissed"]);
+const VALID_PIPELINE_STAGES = new Set([
+  "Initial Contact",
+  "Docs Collected",
+  "Bank Submitted",
+  "Pending Approval",
+]);
+
+function statusForPipelineStage(stage: string): string {
+  if (stage === "Initial Contact" || stage === "Docs Collected") return "Contacted";
+  return "Promoted";
+}
 
 async function requireCeo(req: Request): Promise<string | null> {
   const authHeader = req.headers.get("x-auth-token") || req.headers.get("authorization");
@@ -67,7 +78,12 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  let body: { leadIds?: string[]; repId?: string | null; status?: string } = {};
+  let body: {
+    leadIds?: string[];
+    repId?: string | null;
+    status?: string;
+    pipelineStage?: string;
+  } = {};
   try {
     body = await req.json();
   } catch {
@@ -121,10 +137,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: `status must be one of ${[...VALID_STATUSES].join(", ")}` }, 400);
     }
 
-    // When a lead moves to Contacted, bump the attempt counter + timestamp.
     const updates: Record<string, unknown> = { status };
     if (status === "Contacted") {
       updates.last_contact_date = new Date().toISOString();
+      updates.pipeline_stage = "Initial Contact";
+    } else if (status === "Promoted") {
+      updates.pipeline_stage = "Bank Submitted";
+    } else if (status === "New" || status === "Dismissed") {
+      updates.pipeline_stage = null;
     }
 
     const { error, count } = await supabase
@@ -159,6 +179,33 @@ Deno.serve(async (req) => {
     }
 
     return jsonResponse({ ok: true, updated: count ?? 0, status });
+  }
+
+  // POST ?action=pipeline_stage — move lead on Active Pipeline kanban
+  if (action === "pipeline_stage") {
+    const pipelineStage = body.pipelineStage;
+    if (!pipelineStage || !VALID_PIPELINE_STAGES.has(pipelineStage)) {
+      return jsonResponse({
+        error: `pipelineStage must be one of ${[...VALID_PIPELINE_STAGES].join(", ")}`,
+      }, 400);
+    }
+
+    const status = statusForPipelineStage(pipelineStage);
+    const updates: Record<string, unknown> = {
+      pipeline_stage: pipelineStage,
+      status,
+    };
+    if (status === "Contacted") {
+      updates.last_contact_date = new Date().toISOString();
+    }
+
+    const { error, count } = await supabase
+      .from("inventory_leads")
+      .update(updates, { count: "exact" })
+      .in("id", leadIds);
+
+    if (error) return jsonResponse({ error: "Failed to update pipeline stage" }, 500);
+    return jsonResponse({ ok: true, updated: count ?? 0, pipelineStage, status });
   }
 
   return jsonResponse({ error: "Unknown action" }, 400);

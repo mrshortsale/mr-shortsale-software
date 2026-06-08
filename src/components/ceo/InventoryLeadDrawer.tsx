@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import InventoryRepPicker from '@/components/ceo/InventoryRepPicker';
 import {
@@ -6,7 +7,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import type { InventoryLead, InventoryStatus } from '@/data/inventoryLeads';
+import type { InventoryLead, InventoryStatus, PipelineStage } from '@/data/inventoryLeads';
+
+const STATUSES: InventoryStatus[] = ['New', 'Contacted', 'Promoted', 'Dismissed'];
 
 interface Props {
   lead: InventoryLead | null;
@@ -16,6 +19,10 @@ interface Props {
   onAssignRep: (lead: InventoryLead, repId: string | null) => void | Promise<void>;
   onStatusChange: (lead: InventoryLead, status: InventoryStatus) => void;
   onPushToMojo: (lead: InventoryLead) => void;
+  pipelineStages?: PipelineStage[];
+  pipelineStage?: PipelineStage;
+  stageColors?: Record<PipelineStage, string>;
+  onPipelineStageChange?: (lead: InventoryLead, stage: PipelineStage) => void;
 }
 
 const scoreColor = (s: number) =>
@@ -49,13 +56,34 @@ function formatRelative(ms: number | null | undefined, t: (key: string, opts?: R
 }
 
 export default function InventoryLeadDrawer({
-  lead, open, onOpenChange, repNameById, onAssignRep, onStatusChange, onPushToMojo,
+  lead,
+  open,
+  onOpenChange,
+  repNameById,
+  onAssignRep,
+  onStatusChange,
+  onPushToMojo,
+  pipelineStages,
+  pipelineStage,
+  stageColors,
+  onPipelineStageChange,
 }: Props) {
   const { t } = useTranslation();
+  const [localStatus, setLocalStatus] = useState<InventoryStatus>(lead?.status ?? 'New');
+
+  useEffect(() => {
+    if (lead) setLocalStatus(lead.status);
+  }, [lead?.id, lead?.status]);
+
   if (!lead) return null;
 
   const hot = lead.score >= 8;
   const assignedName = lead.assignedRepId ? repNameById.get(lead.assignedRepId) ?? '—' : null;
+
+  const handleStatusChange = (status: InventoryStatus) => {
+    setLocalStatus(status);
+    onStatusChange(lead, status);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -81,8 +109,8 @@ export default function InventoryLeadDrawer({
               <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${filingColor(lead.filingType)}`}>
                 {lead.filingType ?? t('inventoryDrawer.unknown')}
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusColor(lead.status)}`}>
-                {lead.status}
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${statusColor(localStatus)}`}>
+                {localStatus}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-foreground/20">
                 {lead.leadType ?? t('inventoryDrawer.homeowner')}
@@ -113,9 +141,52 @@ export default function InventoryLeadDrawer({
             <Info label={t('inventory.columns.batchList')} value={lead.batchListName ?? '—'} />
           </Section>
 
+          <Section title={t('inventoryDrawer.changeStatus', { defaultValue: 'Change Status' })}>
+            <div className="flex flex-wrap gap-2">
+              {STATUSES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleStatusChange(s)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    localStatus === s
+                      ? statusColor(s) + ' ring-2 ring-offset-1 ring-current'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          {pipelineStages && pipelineStage && onPipelineStageChange && stageColors && (
+            <Section title="Change Stage">
+              <div className="flex flex-wrap gap-2">
+                {pipelineStages.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onPipelineStageChange(lead, s)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      pipelineStage === s
+                        ? stageColors[s] + ' ring-2 ring-offset-1 ring-current'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
+
           <Section title={t('inventoryDrawer.sections.assignmentActivity')}>
             <Info label={t('inventory.columns.assignedRep')} value={assignedName ?? t('inventory.empty.unassigned')} tone={assignedName ? undefined : 'warn'} />
-            <Info label={t('inventory.columns.status')} value={lead.status} />
+            {pipelineStage && (
+              <Info label="Pipeline stage" value={pipelineStage} />
+            )}
+            <Info label={t('inventory.columns.status')} value={localStatus} />
             <Info label={t('inventory.columns.contactAttempts')} value={String(lead.contactAttempts ?? 0)} />
             <Info label={t('inventory.columns.lastContact')} value={lead.lastContactDate ? formatRelative(lead.lastContactDate, t) : t('inventoryDrawer.never')} />
             <Info label={t('inventory.columns.lastOutcome')} value={lead.lastOutcome ?? '—'} />
@@ -142,18 +213,33 @@ export default function InventoryLeadDrawer({
                 </button>
               }
             />
-            <button
-              onClick={() => onStatusChange(lead, 'Promoted')}
-              className="flex-1 min-w-[120px] py-2 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <ArrowRightCircle size={14} /> {t('inventory.buttons.promote')}
-            </button>
-            <button
-              onClick={() => onStatusChange(lead, 'Dismissed')}
-              className="flex-1 min-w-[120px] py-2 bg-destructive text-destructive-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
-            >
-              <EyeOff size={14} /> {t('inventory.buttons.dismiss')}
-            </button>
+            {localStatus !== 'Promoted' && (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('Promoted')}
+                className="flex-1 min-w-[120px] py-2 bg-accent text-accent-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
+              >
+                <ArrowRightCircle size={14} /> {t('inventory.buttons.promote')}
+              </button>
+            )}
+            {localStatus !== 'Contacted' && localStatus !== 'Dismissed' && (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('Contacted')}
+                className="flex-1 min-w-[120px] py-2 bg-secondary text-secondary-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
+              >
+                <Phone size={14} /> {t('inventoryDrawer.markContacted', { defaultValue: 'Mark Contacted' })}
+              </button>
+            )}
+            {localStatus !== 'Dismissed' && (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('Dismissed')}
+                className="flex-1 min-w-[120px] py-2 bg-destructive text-destructive-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"
+              >
+                <EyeOff size={14} /> {t('inventory.buttons.dismiss')}
+              </button>
+            )}
             <button
               onClick={() => onPushToMojo(lead)}
               className="flex-1 min-w-[120px] py-2 bg-primary text-primary-foreground rounded-lg font-semibold flex items-center justify-center gap-2 text-sm"

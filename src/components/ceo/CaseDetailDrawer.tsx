@@ -1,19 +1,62 @@
+import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ShortSaleCase } from '@/data/pipeline';
+import { PipelineStage, ShortSaleCase } from '@/data/pipeline';
 import { getCaseDetails } from '@/data/caseDetails';
-import { Building2, User, Calendar, Phone, Mail, CheckCircle2, Circle, Clock, FileText } from 'lucide-react';
+import type { InventoryRep } from '@/services/inventory';
+import { Building2, User, Calendar, Phone, Mail, CheckCircle2, Circle, Clock, FileText, UserCheck } from 'lucide-react';
+
+const STAGES: PipelineStage[] = ['Initial Contact', 'Docs Collected', 'Bank Submitted', 'Pending Approval'];
+
+const STAGE_COLOR: Record<PipelineStage, string> = {
+  'Initial Contact': 'bg-secondary/10 text-secondary border border-secondary/30',
+  'Docs Collected': 'bg-accent/10 text-accent border border-accent/30',
+  'Bank Submitted': 'bg-amber-100 text-amber-700 border border-amber-300',
+  'Pending Approval': 'bg-emerald-100 text-emerald-700 border border-emerald-300',
+};
 
 interface Props {
   caseData: ShortSaleCase | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  reps?: InventoryRep[];
+  onStageChange?: (caseData: ShortSaleCase, stage: PipelineStage) => void;
+  onAssignRep?: (caseData: ShortSaleCase, repId: string | null) => void;
 }
 
-export default function CaseDetailDrawer({ caseData, open, onOpenChange }: Props) {
+export default function CaseDetailDrawer({
+  caseData,
+  open,
+  onOpenChange,
+  reps = [],
+  onStageChange,
+  onAssignRep,
+}: Props) {
+  const [localStage, setLocalStage] = useState<PipelineStage>('Initial Contact');
+  const [localAgentId, setLocalAgentId] = useState('');
+
+  useEffect(() => {
+    if (caseData) {
+      setLocalStage(caseData.stage);
+      setLocalAgentId(caseData.agent || '');
+    }
+  }, [caseData?.id]);
+
   if (!caseData) return null;
+
   const d = getCaseDetails(caseData.id);
   const docsDone = d.documents.filter(x => x.done).length;
   const milestonesDone = d.milestones.filter(m => m.done).length;
+
+  const handleStageChange = (stage: PipelineStage) => {
+    setLocalStage(stage);
+    onStageChange?.(caseData, stage);
+  };
+
+  const handleAssignRep = (repId: string) => {
+    const value = repId || null;
+    setLocalAgentId(repId);
+    onAssignRep?.(caseData, value);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -23,7 +66,9 @@ export default function CaseDetailDrawer({ caseData, open, onOpenChange }: Props
             <SheetTitle className="text-primary-foreground text-xl text-left">{caseData.homeowner}</SheetTitle>
             <p className="text-sm opacity-80 text-left">{caseData.address}</p>
             <div className="flex gap-2 mt-3 flex-wrap">
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent/20">{caseData.stage}</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${STAGE_COLOR[localStage]}`}>
+                {localStage}
+              </span>
               <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/30 inline-flex items-center gap-1">
                 <Clock size={10} /> {d.days_in_stage} days in stage
               </span>
@@ -33,6 +78,54 @@ export default function CaseDetailDrawer({ caseData, open, onOpenChange }: Props
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Assignment */}
+          <Section title="Assignment">
+            {reps.length > 0 && onAssignRep ? (
+              <div className="flex justify-between items-center text-sm py-1.5 border-b">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <UserCheck size={12} /> Assigned agent
+                </span>
+                <select
+                  value={localAgentId}
+                  onChange={(e) => handleAssignRep(e.target.value)}
+                  className="text-sm font-medium bg-muted rounded px-2 py-1 border-0 outline-none max-w-[55%]"
+                >
+                  <option value="">Unassigned</option>
+                  {reps.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center text-sm py-1.5 border-b">
+                <span className="text-muted-foreground">Assigned agent</span>
+                <span className="font-medium">{caseData.agent_name}</span>
+              </div>
+            )}
+          </Section>
+
+          {/* Change stage */}
+          {onStageChange && (
+            <Section title="Change Stage">
+              <div className="flex flex-wrap gap-2">
+                {STAGES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => handleStageChange(s)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      localStage === s
+                        ? STAGE_COLOR[s] + ' ring-2 ring-offset-1 ring-current'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </Section>
+          )}
+
           <Section title="Milestones" badge={`${milestonesDone}/${d.milestones.length}`}>
             <div className="space-y-2.5">
               {d.milestones.map((m, i) => (
@@ -117,7 +210,10 @@ export default function CaseDetailDrawer({ caseData, open, onOpenChange }: Props
 
           {caseData.notes && (
             <Section title="Notes">
-              <p className="text-sm text-muted-foreground">{caseData.notes}</p>
+              <p className="text-sm text-muted-foreground flex items-start gap-1.5">
+                <FileText size={12} className="shrink-0 mt-0.5" />
+                {caseData.notes}
+              </p>
             </Section>
           )}
         </div>
