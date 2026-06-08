@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   RealtorLeadStatus,
   relativeTime,
-  realtorLeads as mockLeads,
 } from '@/data/realtorLeads';
 import {
   fetchRealtorLeads,
@@ -31,6 +30,7 @@ const statusBadge: Record<RealtorLeadStatus, string> = {
 export default function RealtorQueue() {
   const [agents, setAgents] = useState<RealtorAgent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [drawerAgent, setDrawerAgent] = useState<RealtorAgent | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('days');
   const [esOnly, setEsOnly] = useState(false);
@@ -63,22 +63,13 @@ export default function RealtorQueue() {
       limit: 100,
     });
     setLoading(false);
-    if (error || leads.length === 0) {
-      const mapped = mockLeads
-        .filter(l => l.status === 'New' || l.status === 'Contacted')
-        .map(l => ({
-          id: l.id, profileId: '', datasetId: 'mock', externalId: l.id,
-          listAgentKey: null, agentName: l.agentName, brokerage: l.brokerage,
-          agentPhone: l.agentPhone, agentEmail: l.agentEmail, language: l.language,
-          listingCount: 1, latestListingId: l.mlsNumber, latestPropertyAddress: l.propertyAddress,
-          latestCity: l.city, latestState: l.state, latestListPrice: l.listPrice,
-          latestDaysOnMarket: l.daysOnMarket, latestPublicRemarks: '',
-          status: l.status, lastContactAt: l.lastContactAt, notes: null, createdAt: '', updatedAt: '',
-        }) as RealtorAgent);
-      setAgents(mapped);
-    } else {
-      setAgents(leads);
+    if (error) {
+      setLoadError(error);
+      setAgents([]);
+      return;
     }
+    setLoadError(null);
+    setAgents(leads);
   }, [esOnly, hotOnly]);
 
   useEffect(() => { load(); }, [load]);
@@ -108,6 +99,19 @@ export default function RealtorQueue() {
         <span>{t('realtorQueueRep.sourceSynced')}</span>
         <span className="ml-auto">{t('realtorQueueRep.inQueue', { count: queue.length })}</span>
       </div>
+
+      {loadError && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive flex items-center justify-between gap-3 px-3 py-2">
+          <span>Failed to load your assigned leads: {loadError}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-card border text-foreground text-xs font-semibold hover:bg-muted"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
 
       {/* Filter / sort bar */}
       <div className="flex flex-wrap items-center gap-2">

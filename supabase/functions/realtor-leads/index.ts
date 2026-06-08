@@ -3,20 +3,26 @@
  *
  * Read/update API for mls_agent_leads (agent-primary realtor short-sale pipeline).
  *
- * GET  → list + stats
- * PATCH → update status, notes, last_contact_at
+ * GET   → list + stats
+ * PATCH → update status, notes, last_contact_at, assigned_rep
+ * POST  → action: round_robin_assign (CEO — assign all unassigned leads)
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyJwt } from "../_shared/jwt.ts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
+import {
+  assignUnassignedRealtorLeadsRoundRobin,
+  loadActiveRepNames,
+  unassignedRealtorLeadsFilter,
+} from "../_shared/roundRobin.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-async function requireUser(req: Request): Promise<{ id: string; role: string } | null> {
+async function requireUser(req: Request): Promise<{ id: string; role: string; name: string | null } | null> {
   const authHeader = req.headers.get("x-auth-token") || req.headers.get("authorization");
   const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
   if (!token) return null;
@@ -25,11 +31,11 @@ async function requireUser(req: Request): Promise<{ id: string; role: string } |
     if (!["ceo", "rep"].includes(payload.role)) return null;
     const { data } = await supabase
       .from("users")
-      .select("id, role, is_active")
+      .select("id, role, is_active, name")
       .eq("id", payload.sub)
       .single();
     if (!data || !data.is_active) return null;
-    return { id: data.id, role: data.role };
+    return { id: data.id, role: data.role, name: data.name ?? null };
   } catch {
     return null;
   }
@@ -120,6 +126,32 @@ Deno.serve(async (req) => {
     return jsonResponse({ lead: rowToAgent(data as Record<string, unknown>) });
   }
 
+  // ── POST: bulk actions ────────────────────────────────────────────────────
+  if (req.method === "POST") {
+    if (user.role !== "ceo") {
+      return jsonResponse({ error: "CEO access required" }, 403);
+    }
+
+    let body: { action?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    if (body.action === "round_robin_assign") {
+      const result = await assignUnassignedRealtorLeadsRoundRobin(supabase);
+      if (result.error) return jsonResponse({ error: result.error }, 400);
+      return jsonResponse({
+        ok: true,
+        assigned: result.assigned,
+        repCount: result.repCount,
+      });
+    }
+
+    return jsonResponse({ error: "Unknown action" }, 400);
+  }
+
   if (req.method !== "GET") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
@@ -140,6 +172,7 @@ Deno.serve(async (req) => {
   const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? "50")));
   const offset = Math.max(0, Number(url.searchParams.get("offset") ?? "0"));
   const hotOnly = url.searchParams.get("hot_only") === "true";
+  const assignedRep = url.searchParams.get("assigned_rep");
 
   // Build filtered query
   let query = supabase
@@ -156,6 +189,14 @@ Deno.serve(async (req) => {
   if (hotOnly) {
     // Hot = 2+ listings OR 90+ days on market
     query = query.or("listing_count.gte.2,latest_days_on_market.gte.90");
+  }
+  if (user.role === "rep" && user.name) {
+    query = query.eq("assigned_rep", user.name);
+  } else if (assignedRep === "unassigned") {
+    const activeRepNames = await loadActiveRepNames(supabase);
+    query = query.or(unassignedRealtorLeadsFilter(activeRepNames));
+  } else if (assignedRep) {
+    query = query.eq("assigned_rep", assignedRep);
   }
   if (q) {
     query = query.or(

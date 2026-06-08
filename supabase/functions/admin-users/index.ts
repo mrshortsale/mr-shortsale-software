@@ -221,6 +221,19 @@ Deno.serve(async (req) => {
     if (!userId) return jsonResponse({ error: "userId is required" }, 400);
     if (userId === callerId) return jsonResponse({ error: "You cannot delete your own account" }, 400);
 
+    const { data: targetUser } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (targetUser?.name) {
+      await supabase
+        .from("mls_agent_leads")
+        .update({ assigned_rep: null })
+        .eq("assigned_rep", targetUser.name);
+    }
+
     const { error: deleteError } = await supabase.from("users").delete().eq("id", userId);
     if (deleteError) return jsonResponse({ error: "Failed to delete user" }, 500);
 

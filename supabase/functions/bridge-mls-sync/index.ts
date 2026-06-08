@@ -23,6 +23,13 @@ import {
   type MlsSyncProfile,
   type AgentLeadRow,
 } from "../_shared/bridge.ts";
+import {
+  assignRepsRoundRobin,
+  loadActiveRepNames,
+  loadRoundRobinIndex,
+  REALTOR_MLS_SCOPE,
+  saveRoundRobinIndex,
+} from "../_shared/roundRobin.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -163,10 +170,21 @@ function scheduleBackgroundContinue(runId: string, nextSkip: number): void {
  * Upsert one page of agent leads.
  * Returns { newCount, updatedCount }.
  */
+type RealtorRoundRobin = {
+  repNames: string[];
+  index: number;
+};
+
 async function upsertAgentLeads(
   rows: AgentLeadRow[],
-): Promise<{ newCount: number; updatedCount: number }> {
-  if (rows.length === 0) return { newCount: 0, updatedCount: 0 };
+  rr?: RealtorRoundRobin,
+): Promise<{ newCount: number; updatedCount: number; assigned: number; nextIndex: number }> {
+  if (rows.length === 0) {
+    return { newCount: 0, updatedCount: 0, assigned: 0, nextIndex: rr?.index ?? 0 };
+  }
+
+  let nextIndex = rr?.index ?? 0;
+  let assigned = 0;
 
   // ── Step 1: Deduplicate this batch by external_id (keep highest-DOM listing per agent) ──
   const batchMap = new Map<string, AgentLeadRow>();
@@ -182,20 +200,29 @@ async function upsertAgentLeads(
   const externalIds = deduped.map((r) => r.external_id);
   const { data: existing } = await supabase
     .from("mls_agent_leads")
-    .select("external_id, listing_count, latest_days_on_market")
+    .select("external_id, listing_count, latest_days_on_market, assigned_rep")
     .in("external_id", externalIds);
 
   const existingMap = new Map(
     (existing ?? []).map((e) => [e.external_id, e]),
   );
 
-  const toInsert: AgentLeadRow[] = [];
+  const toInsert: Array<AgentLeadRow & { assigned_rep?: string }> = [];
   const toUpdate: Array<{ external_id: string; updates: Record<string, unknown> }> = [];
+
+  const pickRep = (): string | null => {
+    if (!rr || rr.repNames.length === 0) return null;
+    const { assignments, nextIndex: ni } = assignRepsRoundRobin(rr.repNames, nextIndex, 1);
+    nextIndex = ni;
+    assigned++;
+    return assignments[0];
+  };
 
   for (const row of deduped) {
     const prev = existingMap.get(row.external_id);
     if (!prev) {
-      toInsert.push(row);
+      const repName = pickRep();
+      toInsert.push(repName ? { ...row, assigned_rep: repName } : row);
     } else {
       const updates: Record<string, unknown> = {
         listing_count: (prev.listing_count ?? 0) + 1,
@@ -203,6 +230,11 @@ async function upsertAgentLeads(
         agent_phone: row.agent_phone || prev.agent_phone,
         agent_email: row.agent_email || prev.agent_email,
       };
+      const activeRepSet = new Set(rr?.repNames ?? []);
+      if (!prev.assigned_rep || !activeRepSet.has(prev.assigned_rep)) {
+        const repName = pickRep();
+        if (repName) updates.assigned_rep = repName;
+      }
       if (row.latest_days_on_market > (prev.latest_days_on_market ?? 0)) {
         updates.latest_listing_id = row.latest_listing_id;
         updates.latest_property_address = row.latest_property_address;
@@ -237,7 +269,7 @@ async function upsertAgentLeads(
     }
   }
 
-  return { newCount: toInsert.length, updatedCount: toUpdate.length };
+  return { newCount: toInsert.length, updatedCount: toUpdate.length, assigned, nextIndex };
 }
 
 // ─── Upsert raw property ──────────────────────────────────────────────────────
@@ -277,6 +309,11 @@ async function syncProfile(params: {
   const { profile, runId, mode, creds } = params;
   let { nextSkip } = params;
   const maxPages = params.maxPages ?? MAX_PAGES_PER_CHUNK;
+
+  const repNames = await loadActiveRepNames(supabase);
+  let rrIndex = repNames.length > 0
+    ? await loadRoundRobinIndex(supabase, REALTOR_MLS_SCOPE)
+    : 0;
 
   // For incremental: get watermark from last successful run
   let since: string | undefined;
@@ -356,7 +393,12 @@ async function syncProfile(params: {
       }
     }
 
-    const { newCount, updatedCount } = await upsertAgentLeads(agentRows);
+    const rr = repNames.length > 0 ? { repNames, index: rrIndex } : undefined;
+    const { newCount, updatedCount, nextIndex } = await upsertAgentLeads(agentRows, rr);
+    rrIndex = nextIndex;
+    if (repNames.length > 0) {
+      await saveRoundRobinIndex(supabase, rrIndex, repNames.length, REALTOR_MLS_SCOPE);
+    }
     cumulativeNew += newCount;
     cumulativeUpdated += updatedCount;
 

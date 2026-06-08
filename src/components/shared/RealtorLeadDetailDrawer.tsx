@@ -198,7 +198,24 @@ export default function RealtorLeadDetailDrawer({
 
           {/* Assignment & Activity */}
           <Section title="Assignment & Activity">
-            <InfoRow label="Assigned rep" value={localRep || 'Unassigned'} tone={localRep && localRep !== 'Unassigned' ? undefined : 'warn'} />
+            {reps.length > 0 && onAssignRep ? (
+              <div className="flex justify-between items-center text-sm py-1.5 border-b">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <UserCheck size={12} /> Assigned rep
+                </span>
+                <select
+                  value={localRep}
+                  onChange={(e) => handleAssignRep(e.target.value)}
+                  className="text-sm font-medium bg-muted rounded px-2 py-1 border-0 outline-none max-w-[55%]"
+                >
+                  {reps.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <InfoRow label="Assigned rep" value={localRep || 'Unassigned'} tone={localRep && localRep !== 'Unassigned' ? undefined : 'warn'} />
+            )}
             <InfoRow label="Status" value={localStatus} />
             <InfoRow label="Last contact" value={agent.lastContactAt ?? 'Not yet contacted'} />
           </Section>

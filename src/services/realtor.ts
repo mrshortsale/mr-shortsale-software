@@ -59,9 +59,17 @@ export interface FetchRealtorLeadsOptions {
   language?: string;
   statuses?: RealtorLeadStatus[];
   hotOnly?: boolean;
+  assignedRep?: string | 'unassigned';
   q?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface RealtorRep {
+  id: string;
+  name: string;
+  email: string;
+  avatar_color: string;
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
@@ -80,6 +88,8 @@ export async function fetchRealtorLeads(opts: FetchRealtorLeadsOptions = {}): Pr
     if (opts.language) params.set('language', opts.language);
     if (opts.statuses?.length) params.set('status', opts.statuses.join(','));
     if (opts.hotOnly) params.set('hot_only', 'true');
+    if (opts.assignedRep === 'unassigned') params.set('assigned_rep', 'unassigned');
+    else if (opts.assignedRep) params.set('assigned_rep', opts.assignedRep);
     if (opts.q) params.set('q', opts.q);
     if (opts.limit != null) params.set('limit', String(opts.limit));
     if (opts.offset != null) params.set('offset', String(opts.offset));
@@ -119,6 +129,45 @@ export async function assignRealtorRep(
   assignedRep: string | null,
 ): Promise<{ lead: RealtorAgent | null; error: string | null }> {
   return patchLead(id, { assignedRep });
+}
+
+export async function fetchRealtorReps(): Promise<{ reps: RealtorRep[]; error: string | null }> {
+  try {
+    const res = await fetch(`${BASE_URL}/admin-leads?action=reps`, {
+      method: 'GET',
+      headers: authedHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { error?: string };
+      return { reps: [], error: err.error ?? `HTTP ${res.status}` };
+    }
+    const data = await res.json() as { reps: RealtorRep[] };
+    return { reps: data.reps ?? [], error: null };
+  } catch (e) {
+    return { reps: [], error: (e as Error).message };
+  }
+}
+
+export async function roundRobinAssignRealtorLeads(): Promise<{
+  assigned: number;
+  repCount: number;
+  error: string | null;
+}> {
+  try {
+    const res = await fetch(`${BASE_URL}/realtor-leads`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ action: 'round_robin_assign' }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { error?: string };
+      return { assigned: 0, repCount: 0, error: err.error ?? `HTTP ${res.status}` };
+    }
+    const data = await res.json() as { assigned: number; repCount: number };
+    return { assigned: data.assigned ?? 0, repCount: data.repCount ?? 0, error: null };
+  } catch (e) {
+    return { assigned: 0, repCount: 0, error: (e as Error).message };
+  }
 }
 
 async function patchLead(

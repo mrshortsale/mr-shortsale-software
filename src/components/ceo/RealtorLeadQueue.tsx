@@ -6,8 +6,10 @@ import {
 } from '@/data/realtorLeads';
 import {
   fetchRealtorLeads,
+  fetchRealtorReps,
   updateRealtorLeadStatus,
   assignRealtorRep,
+  roundRobinAssignRealtorLeads,
   isHotAgent,
   type RealtorAgent,
   type RealtorStats,
@@ -32,8 +34,6 @@ const statusBadge: Record<RealtorLeadStatus, string> = {
   'Declined':    'bg-muted text-muted-foreground',
 };
 
-const reps = ['Unassigned', 'Carlos M.', 'Maria L.', 'Jen R.', 'Andre P.'];
-
 function realtorStatusKey(status: RealtorLeadStatus): string {
   const map: Record<RealtorLeadStatus, string> = {
     'New': 'realtorQueue.status.new',
@@ -54,6 +54,9 @@ export default function RealtorLeadQueue() {
   const [sortKey, setSortKey] = useState<SortKey>('days');
   const [filterState, setFilterState] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RealtorLeadStatus>('all');
+  const [filterRep, setFilterRep] = useState<string>('all');
+  const [repNames, setRepNames] = useState<string[]>([]);
+  const [roundRobinAssigning, setRoundRobinAssigning] = useState(false);
   const [esOnly, setEsOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
   const [page, setPage] = useState(1);
@@ -61,10 +64,20 @@ export default function RealtorLeadQueue() {
   const [totalMatching, setTotalMatching] = useState(0);
   const pageSize = 50;
   const [bulk, setBulk] = useState<Set<string>>(new Set());
-  const [bulkRep, setBulkRep] = useState('Carlos M.');
+  const [bulkRep, setBulkRep] = useState('');
   const [mojoPushing, setMojoPushing] = useState<Set<string>>(new Set());
   const { t, i18n } = useTranslation();
   const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
+
+  const repOptions = useMemo(() => ['Unassigned', ...repNames], [repNames]);
+
+  useEffect(() => {
+    fetchRealtorReps().then(({ reps }) => {
+      const names = reps.map(r => r.name).filter(Boolean);
+      setRepNames(names);
+      if (names.length > 0) setBulkRep(prev => prev || names[0]);
+    });
+  }, []);
 
   const load = useCallback(async () => {
     const offset = (page - 1) * pageSize;
@@ -74,6 +87,7 @@ export default function RealtorLeadQueue() {
       state: filterState === 'all' ? undefined : filterState,
       language: esOnly ? 'ES' : undefined,
       hotOnly,
+      assignedRep: filterRep === 'all' ? undefined : filterRep === 'unassigned' ? 'unassigned' : filterRep,
       limit: pageSize,
       offset,
     });
@@ -91,7 +105,23 @@ export default function RealtorLeadQueue() {
     setAgents(leads);
     setStats(s);
     setTotalMatching(total ?? 0);
-  }, [filterStatus, filterState, esOnly, hotOnly, page]);
+  }, [filterStatus, filterState, filterRep, esOnly, hotOnly, page]);
+
+  const handleRoundRobinAssign = async () => {
+    setRoundRobinAssigning(true);
+    const { assigned, repCount, error } = await roundRobinAssignRealtorLeads();
+    setRoundRobinAssigning(false);
+    if (error) {
+      toast.error(`Round-robin failed: ${error}`);
+      return;
+    }
+    if (assigned === 0) {
+      toast.info(repCount === 0 ? 'No active sales reps found' : 'No unassigned or orphaned leads to distribute');
+      return;
+    }
+    toast.success(`Assigned ${assigned} lead${assigned !== 1 ? 's' : ''} across ${repCount} rep${repCount !== 1 ? 's' : ''}`);
+    load();
+  };
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPageInput(String(page)); }, [page]);
@@ -241,6 +271,15 @@ export default function RealtorLeadQueue() {
             <option value="Closed Won">{t('realtorQueue.status.closedWon')}</option>
             <option value="Declined">{t('realtorQueue.status.declined')}</option>
           </select>
+          <select
+            value={filterRep}
+            onChange={e => { setPage(1); setFilterRep(e.target.value); }}
+            className="bg-muted rounded px-2 py-1 border-0 outline-none"
+          >
+            <option value="all">All reps</option>
+            <option value="unassigned">Unassigned</option>
+            {repNames.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
           <button
             onClick={() => { setPage(1); setEsOnly(v => !v); }}
             className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition-colors ${esOnly ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}
@@ -255,6 +294,16 @@ export default function RealtorLeadQueue() {
           </button>
         </div>
         <div className="flex items-center gap-2 text-xs ml-auto">
+          <button
+            type="button"
+            onClick={handleRoundRobinAssign}
+            disabled={roundRobinAssigning || repNames.length === 0}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-secondary text-secondary-foreground text-[11px] font-bold hover:opacity-90 disabled:opacity-50"
+            title="Distribute all unassigned leads evenly across active sales reps"
+          >
+            {roundRobinAssigning ? <Loader2 size={11} className="animate-spin" /> : <Users size={11} />}
+            Round-robin assign all
+          </button>
           <ArrowUpDown size={14} className="text-muted-foreground" />
           <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)} className="bg-muted rounded px-2 py-1 border-0 outline-none">
             <option value="days">{t('realtorQueue.sort.daysDesc')}</option>
@@ -271,7 +320,7 @@ export default function RealtorLeadQueue() {
           <strong>{t('realtorQueue.bulk.selected', { count: bulk.size })}</strong>
           <span className="opacity-80">{t('realtorQueue.bulk.assignTo')}</span>
           <select value={bulkRep} onChange={e => setBulkRep(e.target.value)} className="bg-card text-foreground rounded px-2 py-1 text-xs">
-            {reps.filter(r => r !== 'Unassigned').map(r => <option key={r} value={r}>{r}</option>)}
+            {repNames.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           <button onClick={applyBulk} className="ml-auto bg-accent text-accent-foreground px-3 py-1 rounded text-xs font-bold hover:opacity-90">{t('realtorQueue.bulk.assign')}</button>
           <button
@@ -389,7 +438,7 @@ export default function RealtorLeadQueue() {
                   className="text-[11px] bg-muted rounded px-1.5 py-1 border-0 outline-none max-w-[110px]"
                   title={t('realtorQueue.assignRep')}
                 >
-                  {reps.map(r => <option key={r} value={r}>{r}</option>)}
+                  {repOptions.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <select
                   value={agent.status}
@@ -466,7 +515,7 @@ export default function RealtorLeadQueue() {
         open={!!drawerAgent}
         onOpenChange={(open) => { if (!open) setDrawerAgent(null); }}
         assignedRep={drawerAgent?.assignedRep ?? undefined}
-        reps={reps}
+        reps={repOptions}
         onStatusChange={handleStatusChange}
         onAssignRep={handleAssignRep}
       />
