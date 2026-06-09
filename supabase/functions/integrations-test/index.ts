@@ -73,6 +73,14 @@ const BUILTIN_HEALTH: Record<string, { endpoint: string; headers: (creds: Record
       return key ? { "Authorization": `Bearer ${key}` } : {};
     },
   },
+  apify: {
+    endpoint: "/v2/users/me",
+    headers: (creds) => {
+      // Apify uses apiToken, not apiKey
+      const token = (creds.apiToken || creds.apiKey || "").trim();
+      return token ? { "Authorization": `Bearer ${token}` } : {};
+    },
+  },
 };
 
 function normalizeBaseUrl(url: string): string {

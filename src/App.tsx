@@ -34,6 +34,8 @@ import IntegrationsPage from '@/components/integrations/IntegrationsPage';
 import DataSources from '@/components/ceo/DataSources';
 import CEOSettingsPage from '@/pages/ceo/CEOSettingsPage';
 import SyncRunsPage from '@/pages/ceo/SyncRunsPage';
+import ZillowApifySyncPage from '@/pages/ceo/ZillowApifySyncPage';
+import ZillowRealtorQueuePage from '@/pages/ceo/ZillowRealtorQueuePage';
 import AIInboundCalls from '@/components/ceo/AIInboundCalls';
 import AIAgentsRoster from '@/components/ceo/AIAgentsRoster';
 import AgentsPage from '@/pages/ceo/ai/AgentsPage';
@@ -85,6 +87,8 @@ const App = () => (
               <Route path="realtor-pipeline" element={<RealtorPipeline />} />
               <Route path="realtor-scripts" element={<RealtorScripts />} />
               <Route path="realtor-reports" element={<RealtorReports />} />
+              <Route path="zillow-apify-sync" element={<ZillowApifySyncPage />} />
+              <Route path="zillow-realtor-queue" element={<ZillowRealtorQueuePage />} />
               <Route path="pipeline" element={<PipelineBoard />} />
               <Route path="speed" element={<SpeedToLeadScreen />} />
               <Route path="dialer" element={<MojoDialerScreen />} />

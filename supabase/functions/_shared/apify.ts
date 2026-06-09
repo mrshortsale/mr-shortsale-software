@@ -1,0 +1,276 @@
+/**
+ * Shared Apify API client helpers.
+ * Used by zillow-apify-sync and zillow-apify-manage.
+ */
+
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decrypt } from "./crypto.ts";
+
+export const APIFY_BASE = "https://api.apify.com/v2";
+
+// Actor IDs that ship as defaults in the integration seed.
+// The CEO can override them via the UI once credentials are configured.
+export const DEFAULT_SEARCH_ACTOR_ID = "X46xKaa20oUA1fRiP";
+export const DEFAULT_AGENT_ACTOR_ID = "1NT8sDVAgchUDnHOc";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface ApifyCredentials {
+  integrationId: string;
+  credentialId: string;
+  apiToken: string;
+  searchActorId: string;
+  agentActorId: string;
+}
+
+/** Minimal shape of items returned by the Zillow Search Scraper. */
+export interface ZillowSearchItem {
+  zpid?: string | number;
+  detailUrl?: string;
+  address?: string;
+  addressStreet?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZipcode?: string;
+  price?: number | string;
+  unformattedPrice?: number;
+  daysOnZillow?: number;
+  brokerName?: string;
+  hdpData?: {
+    homeInfo?: {
+      daysOnZillow?: number;
+      price?: number;
+      zipcode?: string;
+    };
+  };
+  [key: string]: unknown;
+}
+
+/** Minimal shape of items returned by the Zillow Owner Agent Scraper. */
+export interface ZillowAgentItem {
+  zpid?: string | number;
+  agentName?: string;
+  agentPhoneNumber?: string;
+  agentEmail?: string;
+  brokerName?: string;
+  brokerPhoneNumber?: string;
+  mlsName?: string;
+  trueStatus?: string | null;
+  isListedByOwner?: boolean;
+  [key: string]: unknown;
+}
+
+export interface ApifyRunStatus {
+  id: string;
+  status: string; // READY | RUNNING | SUCCEEDED | FAILED | TIMING-OUT | TIMED-OUT | ABORTING | ABORTED
+  defaultDatasetId: string;
+  stats?: { inputBodyLen?: number; outputBodyLen?: number };
+}
+
+// ─── Credentials ──────────────────────────────────────────────────────────────
+
+export async function loadApifyCredentials(
+  supabase: SupabaseClient,
+): Promise<ApifyCredentials> {
+  const { data: integration } = await supabase
+    .from("integrations")
+    .select("id")
+    .eq("slug", "apify")
+    .single();
+
+  if (!integration) throw new Error("Apify integration not found in integrations table");
+
+  const { data: cred } = await supabase
+    .from("integration_credentials")
+    .select("id, encrypted_credentials, credentials_iv")
+    .eq("integration_id", integration.id)
+    .single();
+
+  if (!cred?.encrypted_credentials || !cred.credentials_iv) {
+    throw new Error("Apify credentials not configured — set API token in Admin > Integrations");
+  }
+
+  const raw = JSON.parse(await decrypt(cred.encrypted_credentials, cred.credentials_iv)) as {
+    apiToken?: string;
+    searchActorId?: string;
+    agentActorId?: string;
+  };
+
+  if (!raw.apiToken) {
+    throw new Error("Apify API token is empty — configure it in Admin > Integrations > Apify");
+  }
+
+  return {
+    integrationId: integration.id as string,
+    credentialId: cred.id as string,
+    apiToken: raw.apiToken,
+    searchActorId: raw.searchActorId || DEFAULT_SEARCH_ACTOR_ID,
+    agentActorId: raw.agentActorId || DEFAULT_AGENT_ACTOR_ID,
+  };
+}
+
+// ─── Actor runs ───────────────────────────────────────────────────────────────
+
+/**
+ * Start an Apify actor run and return the run object.
+ * `input` is the actor-specific JSON input payload.
+ */
+export async function startActorRun(
+  apiToken: string,
+  actorId: string,
+  input: Record<string, unknown>,
+): Promise<ApifyRunStatus> {
+  const url = `${APIFY_BASE}/acts/${encodeURIComponent(actorId)}/runs`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiToken}`,
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Apify startActorRun failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+
+  const json = await res.json() as { data: ApifyRunStatus };
+  return json.data;
+}
+
+/**
+ * Poll an Apify run until it reaches a terminal status.
+ * Resolves once succeeded; throws on failure / timeout.
+ */
+export async function waitForRun(
+  apiToken: string,
+  runId: string,
+  opts: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<ApifyRunStatus> {
+  const { timeoutMs = 5 * 60_000, intervalMs = 5_000 } = opts;
+  const deadline = Date.now() + timeoutMs;
+  const terminal = new Set(["SUCCEEDED", "FAILED", "TIMED-OUT", "ABORTED"]);
+
+  while (Date.now() < deadline) {
+    await sleep(intervalMs);
+
+    const res = await fetch(`${APIFY_BASE}/actor-runs/${runId}`, {
+      headers: { "Authorization": `Bearer ${apiToken}` },
+    });
+
+    if (!res.ok) continue; // transient – keep polling
+
+    const json = await res.json() as { data: ApifyRunStatus };
+    const run = json.data;
+
+    if (terminal.has(run.status)) {
+      if (run.status !== "SUCCEEDED") {
+        throw new Error(`Apify run ${runId} ended with status ${run.status}`);
+      }
+      return run;
+    }
+  }
+
+  throw new Error(`Apify run ${runId} did not complete within ${timeoutMs / 1000}s`);
+}
+
+/**
+ * Fetch all items from an Apify dataset. Handles pagination automatically.
+ */
+export async function fetchDatasetItems<T = unknown>(
+  apiToken: string,
+  datasetId: string,
+  opts: { limit?: number } = {},
+): Promise<T[]> {
+  const limit = opts.limit ?? 1000;
+  const pageSize = 1000;
+  const results: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const url =
+      `${APIFY_BASE}/datasets/${encodeURIComponent(datasetId)}/items?offset=${offset}&limit=${Math.min(pageSize, limit - results.length)}&clean=true&format=json`;
+
+    const res = await fetch(url, {
+      headers: { "Authorization": `Bearer ${apiToken}` },
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Apify fetchDataset failed (${res.status}): ${text.slice(0, 200)}`);
+    }
+
+    const page = await res.json() as T[];
+    results.push(...page);
+
+    if (page.length < pageSize || results.length >= limit) break;
+    offset += page.length;
+  }
+
+  return results;
+}
+
+// ─── Logging ──────────────────────────────────────────────────────────────────
+
+/** Write one entry to integration_api_logs (best-effort, non-throwing). */
+export async function logApifyCall(
+  supabase: SupabaseClient,
+  integrationId: string,
+  opts: {
+    method: string;
+    url: string;
+    status: number;
+    latencyMs: number;
+    errorMessage?: string;
+  },
+): Promise<void> {
+  try {
+    await supabase.from("integration_api_logs").insert({
+      integration_id: integrationId,
+      method: opts.method,
+      url: opts.url,
+      status_code: opts.status,
+      latency_ms: opts.latencyMs,
+      error_message: opts.errorMessage ?? null,
+      logged_at: new Date().toISOString(),
+    });
+  } catch {
+    // non-critical
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Normalise a US phone number to digits only (country code 1 prefixed).
+ * Returns empty string if fewer than 10 digits remain after stripping.
+ */
+export function normalizePhone(raw: string | undefined | null): string {
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return digits;
+  return digits.length >= 7 ? digits : "";
+}
+
+/**
+ * Build the dedup key for a Zillow agent lead.
+ * Prefer phone-based key; fall back to name+broker slug.
+ */
+export function buildExternalId(
+  phone: string,
+  agentName?: string,
+  brokerName?: string,
+): string {
+  const norm = normalizePhone(phone);
+  if (norm) return `zillow-agent:${norm}`;
+
+  const slugify = (s: string) =>
+    (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `zillow-agent:name:${slugify(agentName || "unknown")}:${slugify(brokerName || "unknown")}`;
+}

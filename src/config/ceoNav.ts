@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Users,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
 import type { SidebarNavItem } from '@/components/AppSidebar';
 
@@ -40,6 +41,8 @@ export const ceoNavItems: SidebarNavItem[] = [
       { kind: 'item', id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2, path: `${CEO_BASE}/realtor-pipeline` },
       { kind: 'item', id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare, path: `${CEO_BASE}/realtor-scripts` },
       { kind: 'item', id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp, path: `${CEO_BASE}/realtor-reports` },
+      { kind: 'item', id: 'zillow-apify-sync', label: 'Zillow Apify Sync', icon: RefreshCw, path: `${CEO_BASE}/zillow-apify-sync` },
+      { kind: 'item', id: 'zillow-realtor-queue', label: 'Zillow Realtor Queue', icon: Users, path: `${CEO_BASE}/zillow-realtor-queue` },
     ],
   },
 

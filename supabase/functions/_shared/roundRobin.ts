@@ -2,6 +2,7 @@ import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export const BATCH_INVENTORY_SCOPE = "batch_inventory";
 export const REALTOR_MLS_SCOPE = "realtor_mls";
+export const ZILLOW_APIFY_SCOPE = "zillow_apify";
 
 /**
  * Return UUIDs of all active sales reps ordered by name.
@@ -137,6 +138,53 @@ export async function assignUnassignedRealtorLeadsRoundRobin(
   }
 
   await saveRoundRobinIndex(supabase, rrIndex, repNames.length, REALTOR_MLS_SCOPE);
+  return { assigned, repCount: repNames.length, error: null };
+}
+
+/**
+ * Assign every unassigned (or orphaned) zillow_agent_leads row to active reps
+ * in round-robin order. Mirrors assignUnassignedRealtorLeadsRoundRobin().
+ */
+export async function assignUnassignedZillowLeadsRoundRobin(
+  supabase: SupabaseClient,
+): Promise<{ assigned: number; repCount: number; error: string | null }> {
+  const repNames = await loadActiveRepNames(supabase);
+  if (repNames.length === 0) {
+    return { assigned: 0, repCount: 0, error: "No active sales reps found" };
+  }
+
+  const { data: leads, error: listErr } = await supabase
+    .from("zillow_agent_leads")
+    .select("id, assigned_rep")
+    .order("created_at", { ascending: true });
+
+  if (listErr) {
+    return { assigned: 0, repCount: repNames.length, error: "Failed to load Zillow leads" };
+  }
+
+  const toAssign = (leads ?? []).filter((lead) =>
+    needsRealtorAssignment(
+      (lead as { assigned_rep: string | null }).assigned_rep,
+      repNames,
+    )
+  );
+
+  let rrIndex = await loadRoundRobinIndex(supabase, ZILLOW_APIFY_SCOPE);
+  let assigned = 0;
+
+  for (const lead of toAssign) {
+    const { assignments, nextIndex } = assignRepsRoundRobin(repNames, rrIndex, 1);
+    const { error: updateErr } = await supabase
+      .from("zillow_agent_leads")
+      .update({ assigned_rep: assignments[0] })
+      .eq("id", lead.id);
+    if (!updateErr) {
+      assigned++;
+      rrIndex = nextIndex;
+    }
+  }
+
+  await saveRoundRobinIndex(supabase, rrIndex, repNames.length, ZILLOW_APIFY_SCOPE);
   return { assigned, repCount: repNames.length, error: null };
 }
 

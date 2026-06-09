@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "feature_id": "zillow-apify-sync",
+  "title": "Zillow Apify Realtor Channel",
+  "description": "Two-phase Apify scrape (search → listing-agent enrichment) with agent-primary dedup, shared rep assignment, round-robin, and Mojo push.",
+  "source_paths": [
+    "supabase/migrations/026_zillow_apify.sql",
+    "supabase/functions/_shared/apify.ts",
+    "supabase/functions/zillow-apify-sync/",
+    "supabase/functions/zillow-apify-manage/",
+    "supabase/functions/zillow-realtor-leads/",
+    "src/services/zillowApify.ts",
+    "src/pages/ceo/ZillowApifySyncPage.tsx",
+    "src/pages/ceo/ZillowRealtorQueuePage.tsx"
+  ],
+  "related_paths": [
+    "supabase/functions/_shared/roundRobin.ts",
+    "supabase/functions/integrations-test/index.ts",
+    "src/components/integrations/IntegrationConfigPanel.tsx",
+    "src/config/ceoNav.ts",
+    "src/App.tsx"
+  ],
+  "entrypoints": [
+    "supabase/functions/zillow-apify-sync/index.ts",
+    "supabase/functions/zillow-apify-manage/index.ts",
+    "supabase/functions/zillow-realtor-leads/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

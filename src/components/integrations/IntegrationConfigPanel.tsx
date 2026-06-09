@@ -335,7 +335,69 @@ export default function IntegrationConfigPanel({ integration, onBack }: Props) {
                       </p>
                     </div>
                   )}
-                  {integration.auth_method === 'api_key' && (
+                  {integration.auth_method === 'api_key' && integration.slug === 'apify' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="apify-api-token">Apify API Token</Label>
+                        <Input
+                          id="apify-api-token"
+                          name="integration-apify-api-token"
+                          type="text"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          data-form-type="other"
+                          className="font-mono"
+                          placeholder="Leave blank to keep current token"
+                          value={editFields.apiToken || ''}
+                          onChange={(e) => setEditFields({ ...editFields, apiToken: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Find your API token at{' '}
+                          <a
+                            href="https://console.apify.com/settings/integrations"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline underline-offset-2"
+                          >
+                            console.apify.com/settings/integrations
+                          </a>
+                          . Leave blank to keep existing.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="apify-search-actor">Search Actor ID</Label>
+                        <Input
+                          id="apify-search-actor"
+                          name="integration-apify-search-actor"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          className="font-mono text-sm"
+                          placeholder="X46xKaa20oUA1fRiP"
+                          value={editFields.searchActorId || ''}
+                          onChange={(e) => setEditFields({ ...editFields, searchActorId: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">Zillow Search Scraper actor ID. Leave blank to use the default.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="apify-agent-actor">Agent Actor ID</Label>
+                        <Input
+                          id="apify-agent-actor"
+                          name="integration-apify-agent-actor"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
+                          className="font-mono text-sm"
+                          placeholder="1NT8sDVAgchUDnHOc"
+                          value={editFields.agentActorId || ''}
+                          onChange={(e) => setEditFields({ ...editFields, agentActorId: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">Zillow Owner Agent Scraper actor ID. Leave blank to use the default.</p>
+                      </div>
+                    </>
+                  )}
+                  {integration.auth_method === 'api_key' && integration.slug !== 'apify' && (
                     <div className="space-y-1.5">
                       <Label htmlFor={`${integration.slug}-api-token`}>API Key</Label>
                       <Input
