@@ -5,13 +5,16 @@
  *
  * Phase A  (action: "sync")
  *   Start search actor → waitForRun (fast, ~30–90 s) → upsert staging
- *   → fire all agent actor runs in parallel batches (fast, no wait)
- *   → store agent run IDs in metadata → return status "partial"
+ *   → split detail URLs into batches (max 5 URLs each) → start ONLY the first
+ *   agent run → store remaining batches in metadata → return status "partial"
  *
- * Phase B  (action: "collect_agents")
- *   Poll stored agent run IDs → for each SUCCEEDED run, fetch dataset
- *   → upsert zillow_agent_leads (agent-primary) → mark enriched
- *   → when all runs done: round-robin assign → mark "success"
+ * Phase B  (action: "collect_agents", polled by the frontend)
+ *   Runs agent batches SEQUENTIALLY — one in flight at a time. Each poll:
+ *     - checks the active agent run; if SUCCEEDED, fetch dataset + upsert leads
+ *     - then starts the next pending batch (if any)
+ *   Sequential execution avoids Apify's max-concurrent-run limit, which was
+ *   silently failing most batches when they were all fired at once.
+ *   When no active run and no pending batches remain: round-robin → "success".
  *
  * Other actions: pause | resume | stop | list
  */
@@ -41,7 +44,7 @@ const supabase = createClient(
 );
 
 const AGENT_BATCH_SIZE = 5;        // agent actor hard limit: max 5 propertyUrls per run
-const MAX_COLLECT_PER_CALL = 20;   // max agent runs to process per collect_agents poll
+const MAX_START_FAILURES = 5;      // give up after this many consecutive failed batch starts
 const CONTROLLABLE = new Set(["running", "partial", "paused"]);
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -200,18 +203,6 @@ async function phaseA(
     .map((r) => r.detail_url)
     .filter((u): u is string => typeof u === "string" && u.length > 0);
 
-  await updateRun(runId, {
-    listings_scraped: stagingRows.length,
-    metadata: {
-      apify_search_run_id: searchRun.id,
-      phase: "B_firing",
-      agent_runs: [],
-      listings_saved: stagingRows.length,
-      detail_urls_found: detailUrls.length,
-      sample_fields: sampleFields,
-    },
-  });
-
   // Guard: if no valid URLs were extracted, bail with a clear diagnostic
   if (detailUrls.length === 0) {
     const sampleRaw = stagingRows[0]?.search_raw ?? {};
@@ -229,78 +220,68 @@ async function phaseA(
     return;
   }
 
-  // 6. Fire agent actor runs (don't wait — store run IDs for phase B)
-  const totalBatchesPlanned = Math.ceil(detailUrls.length / AGENT_BATCH_SIZE);
-  const agentRunIds: string[] = [];
-  let failedBatches = 0;
-  let lastStartError = "";
+  // 6. Split detail URLs into agent-actor batches (max 5 URLs each). Batches run
+  //    SEQUENTIALLY via collect_agents — one in flight at a time — so we never
+  //    trip Apify's max-concurrent-run limit. Kick off only the FIRST batch here.
+  const batches: string[][] = [];
   for (let i = 0; i < detailUrls.length; i += AGENT_BATCH_SIZE) {
-    const currentStatus = (await getRunRow(runId))?.status;
-    if (currentStatus === "stopped") return;
-
-    const batch = detailUrls.slice(i, i + AGENT_BATCH_SIZE);
-    try {
-      const agentRun = await startActorRun(creds.apiToken, creds.agentActorId, {
-        propertyUrls: batch,
-      });
-      agentRunIds.push(agentRun.id);
-      await logApifyCall(supabase, creds.integrationId, {
-        endpoint: `acts/${creds.agentActorId}/runs`,
-        status: 200,
-        latencyMs: 0,
-      });
-    } catch (err) {
-      failedBatches++;
-      lastStartError = err instanceof Error ? err.message : String(err);
-      await logApifyCall(supabase, creds.integrationId, {
-        endpoint: `acts/${creds.agentActorId}/runs`,
-        status: 500,
-        latencyMs: 0,
-        errorMessage: lastStartError,
-      });
-    }
+    batches.push(detailUrls.slice(i, i + AGENT_BATCH_SIZE));
   }
 
-  // All batches failed to start
-  if (agentRunIds.length === 0) {
-    const limitHint = /limit|disabled|402|403/i.test(lastStartError)
-      ? " — Apify account usage limit reached; raise the limit in Apify Console or upgrade the plan."
+  let firstRunId: string | null = null;
+  let startError = "";
+  try {
+    const agentRun = await startActorRun(creds.apiToken, creds.agentActorId, {
+      propertyUrls: batches[0],
+    });
+    firstRunId = agentRun.id;
+    await logApifyCall(supabase, creds.integrationId, {
+      endpoint: `acts/${creds.agentActorId}/runs`,
+      status: 200,
+      latencyMs: 0,
+    });
+  } catch (err) {
+    startError = err instanceof Error ? err.message : String(err);
+    await logApifyCall(supabase, creds.integrationId, {
+      endpoint: `acts/${creds.agentActorId}/runs`,
+      status: 500,
+      latencyMs: 0,
+      errorMessage: startError,
+    });
+  }
+
+  if (!firstRunId) {
+    const limitHint = /limit|disabled|402|403|429/i.test(startError)
+      ? " — Apify account usage/concurrency limit reached; raise the limit in Apify Console or upgrade the plan."
       : "";
     await updateRun(runId, {
       status: "failed",
       completed_at: new Date().toISOString(),
-      error_message: `Agent actor failed to start for all ${detailUrls.length} URLs.${limitHint} Last error: ${lastStartError}`,
+      error_message: `Agent actor failed to start.${limitHint} Last error: ${startError}`,
       metadata: {
         apify_search_run_id: searchRun.id,
         phase: "B_start_failed",
         detail_urls_found: detailUrls.length,
-        failed_batches: failedBatches,
-        last_start_error: lastStartError,
+        last_start_error: startError,
         sample_fields: sampleFields,
       },
     });
     return;
   }
 
-  // Some batches failed to start (e.g. Apify usage limit hit mid-run). Surface it
-  // in error_message so it isn't silently reported as "only N items processed".
-  const partialWarning = failedBatches > 0
-    ? `Started ${agentRunIds.length}/${totalBatchesPlanned} agent batches; ${failedBatches} failed to start (likely Apify usage limit). Last error: ${lastStartError}`
-    : null;
-
-  // Mark partial — phase B will be collected by collect_agents calls
+  // Mark partial — the rest of the batches are run one-by-one by collect_agents.
   await updateRun(runId, {
-    ...(partialWarning ? { error_message: partialWarning } : {}),
+    listings_scraped: stagingRows.length,
     status: "partial",
     metadata: {
       apify_search_run_id: searchRun.id,
       phase: "B",
-      agent_runs: agentRunIds.map((id) => ({ id, processed: false })),
-      total_batches: agentRunIds.length,
-      batches_planned: totalBatchesPlanned,
-      failed_batches: failedBatches,
-      detail_urls_found: detailUrls.length,
+      active_run_id: firstRunId,
+      pending_batches: batches.slice(1),
+      total_batches: batches.length,
       processed_batches: 0,
+      detail_urls_found: detailUrls.length,
+      start_failures: 0,
       sample_fields: sampleFields,
     },
   });
@@ -367,93 +348,133 @@ async function collectAgents(
   const run = await getRunRow(runId);
   if (!run) return { processed: 0, stillPending: 0, done: true };
 
-  // Only collect when Phase A has finished and agent runs have been fired
+  // Only collect when Phase A has finished and an agent run has been fired
   if (run.status !== "partial") {
     return { processed: 0, stillPending: 0, done: false };
   }
 
   const meta = (run.metadata ?? {}) as {
-    agent_runs?: { id: string; processed: boolean }[];
+    active_run_id?: string | null;
+    pending_batches?: string[][];
+    total_batches?: number;
     processed_batches?: number;
+    start_failures?: number;
+    [k: string]: unknown;
   };
-  const agentRuns = meta.agent_runs ?? [];
 
-  // Shouldn't happen for "partial" runs, but handle defensively
-  if (agentRuns.length === 0) {
-    await updateRun(runId, {
-      status: "failed",
-      completed_at: new Date().toISOString(),
-      error_message: "Run was marked partial but no agent run IDs were stored.",
-    });
-    return { processed: 0, stillPending: 0, done: true };
-  }
+  let activeRunId = meta.active_run_id ?? null;
+  let pending = Array.isArray(meta.pending_batches) ? meta.pending_batches : [];
+  let processedBatches = meta.processed_batches ?? 0;
+  let startFailures = meta.start_failures ?? 0;
+  const totalBatches = meta.total_batches ?? (processedBatches + pending.length + (activeRunId ? 1 : 0));
 
   let newlyProcessed = 0;
-  let stillPending = 0;
-  let processedThisCall = 0;
-  const updatedRuns = [...agentRuns];
 
-  for (let i = 0; i < updatedRuns.length; i++) {
-    const ar = updatedRuns[i];
-    if (ar.processed) continue;
-
-    // Cap per poll so we don't time out when many runs complete at once
-    if (processedThisCall >= MAX_COLLECT_PER_CALL) {
-      stillPending++;
-      continue;
-    }
-
-    // Check Apify run status
-    let apifyRun: ApifyRunStatus;
+  // ── 1. Resolve the in-flight agent run, if any ──────────────────────────────
+  if (activeRunId) {
+    let apifyRun: ApifyRunStatus | null = null;
     try {
       const res = await fetch(
-        `https://api.apify.com/v2/actor-runs/${ar.id}`,
+        `https://api.apify.com/v2/actor-runs/${activeRunId}`,
         { headers: { Authorization: `Bearer ${creds.apiToken}` } },
       );
-      if (!res.ok) { stillPending++; continue; }
-      const json = await res.json() as { data: ApifyRunStatus };
-      apifyRun = json.data;
+      if (res.ok) {
+        const json = await res.json() as { data: ApifyRunStatus };
+        apifyRun = json.data;
+      }
     } catch {
-      stillPending++;
-      continue;
+      apifyRun = null;
+    }
+
+    // Couldn't read status this poll — try again next poll.
+    if (!apifyRun) {
+      return { processed: 0, stillPending: pending.length + 1, done: false };
     }
 
     const terminal = new Set(["SUCCEEDED", "FAILED", "TIMED-OUT", "ABORTED"]);
     if (!terminal.has(apifyRun.status)) {
-      stillPending++;
-      continue;
+      // Still running — wait for the next poll before doing anything else.
+      return { processed: 0, stillPending: pending.length + 1, done: false };
     }
 
-    if (apifyRun.status !== "SUCCEEDED") {
-      updatedRuns[i] = { ...ar, processed: true };
-      processedThisCall++;
-      continue;
+    // Run finished. If it succeeded, ingest its dataset.
+    if (apifyRun.status === "SUCCEEDED") {
+      try {
+        const agentItems = await fetchDatasetItems<ZillowAgentItem>(
+          creds.apiToken,
+          apifyRun.defaultDatasetId,
+        );
+        newlyProcessed += await upsertAgentItems(agentItems, run.profile_id);
+      } catch {
+        // Dataset fetch failed — retry on the next poll, keep run active.
+        return { processed: 0, stillPending: pending.length + 1, done: false };
+      }
     }
 
-    // Fetch and process results
+    processedBatches++;
+    activeRunId = null;
+  }
+
+  // ── 2. Start the next batch (sequential — one run at a time) ─────────────────
+  let startError = "";
+  if (!activeRunId && pending.length > 0) {
+    const nextBatch = pending[0];
     try {
-      const agentItems = await fetchDatasetItems<ZillowAgentItem>(
-        creds.apiToken,
-        apifyRun.defaultDatasetId,
-      );
-      const count = await upsertAgentItems(agentItems, run.profile_id);
-      newlyProcessed += count;
-      updatedRuns[i] = { ...ar, processed: true };
-      processedThisCall++;
-    } catch {
-      stillPending++;
+      const agentRun = await startActorRun(creds.apiToken, creds.agentActorId, {
+        propertyUrls: nextBatch,
+      });
+      activeRunId = agentRun.id;
+      pending = pending.slice(1);
+      startFailures = 0;
+      await logApifyCall(supabase, creds.integrationId, {
+        endpoint: `acts/${creds.agentActorId}/runs`,
+        status: 200,
+        latencyMs: 0,
+      });
+    } catch (err) {
+      startError = err instanceof Error ? err.message : String(err);
+      startFailures++;
+      await logApifyCall(supabase, creds.integrationId, {
+        endpoint: `acts/${creds.agentActorId}/runs`,
+        status: 500,
+        latencyMs: 0,
+        errorMessage: startError,
+      });
     }
   }
 
-  const processedBatches = updatedRuns.filter((r) => r.processed).length;
-  const allDone = stillPending === 0 && processedBatches === agentRuns.length;
+  // Too many consecutive start failures (e.g. Apify usage limit) — give up.
+  if (startFailures >= MAX_START_FAILURES) {
+    const limitHint = /limit|disabled|402|403|429/i.test(startError)
+      ? " — Apify account usage/concurrency limit reached; raise the limit in Apify Console or upgrade the plan."
+      : "";
+    await updateRun(runId, {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      agents_upserted: (run.agents_upserted ?? 0) + newlyProcessed,
+      error_message: `Agent actor failed to start ${startFailures}× in a row after ${processedBatches}/${totalBatches} batches.${limitHint} Last error: ${startError}`,
+      metadata: {
+        ...meta,
+        active_run_id: null,
+        pending_batches: pending,
+        processed_batches: processedBatches,
+        start_failures: startFailures,
+      },
+    });
+    return { processed: newlyProcessed, stillPending: pending.length, done: true };
+  }
+
+  const allDone = !activeRunId && pending.length === 0;
 
   await updateRun(runId, {
     agents_upserted: (run.agents_upserted ?? 0) + newlyProcessed,
     metadata: {
       ...meta,
-      agent_runs: updatedRuns,
+      active_run_id: activeRunId,
+      pending_batches: pending,
+      total_batches: totalBatches,
       processed_batches: processedBatches,
+      start_failures: startFailures,
     },
     ...(allDone ? {
       status: "success",
@@ -471,7 +492,7 @@ async function collectAgents(
 
   return {
     processed: newlyProcessed,
-    stillPending,
+    stillPending: pending.length + (activeRunId ? 1 : 0),
     done: allDone,
   };
 }
