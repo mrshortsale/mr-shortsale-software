@@ -64,7 +64,6 @@ interface ProfileFormState {
   daysOnZillow: string;
   priceMin: string;
   priceMax: string;
-  maxListings: number;
   enabled: boolean;
 }
 
@@ -79,7 +78,6 @@ const DEFAULT_FORM: ProfileFormState = {
   daysOnZillow: '',
   priceMin: '',
   priceMax: '',
-  maxListings: 500,
   enabled: false,
 };
 
@@ -222,26 +220,14 @@ function ProfileForm({ initial, onSave, onCancel, saving }: ProfileFormProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Max Listings per Run</Label>
-          <Input
-            type="number"
-            min={1}
-            max={5000}
-            value={form.maxListings}
-            onChange={(e) => set({ maxListings: Number(e.target.value) })}
+      <div className="space-y-1.5">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <Switch
+            checked={form.enabled}
+            onCheckedChange={(v) => set({ enabled: v })}
           />
-        </div>
-        <div className="space-y-1.5 flex flex-col justify-end">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <Switch
-              checked={form.enabled}
-              onCheckedChange={(v) => set({ enabled: v })}
-            />
-            <span>Enabled</span>
-          </label>
-        </div>
+          <span>Enabled</span>
+        </label>
       </div>
 
       <div className="flex gap-2 pt-1">
@@ -367,7 +353,6 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
       profileId: profile.id,
       displayName: form.displayName,
       searchConfig,
-      maxListings: form.maxListings,
       enabled: form.enabled,
     });
     setSavingEdit(false);
@@ -403,7 +388,6 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
     daysOnZillow: String(cfg.daysOnZillow ?? ''),
     priceMin: String(cfg.priceMin ?? ''),
     priceMax: String(cfg.priceMax ?? ''),
-    maxListings: profile.max_listings,
     enabled: profile.enabled,
   };
 
@@ -422,7 +406,7 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
               {activeRun && statusBadge(activeRun.status)}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Last sync: {fmtDate(profile.last_synced_at)} · Max {profile.max_listings} listings
+              Last sync: {fmtDate(profile.last_synced_at)}
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -567,7 +551,6 @@ export default function ZillowApifySyncPage() {
     const { profile, error } = await createZillowProfile({
       displayName: form.displayName,
       searchConfig,
-      maxListings: form.maxListings,
       enabled: form.enabled,
     });
     setSavingNew(false);

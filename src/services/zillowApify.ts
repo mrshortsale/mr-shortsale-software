@@ -24,7 +24,6 @@ export interface ZillowSyncProfile {
   enabled: boolean;
   search_url: string;
   search_config: Record<string, unknown>;
-  max_listings: number;
   last_synced_at: string | null;
   created_at: string;
   updated_at: string;
@@ -116,7 +115,6 @@ export async function createZillowProfile(payload: {
   displayName: string;
   searchUrl?: string;
   searchConfig?: SearchConfig;
-  maxListings?: number;
   enabled?: boolean;
 }): Promise<{ profile?: ZillowSyncProfile; error?: string }> {
   try {
@@ -138,7 +136,6 @@ export async function updateZillowProfile(payload: {
   displayName?: string;
   searchUrl?: string;
   searchConfig?: SearchConfig;
-  maxListings?: number;
   enabled?: boolean;
 }): Promise<{ profile?: ZillowSyncProfile; error?: string }> {
   try {

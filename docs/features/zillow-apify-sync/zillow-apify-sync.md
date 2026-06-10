@@ -56,6 +56,6 @@ Scrapes Zillow listing and listing-agent data via Apify actors, deduplicates by 
 
 ## Open questions / gaps
 
-- The Apify actor input schemas (`searchUrls` for search actor; `startUrls` for agent actor) are assumed based on common Apify conventions. Verify actual field names in the Apify console before first production run.
-- `max_listings` per profile caps spend; the CEO should confirm a comfortable value before enabling a profile.
-- Phase B agent enrichment runs inline in a single edge function invocation. For very large staging batches (>200 listings), chunked `_internalContinue` calls may be needed to avoid the 30-second edge timeout.
+- The Apify actor input schemas (`searchUrls` for search actor; `propertyUrls` for agent actor, max 5 per run) are confirmed against the Apify console.
+- There is no per-profile listing cap: the sync enriches every listing the search returns. Spend is bounded only by the Apify account's monthly usage limit; if that limit is hit mid-run the run records how many agent batches failed to start.
+- Phase B agent enrichment is asynchronous: agent runs are fired during Phase A, then collected via polled `collect_agents` calls (max 20 runs processed per call) to avoid edge-function timeouts.

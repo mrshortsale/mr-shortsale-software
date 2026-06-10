@@ -40,7 +40,8 @@ const supabase = createClient(
   Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-const AGENT_BATCH_SIZE = 200;
+const AGENT_BATCH_SIZE = 5;        // agent actor hard limit: max 5 propertyUrls per run
+const MAX_COLLECT_PER_CALL = 20;   // max agent runs to process per collect_agents poll
 const CONTROLLABLE = new Set(["running", "partial", "paused"]);
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -101,7 +102,6 @@ async function phaseA(
   runId: string,
   profileId: string,
   searchUrl: string,
-  maxListings: number,
   creds: Awaited<ReturnType<typeof loadApifyCredentials>>,
 ): Promise<void> {
   const t0 = Date.now();
@@ -109,17 +109,18 @@ async function phaseA(
   // 1. Start search actor
   let searchRun: ApifyRunStatus;
   try {
+    // PAGINATION_WITH_ZOOM_IN is required for this actor to return results on large
+    // geographic searches (whole state). It ignores maxItems on the Apify side, but
+    // we cap the number of items we READ from the dataset via fetchDatasetItems + slice.
     searchRun = await startActorRun(creds.apiToken, creds.searchActorId, {
       searchUrls: [{ url: searchUrl }],
-      maxItems: maxListings,
       extractionMethod: "PAGINATION_WITH_ZOOM_IN",
     });
     await updateRun(runId, {
       metadata: { apify_search_run_id: searchRun.id, phase: "A", agent_runs: [] },
     });
     await logApifyCall(supabase, creds.integrationId, {
-      method: "POST",
-      url: `acts/${creds.searchActorId}/runs`,
+      endpoint: `acts/${creds.searchActorId}/runs`,
       status: 200,
       latencyMs: Date.now() - t0,
     });
@@ -150,13 +151,13 @@ async function phaseA(
     return;
   }
 
-  // 3. Fetch dataset and cap to maxListings
+  // 3. Fetch all items from the search dataset — the search run is already paid for,
+  //    so we stage and enrich every result the search returns.
   let items: ZillowSearchItem[];
   try {
     items = await fetchDatasetItems<ZillowSearchItem>(
       creds.apiToken,
       searchCompleted.defaultDatasetId,
-      { limit: maxListings },
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -168,8 +169,8 @@ async function phaseA(
     return;
   }
 
-  // Cap to maxListings (actor may ignore maxItems with PAGINATION_WITH_ZOOM_IN)
-  if (items.length > maxListings) items = items.slice(0, maxListings);
+  // Store a sample of raw field names in metadata for debugging
+  const sampleFields = items.length > 0 ? Object.keys(items[0]) : [];
 
   // 4. Upsert staging rows
   const stagingRows = items
@@ -183,34 +184,56 @@ async function phaseA(
     });
   }
 
+  if (stagingRows.length === 0) {
+    await updateRun(runId, {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      listings_scraped: 0,
+      error_message: `Search actor returned ${items.length} items but none had a valid zpid. Sample fields: ${sampleFields.join(", ")}`,
+      metadata: { apify_search_run_id: searchRun.id, phase: "A_empty", sample_fields: sampleFields },
+    });
+    return;
+  }
+
+  // 5. Build detail URLs for agent scraper — process ALL staged listings (no cap)
+  const detailUrls = stagingRows
+    .map((r) => r.detail_url)
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
+
   await updateRun(runId, {
     listings_scraped: stagingRows.length,
     metadata: {
       apify_search_run_id: searchRun.id,
-      phase: "B",
+      phase: "B_firing",
       agent_runs: [],
+      listings_saved: stagingRows.length,
+      detail_urls_found: detailUrls.length,
+      sample_fields: sampleFields,
     },
   });
 
-  if (stagingRows.length === 0) {
+  // Guard: if no valid URLs were extracted, bail with a clear diagnostic
+  if (detailUrls.length === 0) {
+    const sampleRaw = stagingRows[0]?.search_raw ?? {};
     await updateRun(runId, {
-      status: "success",
+      status: "failed",
       completed_at: new Date().toISOString(),
-      agents_upserted: 0,
+      error_message: `Staged ${stagingRows.length} listings but extractDetailUrl returned empty for all. sample_raw below.`,
+      metadata: {
+        apify_search_run_id: searchRun.id,
+        phase: "B_no_urls",
+        sample_raw: sampleRaw,
+        sample_fields: sampleFields,
+      },
     });
-    await supabase
-      .from("zillow_apify_sync_profiles")
-      .update({ last_synced_at: new Date().toISOString() })
-      .eq("id", profileId);
     return;
   }
 
-  // 5. Fire agent actor runs (don't wait — store run IDs for phase B)
-  const detailUrls = stagingRows
-    .map((r) => r.detail_url)
-    .filter(Boolean);
-
+  // 6. Fire agent actor runs (don't wait — store run IDs for phase B)
+  const totalBatchesPlanned = Math.ceil(detailUrls.length / AGENT_BATCH_SIZE);
   const agentRunIds: string[] = [];
+  let failedBatches = 0;
+  let lastStartError = "";
   for (let i = 0; i < detailUrls.length; i += AGENT_BATCH_SIZE) {
     const currentStatus = (await getRunRow(runId))?.status;
     if (currentStatus === "stopped") return;
@@ -222,34 +245,86 @@ async function phaseA(
       });
       agentRunIds.push(agentRun.id);
       await logApifyCall(supabase, creds.integrationId, {
-        method: "POST",
-        url: `acts/${creds.agentActorId}/runs`,
+        endpoint: `acts/${creds.agentActorId}/runs`,
         status: 200,
         latencyMs: 0,
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      failedBatches++;
+      lastStartError = err instanceof Error ? err.message : String(err);
       await logApifyCall(supabase, creds.integrationId, {
-        method: "POST",
-        url: `acts/${creds.agentActorId}/runs`,
+        endpoint: `acts/${creds.agentActorId}/runs`,
         status: 500,
         latencyMs: 0,
-        errorMessage: msg,
+        errorMessage: lastStartError,
       });
     }
   }
 
+  // All batches failed to start
+  if (agentRunIds.length === 0) {
+    const limitHint = /limit|disabled|402|403/i.test(lastStartError)
+      ? " — Apify account usage limit reached; raise the limit in Apify Console or upgrade the plan."
+      : "";
+    await updateRun(runId, {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_message: `Agent actor failed to start for all ${detailUrls.length} URLs.${limitHint} Last error: ${lastStartError}`,
+      metadata: {
+        apify_search_run_id: searchRun.id,
+        phase: "B_start_failed",
+        detail_urls_found: detailUrls.length,
+        failed_batches: failedBatches,
+        last_start_error: lastStartError,
+        sample_fields: sampleFields,
+      },
+    });
+    return;
+  }
+
+  // Some batches failed to start (e.g. Apify usage limit hit mid-run). Surface it
+  // in error_message so it isn't silently reported as "only N items processed".
+  const partialWarning = failedBatches > 0
+    ? `Started ${agentRunIds.length}/${totalBatchesPlanned} agent batches; ${failedBatches} failed to start (likely Apify usage limit). Last error: ${lastStartError}`
+    : null;
+
   // Mark partial — phase B will be collected by collect_agents calls
   await updateRun(runId, {
+    ...(partialWarning ? { error_message: partialWarning } : {}),
     status: "partial",
     metadata: {
       apify_search_run_id: searchRun.id,
       phase: "B",
       agent_runs: agentRunIds.map((id) => ({ id, processed: false })),
       total_batches: agentRunIds.length,
+      batches_planned: totalBatchesPlanned,
+      failed_batches: failedBatches,
+      detail_urls_found: detailUrls.length,
       processed_batches: 0,
+      sample_fields: sampleFields,
     },
   });
+}
+
+function extractDetailUrl(it: ZillowSearchItem): string {
+  const raw = it as unknown as Record<string, unknown>;
+
+  // 1. Preferred field names (most common across actor versions)
+  for (const key of ["detailUrl", "url", "hdpUrl", "propertyUrl", "link", "listingUrl"]) {
+    const v = raw[key];
+    if (typeof v === "string" && v.includes("zillow.com")) return v;
+  }
+
+  // 2. Scan ALL string values for anything that looks like a Zillow listing URL
+  for (const v of Object.values(raw)) {
+    if (typeof v === "string" && v.includes("zillow.com/homedetails")) return v;
+  }
+
+  // 3. Construct from zpid — Zillow reliably redirects these
+  const zpid = String(raw["zpid"] ?? it.zpid ?? "");
+  if (zpid) return `https://www.zillow.com/homedetails/${zpid}_zpid/`;
+
+  return "";
 }
 
 function mapSearchItemToStaging(runId: string, it: ZillowSearchItem) {
@@ -271,7 +346,7 @@ function mapSearchItemToStaging(runId: string, it: ZillowSearchItem) {
   return {
     sync_run_id: runId,
     zpid,
-    detail_url: it.detailUrl ?? "",
+    detail_url: extractDetailUrl(it),
     address: it.addressStreet ?? it.address ?? null,
     city: it.addressCity ?? null,
     state: it.addressState ?? null,
@@ -292,27 +367,41 @@ async function collectAgents(
   const run = await getRunRow(runId);
   if (!run) return { processed: 0, stillPending: 0, done: true };
 
+  // Only collect when Phase A has finished and agent runs have been fired
+  if (run.status !== "partial") {
+    return { processed: 0, stillPending: 0, done: false };
+  }
+
   const meta = (run.metadata ?? {}) as {
     agent_runs?: { id: string; processed: boolean }[];
     processed_batches?: number;
   };
   const agentRuns = meta.agent_runs ?? [];
 
+  // Shouldn't happen for "partial" runs, but handle defensively
   if (agentRuns.length === 0) {
     await updateRun(runId, {
-      status: "success",
+      status: "failed",
       completed_at: new Date().toISOString(),
+      error_message: "Run was marked partial but no agent run IDs were stored.",
     });
     return { processed: 0, stillPending: 0, done: true };
   }
 
   let newlyProcessed = 0;
   let stillPending = 0;
+  let processedThisCall = 0;
   const updatedRuns = [...agentRuns];
 
   for (let i = 0; i < updatedRuns.length; i++) {
     const ar = updatedRuns[i];
     if (ar.processed) continue;
+
+    // Cap per poll so we don't time out when many runs complete at once
+    if (processedThisCall >= MAX_COLLECT_PER_CALL) {
+      stillPending++;
+      continue;
+    }
 
     // Check Apify run status
     let apifyRun: ApifyRunStatus;
@@ -337,6 +426,7 @@ async function collectAgents(
 
     if (apifyRun.status !== "SUCCEEDED") {
       updatedRuns[i] = { ...ar, processed: true };
+      processedThisCall++;
       continue;
     }
 
@@ -349,6 +439,7 @@ async function collectAgents(
       const count = await upsertAgentItems(agentItems, run.profile_id);
       newlyProcessed += count;
       updatedRuns[i] = { ...ar, processed: true };
+      processedThisCall++;
     } catch {
       stillPending++;
     }
@@ -394,8 +485,15 @@ async function upsertAgentItems(
   for (const agent of agentItems) {
     const zpid = String(agent.zpid ?? "");
     const phone = normalizePhone(agent.agentPhoneNumber);
-    const agentName = agent.agentName ?? "";
-    const brokerName = agent.brokerName ?? "";
+    const agentName = (agent.agentName ?? "").trim();
+    const brokerName = (agent.brokerName ?? "").trim();
+
+    // Skip unusable records: the actor returns all-null contact + a `message`
+    // (e.g. "404: Not Found") when Zillow blocks the request. Storing these would
+    // collapse every failure into a single "unknown:unknown" dedup row.
+    const hasContact = Boolean(phone || agentName || brokerName);
+    if (!hasContact) continue;
+
     const externalId = buildExternalId(phone, agentName, brokerName);
 
     // Join staging for property info
@@ -488,7 +586,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profiles } = await supabase
       .from("zillow_apify_sync_profiles")
-      .select("id, display_name, enabled, last_synced_at, max_listings")
+      .select("id, display_name, enabled, last_synced_at")
       .order("display_name");
 
     const profileIds = (profiles ?? []).map((p) => p.id as string);
@@ -582,7 +680,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await supabase
       .from("zillow_apify_sync_profiles")
-      .select("id, display_name, search_url, max_listings")
+      .select("id, display_name, search_url")
       .eq("id", profileId)
       .single();
 
@@ -613,7 +711,7 @@ Deno.serve(async (req: Request) => {
 
     // Phase A runs in background (waitUntil keeps the function alive after response)
     EdgeRuntime.waitUntil(
-      phaseA(newRun.id, profileId, profile.search_url, profile.max_listings, creds),
+      phaseA(newRun.id, profileId, profile.search_url, creds),
     );
 
     return jsonResponse({ ok: true, runId: newRun.id, status: "running" }, 202);

@@ -1,0 +1,223 @@
+[
+  {
+    "inputIdentifier": "https://www.zillow.com/homedetails/1311-Delaware-Ave-SW-APT-S833-Washington-DC-20024/2089231868_zpid/",
+    "zpid": "2089231868",
+    "source": "9vrc_pr_zpd",
+    "isListedByOwner": false,
+    "agentName": "James Chase",
+    "agentEmail": null,
+    "agentPhoneNumber": "301-908-6612",
+    "agentLicenseNumber": null,
+    "listAgentFullName": "James Chase",
+    "listAgentLicenseNumber": null,
+    "coAgentName": "Co-Listing Agent: Roman Mychajliw",
+    "coAgentLicenseNumber": null,
+    "coAgentNumber": "240-994-5067",
+    "buyerAgentName": null,
+    "buyerAgentMemberStateLicense": null,
+    "buyerBrokerageName": null,
+    "brokerName": "Long & Foster Real Estate, Inc.",
+    "brokerPhoneNumber": "301-975-9500",
+    "officeName": "Long & Foster Real Estate, Inc.",
+    "listingOffices": [
+      {
+        "associatedOfficeType": "listOffice",
+        "officeName": "Long & Foster Real Estate, Inc."
+      },
+      {
+        "associatedOfficeType": "coListOffice",
+        "officeName": "Long & Foster Real Estate, Inc."
+      }
+    ],
+    "listingAgents": [
+      {
+        "associatedAgentType": "listAgent",
+        "memberFullName": "James Chase",
+        "memberStateLicense": null
+      },
+      {
+        "associatedAgentType": "coListAgent",
+        "memberFullName": "Co-Listing Agent: Roman Mychajliw",
+        "memberStateLicense": null
+      }
+    ],
+    "mlsId": "DCDC2265824",
+    "mlsName": "Bright MLS",
+    "mlsDisclaimer": "The data relating to real estate for sale on this website appears in part through the BRIGHT Internet Data Exchange program, a voluntary cooperative exchange of property listing data between licensed real estate brokerage firms, and is provided by BRIGHT through a licensing agreement.\nListing information is from various brokers who participate in the Bright MLS IDX program and not all listings may be visible on the site. \nThe property information being provided on or through the website is for the personal, non-commercial use of consumers and such information may not be used for any purpose other than to identify prospective properties consumers may be interested in purchasing.\nSome properties which appear for sale on the website may no longer be available because they are for instance, under contract, sold or are no longer being offered for sale. \nProperty information displayed is deemed reliable but is not guaranteed. \nCopyright 2026 Bright MLS, Inc. [Click here for more information](/mls-disclaimers/#5632)\n\n",
+    "trueStatus": null,
+    "attributionTitle": null,
+    "listingAgreement": "Exclusive Right To Sell",
+    "providerLogo": "https://photos.zillowstatic.com/fp/3c0b241c63af930483095615f244c283-zillow_web_95_35.jpg",
+    "lastChecked": "2026-06-10 02:21:39",
+    "lastUpdated": "2026-06-05 02:07:53",
+    "rentalDisplayName": null,
+    "rentalBusinessName": null,
+    "rentalPhoneNumber": null,
+    "rentalAgentBadgeType": null,
+    "rentalPhotoUrl": null,
+    "rentalReviewsCount": null,
+    "rentalReviewsUrl": null,
+    "rentalRatingAverage": null,
+    "rentalIsBrokerLocalCompliance": null,
+    "message": "200: Success"
+  },
+  {
+    "inputIdentifier": "https://www.zillow.com/homedetails/1109-Penn-St-NE-APT-4-Washington-DC-20002/71741336_zpid/",
+    "zpid": "71741336",
+    "source": "9vrc_pr_zpd",
+    "isListedByOwner": false,
+    "agentName": "David Conforti",
+    "agentEmail": null,
+    "agentPhoneNumber": "202-744-0714",
+    "agentLicenseNumber": null,
+    "listAgentFullName": "David Conforti",
+    "listAgentLicenseNumber": "5015100",
+    "coAgentName": null,
+    "coAgentLicenseNumber": null,
+    "coAgentNumber": null,
+    "buyerAgentName": null,
+    "buyerAgentMemberStateLicense": null,
+    "buyerBrokerageName": null,
+    "brokerName": "AEGIS REALTY COMPANY, LLC",
+    "brokerPhoneNumber": "2022861302",
+    "officeName": "AEGIS REALTY COMPANY, LLC",
+    "listingOffices": [
+      {
+        "associatedOfficeType": "listOffice",
+        "officeName": "AEGIS REALTY COMPANY, LLC"
+      }
+    ],
+    "listingAgents": [
+      {
+        "associatedAgentType": "listAgent",
+        "memberFullName": "David Conforti",
+        "memberStateLicense": "5015100"
+      }
+    ],
+    "mlsId": "DCDC2232840",
+    "mlsName": "Bright MLS",
+    "mlsDisclaimer": "The data relating to real estate for sale on this website appears in part through the BRIGHT Internet Data Exchange program, a voluntary cooperative exchange of property listing data between licensed real estate brokerage firms, and is provided by BRIGHT through a licensing agreement.\nListing information is from various brokers who participate in the Bright MLS IDX program and not all listings may be visible on the site. \nThe property information being provided on or through the website is for the personal, non-commercial use of consumers and such information may not be used for any purpose other than to identify prospective properties consumers may be interested in purchasing.\nSome properties which appear for sale on the website may no longer be available because they are for instance, under contract, sold or are no longer being offered for sale. \nProperty information displayed is deemed reliable but is not guaranteed. \nCopyright 2026 Bright MLS, Inc. [Click here for more information](/mls-disclaimers/#5632)\n\n",
+    "trueStatus": null,
+    "attributionTitle": null,
+    "listingAgreement": "Exclusive Right To Sell",
+    "providerLogo": "https://photos.zillowstatic.com/fp/3c0b241c63af930483095615f244c283-zillow_web_95_35.jpg",
+    "lastChecked": "2026-06-10 02:21:39",
+    "lastUpdated": "2026-05-21 03:25:54",
+    "rentalDisplayName": null,
+    "rentalBusinessName": null,
+    "rentalPhoneNumber": null,
+    "rentalAgentBadgeType": null,
+    "rentalPhotoUrl": null,
+    "rentalReviewsCount": null,
+    "rentalReviewsUrl": null,
+    "rentalRatingAverage": null,
+    "rentalIsBrokerLocalCompliance": null,
+    "message": "200: Success"
+  },
+  {
+    "inputIdentifier": "https://www.zillow.com/homedetails/3107-Naylor-Rd-SE-APT-302-Washington-DC-20020/71741687_zpid/",
+    "zpid": "71741687",
+    "source": "9vrc_pr_zpd",
+    "isListedByOwner": false,
+    "agentName": "Teresa Smith",
+    "agentEmail": null,
+    "agentPhoneNumber": "301-237-7599",
+    "agentLicenseNumber": null,
+    "listAgentFullName": "Teresa Smith",
+    "listAgentLicenseNumber": "SP98364305",
+    "coAgentName": null,
+    "coAgentLicenseNumber": null,
+    "coAgentNumber": null,
+    "buyerAgentName": null,
+    "buyerAgentMemberStateLicense": null,
+    "buyerBrokerageName": null,
+    "brokerName": "Keller Williams Preferred Properties",
+    "brokerPhoneNumber": "240-737-5000",
+    "officeName": "Keller Williams Preferred Properties",
+    "listingOffices": [
+      {
+        "associatedOfficeType": "listOffice",
+        "officeName": "Keller Williams Preferred Properties"
+      }
+    ],
+    "listingAgents": [
+      {
+        "associatedAgentType": "listAgent",
+        "memberFullName": "Teresa Smith",
+        "memberStateLicense": "SP98364305"
+      }
+    ],
+    "mlsId": "DCDC2173988",
+    "mlsName": "Bright MLS",
+    "mlsDisclaimer": "The data relating to real estate for sale on this website appears in part through the BRIGHT Internet Data Exchange program, a voluntary cooperative exchange of property listing data between licensed real estate brokerage firms, and is provided by BRIGHT through a licensing agreement.\nListing information is from various brokers who participate in the Bright MLS IDX program and not all listings may be visible on the site. \nThe property information being provided on or through the website is for the personal, non-commercial use of consumers and such information may not be used for any purpose other than to identify prospective properties consumers may be interested in purchasing.\nSome properties which appear for sale on the website may no longer be available because they are for instance, under contract, sold or are no longer being offered for sale. \nProperty information displayed is deemed reliable but is not guaranteed. \nCopyright 2026 Bright MLS, Inc. [Click here for more information](/mls-disclaimers/#5632)\n\n",
+    "trueStatus": null,
+    "attributionTitle": null,
+    "listingAgreement": "Exclusive Agency",
+    "providerLogo": "https://photos.zillowstatic.com/fp/3c0b241c63af930483095615f244c283-zillow_web_95_35.jpg",
+    "lastChecked": "2026-06-10 02:21:39",
+    "lastUpdated": "2026-06-04 11:57:30",
+    "rentalDisplayName": null,
+    "rentalBusinessName": null,
+    "rentalPhoneNumber": null,
+    "rentalAgentBadgeType": null,
+    "rentalPhotoUrl": null,
+    "rentalReviewsCount": null,
+    "rentalReviewsUrl": null,
+    "rentalRatingAverage": null,
+    "rentalIsBrokerLocalCompliance": null,
+    "message": "200: Success"
+  },
+  {
+    "inputIdentifier": "https://www.zillow.com/homedetails/Bruce-Pl-SE-Washington-DC-20020/183123169_zpid/",
+    "zpid": "183123169",
+    "source": "9vrc_pr_zpd",
+    "isListedByOwner": false,
+    "agentName": "Mr. Keith A Hawkins",
+    "agentEmail": null,
+    "agentPhoneNumber": "240-413-6252",
+    "agentLicenseNumber": null,
+    "listAgentFullName": "Mr. Keith A Hawkins",
+    "listAgentLicenseNumber": "0225243770",
+    "coAgentName": null,
+    "coAgentLicenseNumber": null,
+    "coAgentNumber": null,
+    "buyerAgentName": null,
+    "buyerAgentMemberStateLicense": null,
+    "buyerBrokerageName": null,
+    "brokerName": "Samson Properties",
+    "brokerPhoneNumber": "7033788810",
+    "officeName": "Samson Properties",
+    "listingOffices": [
+      {
+        "associatedOfficeType": "listOffice",
+        "officeName": "Samson Properties"
+      }
+    ],
+    "listingAgents": [
+      {
+        "associatedAgentType": "listAgent",
+        "memberFullName": "Mr. Keith A Hawkins",
+        "memberStateLicense": "0225243770"
+      }
+    ],
+    "mlsId": "DCDC2262170",
+    "mlsName": "Bright MLS",
+    "mlsDisclaimer": "The data relating to real estate for sale on this website appears in part through the BRIGHT Internet Data Exchange program, a voluntary cooperative exchange of property listing data between licensed real estate brokerage firms, and is provided by BRIGHT through a licensing agreement.\nListing information is from various brokers who participate in the Bright MLS IDX program and not all listings may be visible on the site. \nThe property information being provided on or through the website is for the personal, non-commercial use of consumers and such information may not be used for any purpose other than to identify prospective properties consumers may be interested in purchasing.\nSome properties which appear for sale on the website may no longer be available because they are for instance, under contract, sold or are no longer being offered for sale. \nProperty information displayed is deemed reliable but is not guaranteed. \nCopyright 2026 Bright MLS, Inc. [Click here for more information](/mls-disclaimers/#5632)\n\n",
+    "trueStatus": null,
+    "attributionTitle": null,
+    "listingAgreement": "Exclusive Right To Sell",
+    "providerLogo": "https://photos.zillowstatic.com/fp/3c0b241c63af930483095615f244c283-zillow_web_95_35.jpg",
+    "lastChecked": "2026-06-10 02:21:39",
+    "lastUpdated": "2026-05-15 03:33:26",
+    "rentalDisplayName": null,
+    "rentalBusinessName": null,
+    "rentalPhoneNumber": null,
+    "rentalAgentBadgeType": null,
+    "rentalPhotoUrl": null,
+    "rentalReviewsCount": null,
+    "rentalReviewsUrl": null,
+    "rentalRatingAverage": null,
+    "rentalIsBrokerLocalCompliance": null,
+    "message": "200: Success"
+  }
+]

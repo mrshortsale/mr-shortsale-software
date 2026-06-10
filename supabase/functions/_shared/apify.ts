@@ -218,8 +218,7 @@ export async function logApifyCall(
   supabase: SupabaseClient,
   integrationId: string,
   opts: {
-    method: string;
-    url: string;
+    endpoint: string;
     status: number;
     latencyMs: number;
     errorMessage?: string;
@@ -228,12 +227,11 @@ export async function logApifyCall(
   try {
     await supabase.from("integration_api_logs").insert({
       integration_id: integrationId,
-      method: opts.method,
-      url: opts.url,
+      endpoint: opts.endpoint,
       status_code: opts.status,
       latency_ms: opts.latencyMs,
       error_message: opts.errorMessage ?? null,
-      logged_at: new Date().toISOString(),
+      direction: "outbound",
     });
   } catch {
     // non-critical
