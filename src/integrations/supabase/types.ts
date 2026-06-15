@@ -293,6 +293,107 @@ export type Database = {
           },
         ]
       }
+      county_scrape_runs: {
+        Row: {
+          completed_at: string | null
+          county_source_id: string | null
+          error_message: string | null
+          id: string
+          raw_preview: string | null
+          records_found: number | null
+          records_inserted: number | null
+          records_skipped: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          county_source_id?: string | null
+          error_message?: string | null
+          id?: string
+          raw_preview?: string | null
+          records_found?: number | null
+          records_inserted?: number | null
+          records_skipped?: number | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          county_source_id?: string | null
+          error_message?: string | null
+          id?: string
+          raw_preview?: string | null
+          records_found?: number | null
+          records_inserted?: number | null
+          records_skipped?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "county_scrape_runs_county_source_id_fkey"
+            columns: ["county_source_id"]
+            isOneToOne: false
+            referencedRelation: "county_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      county_sources: {
+        Row: {
+          apify_actor_id: string | null
+          county_fips: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_record_count: number | null
+          last_scraped_at: string | null
+          name: string
+          notes: string | null
+          schedule: string
+          scrape_method: string
+          scrape_url: string
+          state: string
+          updated_at: string
+          url_params: Json | null
+        }
+        Insert: {
+          apify_actor_id?: string | null
+          county_fips?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_record_count?: number | null
+          last_scraped_at?: string | null
+          name: string
+          notes?: string | null
+          schedule?: string
+          scrape_method?: string
+          scrape_url: string
+          state?: string
+          updated_at?: string
+          url_params?: Json | null
+        }
+        Update: {
+          apify_actor_id?: string | null
+          county_fips?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_record_count?: number | null
+          last_scraped_at?: string | null
+          name?: string
+          notes?: string | null
+          schedule?: string
+          scrape_method?: string
+          scrape_url?: string
+          state?: string
+          updated_at?: string
+          url_params?: Json | null
+        }
+        Relationships: []
+      }
       integration_api_logs: {
         Row: {
           created_at: string
