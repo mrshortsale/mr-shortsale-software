@@ -9,6 +9,7 @@ import { listIntegrations, type Integration, type IntegrationStatus } from '@/se
 import AddIntegrationModal from './AddIntegrationModal';
 import IntegrationConfigPanel from './IntegrationConfigPanel';
 import ApiUsageDashboard from './ApiUsageDashboard';
+import CountySourcesSection from './CountySourcesSection';
 import { toast } from 'sonner';
 
 const STATUS_CONFIG: Record<IntegrationStatus, { label: string; className: string }> = {
@@ -198,6 +199,8 @@ export default function IntegrationsPage() {
           </p>
         </div>
       )}
+
+      <CountySourcesSection />
 
       {/* Refresh button */}
       <div className="flex justify-center pt-2">
