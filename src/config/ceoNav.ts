@@ -20,6 +20,7 @@ import {
   Users,
   Zap,
   RefreshCw,
+  Database,
 } from 'lucide-react';
 import type { SidebarNavItem } from '@/components/AppSidebar';
 
@@ -37,6 +38,7 @@ export const ceoNavItems: SidebarNavItem[] = [
     children: [
       { kind: 'item', id: 'inventory', label: 'Lead Inventory', icon: List, path: `${CEO_BASE}/inventory` },
       { kind: 'item', id: 'sync-runs', label: 'Sync History', icon: History, path: `${CEO_BASE}/sync-runs` },
+      { kind: 'item', id: 'data-sources', label: 'Data Sources', icon: Database, path: `${CEO_BASE}/data` },
       { kind: 'item', id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users, path: `${CEO_BASE}/realtor-queue` },
       { kind: 'item', id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2, path: `${CEO_BASE}/realtor-pipeline` },
       { kind: 'item', id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare, path: `${CEO_BASE}/realtor-scripts` },

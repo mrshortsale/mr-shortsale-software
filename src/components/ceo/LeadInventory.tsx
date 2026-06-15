@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -86,13 +86,14 @@ const EMPTY_STATS: InventoryStats = {
   hotEquity: 0,
   auctionsLt30: 0,
   hotScore: 0,
-  bySource: { Batch: 0, Zillow: 0, Meta: 0, Manual: 0 },
+  bySource: { Batch: 0, County: 0, Zillow: 0, Meta: 0, Manual: 0 },
 };
 
 export default function LeadInventory() {
   const { views } = useSavedViews();
   const { t, i18n } = useTranslation();
   const loc = i18n.language === 'es' ? 'es-MX' : 'en-US';
+  const [searchParams] = useSearchParams();
 
   const [leads, setLeads] = useState<InventoryLead[]>([]);
   const [stats, setStats] = useState<InventoryStats>(EMPTY_STATS);
@@ -107,7 +108,8 @@ export default function LeadInventory() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [source, setSource] = useState<InventorySource | 'All'>('Batch');
+  const initialSource = searchParams.get('source') === 'County' ? 'County' : 'Batch';
+  const [source, setSource] = useState<InventorySource | 'All'>(initialSource);
   const [state, setState] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -160,7 +162,7 @@ export default function LeadInventory() {
     const [{ data: status }, fetchResult] = await Promise.all([
       getBatchSyncStatus(),
       fetchInventoryLeads({
-        source: source === 'All' ? 'Batch' : source,
+        source,
         state,
         q: debouncedSearch || undefined,
         minScore,
@@ -469,7 +471,7 @@ export default function LeadInventory() {
               className="w-full pl-7 pr-2 py-1.5 text-xs border rounded-md bg-muted outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
-          <Select value={source} onChange={(v) => setSource(v as InventorySource | 'All')} options={['All', 'Batch']} />
+          <Select value={source} onChange={(v) => setSource(v as InventorySource | 'All')} options={['All', 'Batch', 'County']} />
           <Select value={state} onChange={setState} options={STATES} />
           <label className="text-[11px] flex items-center gap-1.5 text-foreground">
             {t('inventory.filters.scoreMin')}
@@ -540,7 +542,7 @@ export default function LeadInventory() {
         <span>
           Showing <strong className="text-foreground">{totalMatching.toLocaleString()}</strong> of{' '}
           <strong>{(stats.sourceTotal ?? 0).toLocaleString()}</strong>{' '}
-          {source === 'All' ? 'Batch' : source} leads after filters
+          {source === 'All' ? 'all source' : source} leads after filters
         </span>
         <span className="text-muted-foreground flex items-center gap-1">
           <Filter size={10} /> {activeStatuses.size}/{STATUS_OPTIONS.length} statuses
@@ -721,7 +723,7 @@ export default function LeadInventory() {
                       case 'source':
                         return (
                           <span key={c.id} title={`Synced ${lastSyncLabel}`}>
-                            <Chip>{lead.source}</Chip>
+                            <Chip tone={lead.source === 'County' ? 'green' : 'blue'}>{lead.source === 'Batch' ? 'BatchLeads' : lead.source}</Chip>
                           </span>
                         );
                       case 'equity':
@@ -926,9 +928,14 @@ function Select({ value, onChange, options }: { value: string; onChange: (v: str
   );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'muted' | 'green' | 'blue' }) {
+  const cls = tone === 'green'
+    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    : tone === 'blue'
+      ? 'bg-blue-100 text-blue-700 border-blue-200'
+      : 'bg-muted text-foreground border-muted-foreground/20';
   return (
-    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-muted text-foreground border border-muted-foreground/20">
+    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${cls}`}>
       {children}
     </span>
   );
