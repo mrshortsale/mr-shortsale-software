@@ -31,8 +31,8 @@ export default function MojoDialerScreen() {
   }, []);
 
   const handleBulkSend = () => {
-    sendToMojo(['l1', 'l2', 'l3']).then(r => {
-      toast.success(t('dialer.mojoQueued', { count: r.queued }));
+    sendToMojo([]).then(r => {
+      toast.success(t('dialer.mojoQueued', { count: r.sent }));
     });
   };
 

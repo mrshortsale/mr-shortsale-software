@@ -113,7 +113,7 @@ function RunsTab() {
 
         {runs.map((run) => {
           const totalTokens = run.summary
-            ? Object.values(run.summary).reduce((sum, v) => {
+            ? Object.values(run.summary).reduce<number>((sum, v) => {
                 const val = v as { tokens?: number };
                 return sum + (val?.tokens || 0);
               }, 0)
