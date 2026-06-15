@@ -133,7 +133,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
 
   const onSubmit = async (values: CreateUserValues) => {
     setServerError('');
-    const result = await adminCreateUser(values);
+    const result = await adminCreateUser(values as Required<Omit<CreateUserValues, 'approveImmediately'>> & Pick<CreateUserValues, 'approveImmediately'>);
     if (result.error) { setServerError(result.error); return; }
     if (!result.user) { setServerError('Failed to create user'); return; }
 

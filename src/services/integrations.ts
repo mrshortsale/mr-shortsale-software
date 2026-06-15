@@ -13,7 +13,7 @@ function authedHeaders(): Record<string, string> {
   };
 }
 
-export type AuthMethod = 'api_key' | 'basic_auth' | 'oauth2' | 'inbound_webhook' | 'none';
+export type AuthMethod = 'api_key' | 'basic_auth' | 'oauth2' | 'inbound_webhook' | 'outbound_webhook' | 'none';
 export type IntegrationStatus = 'connected' | 'disabled' | 'error';
 
 export interface Integration {
