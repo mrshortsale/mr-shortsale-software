@@ -10,8 +10,8 @@
     "supabase/functions/county-sources-manage/",
     "supabase/functions/county-scraper-sync/",
     "supabase/functions/county-scraper-cron/",
-    "supabase/migrations/028_county_sources.sql",
-    "supabase/migrations/029_county_scraper_cron.sql"
+    "supabase/migrations/030_county_sources.sql",
+    "supabase/migrations/031_county_scraper_cron.sql"
   ],
   "related_paths": [
     "src/App.tsx",

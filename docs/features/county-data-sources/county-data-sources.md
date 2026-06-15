@@ -29,7 +29,7 @@ County Data Sources gives CEO users an admin workflow for managing county forecl
 - Use `src/services/countyScraper.ts` and `src/types/countyScraper.ts` for the browser API contract.
 - Use `supabase/functions/county-sources-manage/` for county source CRUD and run history reads.
 - Use `supabase/functions/county-scraper-sync/` for Firecrawl/OpenAI extraction and inventory insertion.
-- Use `supabase/functions/county-scraper-cron/` and `supabase/migrations/029_county_scraper_cron.sql` for daily scheduled runs.
+- Use `supabase/functions/county-scraper-cron/` and `supabase/migrations/031_county_scraper_cron.sql` for daily scheduled runs.
 - Lead Inventory source badges and filters live in `src/components/ceo/LeadInventory.tsx`; server filtering lives in `supabase/functions/inventory-leads/index.ts`.
 
 ## Open questions / gaps
