@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { createCountySource, deleteCountySource, getCountyScrapeRuns, getCountySources, runCountyScrape, toggleCountySourceActive, updateCountySource } from '@/services/countyScraper';
+import { createCountySource, deleteCountySource, getScrapeRuns, getCountySources, runCountyScrape, toggleCountySourceActive, updateCountySource } from '@/services/countyScraper';
 import type { CountyScrapeRun, CountySource, CreateCountySourceInput } from '@/types/countyScraper';
 import AddCountySourceModal from './AddCountySourceModal';
 import CountyScrapeHistory from './CountyScrapeHistory';
@@ -20,7 +20,7 @@ export default function CountySourcesSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CountySource | null>(null);
 
-  const refresh = useCallback(async () => { setLoading(true); try { const [sourceData, runData] = await Promise.all([getCountySources(), getCountyScrapeRuns()]); setSources(sourceData); setRuns(runData); } catch (error) { toast.error(error instanceof Error ? error.message : 'Failed to load county sources'); } finally { setLoading(false); } }, []);
+  const refresh = useCallback(async () => { setLoading(true); try { const [sourceData, runData] = await Promise.all([getCountySources(), getScrapeRuns()]); setSources(sourceData); setRuns(runData); } catch (error) { toast.error(error instanceof Error ? error.message : 'Failed to load county sources'); } finally { setLoading(false); } }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
   const saveSource = async (data: CreateCountySourceInput) => { try { if (editing) await updateCountySource(editing.id, data); else await createCountySource(data); toast.success('County source saved'); await refresh(); } catch (error) { toast.error(error instanceof Error ? error.message : 'Failed to save county source'); } };
