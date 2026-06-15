@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
   // Build the main paged query for the table
   // deno-lint-ignore no-explicit-any
   const applyFilters = (qb: any) => {
-    qb = qb.eq("source", source);
+    if (source !== "All") qb = qb.eq("source", source);
     if (state && state !== "All") qb = qb.eq("state", state);
     if (esOnly) qb = qb.eq("language", "ES");
     if (pipelineOnly) {
@@ -162,11 +162,11 @@ Deno.serve(async (req) => {
 
   // KPI counters scoped to the active source — every lead in the DB is already
   // qualified (ingest filter), so no additional gating is needed here.
-  const kpiBase = () =>
-    supabase
-      .from("inventory_leads")
-      .select("*", { count: "exact", head: true })
-      .eq("source", source);
+  const kpiBase = () => {
+    let q = supabase.from("inventory_leads").select("*", { count: "exact", head: true });
+    if (source !== "All") q = q.eq("source", source);
+    return q;
+  };
 
   const [newTodayResp, hotEquityResp, auctionsLt30Resp, hotScoreResp, totalSourceResp] = await Promise.all([
     kpiBase().gte("ingested_at", todayIso),
@@ -179,12 +179,13 @@ Deno.serve(async (req) => {
   // Avg contact attempts requires a small aggregation; do it with a single
   // .select() and compute client-side, capped at 5000 active rows (KPI is a
   // headline metric, exact value isn't critical).
-  const { data: attemptsRows } = await supabase
+  let attemptsQuery = supabase
     .from("inventory_leads")
     .select("contact_attempts")
-    .eq("source", source)
     .in("status", ["New", "Contacted"])
     .limit(5000);
+  if (source !== "All") attemptsQuery = attemptsQuery.eq("source", source);
+  const { data: attemptsRows } = await attemptsQuery;
   const attemptsArr = (attemptsRows ?? []).map((r: { contact_attempts: number | null }) =>
     Number(r.contact_attempts ?? 0)
   );
@@ -220,7 +221,8 @@ Deno.serve(async (req) => {
       auctionsLt30: auctionsLt30Resp.count ?? 0,
       hotScore: hotScoreResp.count ?? 0,
       bySource: {
-        Batch: totalSourceResp.count ?? 0,
+        Batch: source === "Batch" ? totalSourceResp.count ?? 0 : 0,
+        County: source === "County" ? totalSourceResp.count ?? 0 : 0,
         Zillow: 0,
         Meta: 0,
         Manual: 0,

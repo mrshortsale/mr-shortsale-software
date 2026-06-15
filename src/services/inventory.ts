@@ -389,8 +389,7 @@ export async function fetchInventoryLeads(
 }> {
   try {
     const query = new URLSearchParams();
-    const source = params.source && params.source !== 'All' ? params.source : 'Batch';
-    query.set('source', source);
+    if (params.source && params.source !== 'All') query.set('source', params.source);
     if (params.state && params.state !== 'All') query.set('state', params.state);
     if (params.q) query.set('q', params.q);
     if (params.minScore !== undefined) query.set('min_score', String(params.minScore));

@@ -1,4 +1,4 @@
-export type InventorySource = 'Batch' | 'Zillow' | 'Meta' | 'Manual';
+export type InventorySource = 'Batch' | 'County' | 'Zillow' | 'Meta' | 'Manual';
 export type InventoryLang = 'EN' | 'ES';
 export type InventoryStatus = 'New' | 'Contacted' | 'Promoted' | 'Dismissed';
 export type InventoryFilingType = 'NOD' | 'NTS' | 'LP' | 'Short Sale' | 'Inbound' | 'REO' | 'Other';

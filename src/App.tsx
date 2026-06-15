@@ -31,7 +31,7 @@ import CEORoadmapPage from '@/pages/ceo/CEORoadmapPage';
 import Presentation from '@/components/ceo/Presentation';
 import UserManagement from '@/components/ceo/UserManagement';
 import IntegrationsPage from '@/components/integrations/IntegrationsPage';
-import DataSources from '@/components/ceo/DataSources';
+import DataSourcesPage from '@/pages/admin/DataSourcesPage';
 import CEOSettingsPage from '@/pages/ceo/CEOSettingsPage';
 import SyncRunsPage from '@/pages/ceo/SyncRunsPage';
 import ZillowApifySyncPage from '@/pages/ceo/ZillowApifySyncPage';
@@ -109,7 +109,7 @@ const App = () => (
               <Route index element={<Navigate to="integrations" replace />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="integrations" element={<IntegrationsPage />} />
-              <Route path="data" element={<DataSources />} />
+              <Route path="data" element={<DataSourcesPage />} />
               <Route path="settings" element={<CEOSettingsPage />} />
             </Route>
 

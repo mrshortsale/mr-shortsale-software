@@ -1,0 +1,29 @@
+{
+  "schema_version": "1",
+  "feature_id": "county-data-sources",
+  "title": "County Data Sources",
+  "description": "CEO admin panel and scraper workflow for county foreclosure filing sources.",
+  "source_paths": [
+    "src/pages/admin/DataSourcesPage.tsx",
+    "src/services/countyScraper.ts",
+    "src/types/countyScraper.ts",
+    "supabase/functions/county-sources-manage/",
+    "supabase/functions/county-scraper-sync/",
+    "supabase/functions/county-scraper-cron/",
+    "supabase/migrations/030_county_sources.sql",
+    "supabase/migrations/031_county_scraper_cron.sql"
+  ],
+  "related_paths": [
+    "src/App.tsx",
+    "src/config/ceoNav.ts",
+    "src/components/ceo/LeadInventory.tsx",
+    "src/services/inventory.ts",
+    "supabase/functions/inventory-leads/index.ts"
+  ],
+  "entrypoints": [
+    "src/pages/admin/DataSourcesPage.tsx",
+    "supabase/functions/county-scraper-sync/index.ts",
+    "supabase/functions/county-sources-manage/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

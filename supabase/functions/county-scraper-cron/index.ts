@@ -1,30 +1,59 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY")!,
+);
+
 function getServiceRoleKey(): string {
   return (Deno.env.get("VITE_SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
 }
 
-function todayEastern(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 Deno.serve(async () => {
-  const key = getServiceRoleKey();
-  const base = `${Deno.env.get("SUPABASE_URL")}/functions/v1`;
-  if (!key || !key.startsWith("eyJ")) return new Response(JSON.stringify({ ok: false, error: "Missing service role key" }), { status: 500, headers: { "Content-Type": "application/json" } });
-  const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${key}`, "apikey": key };
-  try {
-    const listRes = await fetch(`${base}/county-sources-manage`, { headers });
-    const list = await listRes.json();
-    if (!listRes.ok) throw new Error(list.error ?? "Failed to list county sources");
-    const date = todayEastern();
-    const results = [];
-    for (const source of (list.countySources ?? []).filter((s: any) => s.is_active && s.schedule === "daily")) {
-      try {
-        const res = await fetch(`${base}/county-scraper-sync`, { method: "POST", headers, body: JSON.stringify({ county_source_id: source.id, date_from: date, date_to: date, _scheduledTrigger: true }) });
-        results.push({ county_source_id: source.id, status: res.status, ...(await res.json()) });
-      } catch (err) { results.push({ county_source_id: source.id, ok: false, error: err instanceof Error ? err.message : "Unknown error" }); }
-    }
-    return new Response(JSON.stringify({ ok: true, results }), { headers: { "Content-Type": "application/json" } });
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : "Unknown error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  const serviceRoleKey = getServiceRoleKey();
+  if (!serviceRoleKey || !serviceRoleKey.startsWith("eyJ")) {
+    return json({ ok: false, error: "Missing service role key" }, 500);
   }
+
+  const { data: sources, error } = await supabase
+    .from("county_sources")
+    .select("id, name")
+    .eq("is_active", true)
+    .eq("schedule", "daily");
+
+  if (error) return json({ ok: false, error: "Failed to load county sources" }, 500);
+
+  const results = [];
+  const syncUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/county-scraper-sync`;
+  const headers = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${serviceRoleKey}`,
+    "apikey": serviceRoleKey,
+  };
+
+  for (const source of sources ?? []) {
+    try {
+      const response = await fetch(syncUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ county_source_id: source.id, _scheduledTrigger: true }),
+      });
+      const data = await response.json();
+      console.log(`[county-scraper-cron] ${source.name} status=${response.status}`, data);
+      results.push({ source: source.name, ok: response.ok, data });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[county-scraper-cron] ${source.name} failed`, message);
+      results.push({ source: source.name, ok: false, error: message });
+    }
+  }
+
+  return json({ ok: true, results });
 });
