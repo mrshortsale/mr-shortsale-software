@@ -52,16 +52,18 @@ async function scrapeApify(source: Record<string, unknown>, dateFrom?: string): 
 }
 
 async function extractRecords(raw: string): Promise<ExtractedRecord[]> {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) throw new Error("Missing OPENAI_API_KEY");
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
   const system = `You are a real estate data extraction assistant. Extract lis pendens and foreclosure filing records from the following county clerk website content. Return a JSON array of records. Each record must have: { homeowner_name: string, address: string, city: string, state: string (default 'FL'), zip: string, county: string, filing_type: 'Lis Pendens', filing_date: string (YYYY-MM-DD), case_number: string, mortgage_lender: string, attorney_name: string, amount_owed: number | null, parcel_id: string | null }. If a field is not found, use null. Return ONLY the JSON array, no other text.`;
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: "gpt-4o-mini", temperature: 0, messages: [{ role: "system", content: system }, { role: "user", content: raw.slice(0, 60000) }] }),
+    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: system }, { role: "user", content: raw.slice(0, 60000) }] }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error?.message ?? "OpenAI extraction failed");
+  if (res.status === 429) throw new Error("AI rate limit hit — try again shortly");
+  if (res.status === 402) throw new Error("AI credits exhausted — add credits in Workspace → Usage");
+  if (!res.ok) throw new Error(data.error?.message ?? "AI extraction failed");
   const text = data.choices?.[0]?.message?.content ?? "[]";
   return JSON.parse(text.replace(/^```json\s*/i, "").replace(/```$/i, ""));
 }
