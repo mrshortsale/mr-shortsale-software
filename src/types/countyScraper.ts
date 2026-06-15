@@ -19,6 +19,22 @@ export interface CountySource {
   updated_at: string;
 }
 
+export interface CountyLeadExtractionRecord {
+  homeowner_name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  county: string;
+  filing_type: string;
+  filing_date: string | null;
+  case_number: string;
+  mortgage_lender: string | null;
+  attorney_name: string | null;
+  amount_owed: number | null;
+  parcel_id: string | null;
+}
+
 export interface CountySampleRecord {
   homeowner_name?: string;
   address?: string;
