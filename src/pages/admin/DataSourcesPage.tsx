@@ -34,12 +34,12 @@ export default function DataSourcesPage() {
   const [form, setForm] = useState<CreateCountySourceInput>(blankForm);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const hasRunning = useMemo(() => runs.some((run) => run.status === 'running'), [runs]);
+  const hasRunning = useMemo(() => (Array.isArray(runs) ? runs : []).some((run) => run.status === 'running'), [runs]);
 
   const refresh = useCallback(async () => {
     const [nextSources, nextRuns] = await Promise.all([getCountySources(), getScrapeRuns()]);
-    setSources(nextSources);
-    setRuns(nextRuns);
+    setSources(Array.isArray(nextSources) ? nextSources : []);
+    setRuns(Array.isArray(nextRuns) ? nextRuns : []);
   }, []);
 
   useEffect(() => {

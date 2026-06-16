@@ -41,7 +41,7 @@ export async function getCountySources(): Promise<CountySource[]> {
     response,
     'Failed to load county sources',
   );
-  return data.sources;
+  return Array.isArray(data.sources) ? data.sources : [];
 }
 
 export async function createCountySource(input: CreateCountySourceInput): Promise<CountySource> {
@@ -108,5 +108,5 @@ export async function getScrapeRuns(countySourceId?: string): Promise<CountyScra
     response,
     'Failed to load runs',
   );
-  return data.runs;
+  return Array.isArray(data.runs) ? data.runs : [];
 }
