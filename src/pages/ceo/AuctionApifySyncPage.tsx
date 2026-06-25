@@ -378,6 +378,7 @@ export default function AuctionApifySyncPage() {
               <p className="text-xs text-muted-foreground">
                 This run will process <strong>{plannedStates.length}</strong> state
                 {plannedStates.length !== 1 ? 's' : ''} (max 2,000 listings per state).
+                Only listings from the last 7 days are stored; Bank Owned is excluded.
                 {stateMode === 'count' && plannedStates.length > 0 && (
                   <> Starting with {plannedStates[0]}.</>
                 )}

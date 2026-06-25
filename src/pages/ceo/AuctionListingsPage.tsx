@@ -15,7 +15,6 @@ import {
 
 const SALE_TYPE_BADGE: Record<string, string> = {
   'Foreclosure':       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  'Bank Owned':        'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
   'Private Seller':    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   'Newly Foreclosed':  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
 };
@@ -177,7 +176,7 @@ function ListingDrawer({
 
 const PAGE_SIZE = 50;
 
-type SortKey = 'auction_date' | 'bid_asc' | 'bid_desc' | 'scraped';
+type SortKey = 'auction_date_desc' | 'bid_asc' | 'bid_desc';
 
 export default function AuctionListingsPage() {
   const [listings, setListings] = useState<AuctionListing[]>([]);
@@ -186,11 +185,12 @@ export default function AuctionListingsPage() {
   const [page, setPage] = useState(1);
   const [filterState, setFilterState] = useState('');
   const [filterSaleType, setFilterSaleType] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('auction_date');
+  const [sortKey, setSortKey] = useState<SortKey>('auction_date_desc');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [drawer, setDrawer] = useState<AuctionListing | null>(null);
   const [totalListings, setTotalListings] = useState(0);
+  const [listingWindowDays, setListingWindowDays] = useState(7);
 
   // Debounce search
   useEffect(() => {
@@ -200,19 +200,24 @@ export default function AuctionListingsPage() {
 
   // Load total count once
   useEffect(() => {
-    fetchAuctionSyncStatus().then((s) => setTotalListings(s.totalListings));
+    fetchAuctionSyncStatus().then((s) => {
+      setTotalListings(s.totalListings);
+      if (s.listingWindowDays) setListingWindowDays(s.listingWindowDays);
+    });
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { listings: l, total: t } = await fetchAuctionListings({
+    const { listings: l, total: t, listingWindowDays: windowDays } = await fetchAuctionListings({
       state: filterState || undefined,
       saleType: filterSaleType || undefined,
+      sort: sortKey,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     });
     setLoading(false);
-    // Client-side sort + search (data already paged server-side)
+    if (windowDays) setListingWindowDays(windowDays);
+
     let filtered = l;
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
@@ -223,21 +228,6 @@ export default function AuctionListingsPage() {
           item.postal_code?.includes(q) ||
           item.auction_id.includes(q),
       );
-    }
-    if (sortKey === 'auction_date') {
-      filtered = [...filtered].sort((a, b) =>
-        (a.auction_start_date ?? '').localeCompare(b.auction_start_date ?? ''),
-      );
-    } else if (sortKey === 'bid_asc') {
-      filtered = [...filtered].sort(
-        (a, b) => (a.opening_bid ?? a.starting_bid_amount ?? 0) - (b.opening_bid ?? b.starting_bid_amount ?? 0),
-      );
-    } else if (sortKey === 'bid_desc') {
-      filtered = [...filtered].sort(
-        (a, b) => (b.opening_bid ?? b.starting_bid_amount ?? 0) - (a.opening_bid ?? a.starting_bid_amount ?? 0),
-      );
-    } else {
-      filtered = [...filtered].sort((a, b) => b.last_scraped_at.localeCompare(a.last_scraped_at));
     }
     setListings(filtered);
     setTotal(t);
@@ -260,7 +250,7 @@ export default function AuctionListingsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Auction Listings</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Foreclosure and auction properties from Auction.com
+            Foreclosure and private-seller listings from the last {listingWindowDays} days (newest listed first). Bank Owned excluded.
           </p>
         </div>
         <Badge variant="secondary" className="shrink-0 text-sm">
@@ -295,7 +285,6 @@ export default function AuctionListingsPage() {
           >
             <option value="">All Sale Types</option>
             <option value="Foreclosure">Foreclosure</option>
-            <option value="Bank Owned">Bank Owned</option>
             <option value="Private Seller">Private Seller</option>
             <option value="Newly Foreclosed">Newly Foreclosed</option>
           </select>
@@ -306,10 +295,9 @@ export default function AuctionListingsPage() {
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
           >
-            <option value="auction_date">Auction Date ↑</option>
+            <option value="auction_date_desc">Newest listed ↓</option>
             <option value="bid_asc">Bid ↑</option>
             <option value="bid_desc">Bid ↓</option>
-            <option value="scraped">Recently Scraped</option>
           </select>
           <button
             type="button"

@@ -70,6 +70,7 @@ export interface AuctionSyncStatus {
   totalListings: number;
   activeRun: AuctionSyncRun | null;
   syncInProgress: boolean;
+  listingWindowDays?: number;
 }
 
 // ─── Sync controls ────────────────────────────────────────────────────────────
@@ -165,6 +166,7 @@ export async function fetchAuctionSyncStatus(): Promise<AuctionSyncStatus & { er
       totalListings: data.totalListings ?? 0,
       activeRun: data.activeRun ?? null,
       syncInProgress: data.syncInProgress ?? false,
+      listingWindowDays: data.listingWindowDays,
     };
   } catch {
     return {
@@ -195,13 +197,14 @@ export async function listAuctionSyncRuns(): Promise<{ runs: AuctionSyncRun[]; e
 export interface FetchAuctionListingsOptions {
   state?: string;
   saleType?: string;
+  sort?: 'auction_date_desc' | 'bid_asc' | 'bid_desc';
   limit?: number;
   offset?: number;
 }
 
 export async function fetchAuctionListings(
   opts: FetchAuctionListingsOptions = {},
-): Promise<{ listings: AuctionListing[]; total: number; error?: string }> {
+): Promise<{ listings: AuctionListing[]; total: number; listingWindowDays?: number; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/auction-apify-sync`, {
       method: 'POST',
@@ -210,13 +213,18 @@ export async function fetchAuctionListings(
         action: 'listings',
         state: opts.state,
         saleType: opts.saleType,
+        sort: opts.sort ?? 'auction_date_desc',
         limit: opts.limit ?? 50,
         offset: opts.offset ?? 0,
       }),
     });
     const data = await res.json();
     if (!res.ok) return { listings: [], total: 0, error: data.error };
-    return { listings: data.listings ?? [], total: data.total ?? 0 };
+    return {
+      listings: data.listings ?? [],
+      total: data.total ?? 0,
+      listingWindowDays: data.listingWindowDays,
+    };
   } catch {
     return { listings: [], total: 0, error: 'Network error' };
   }

@@ -21,6 +21,11 @@ import {
   DEFAULT_AUCTION_ACTOR_ID,
   type AuctionListingItem,
 } from "../_shared/apify.ts";
+import {
+  filterAuctionItemsForIngest,
+  listingWindowCutoffIso,
+  AUCTION_LISTING_WINDOW_DAYS,
+} from "../_shared/auctionListingFilters.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -232,7 +237,9 @@ async function upsertStateItems(
   runId: string,
   items: AuctionListingItem[],
 ): Promise<number> {
-  const rows = items
+  const { items: filtered, stats } = filterAuctionItemsForIngest(items);
+
+  const rows = filtered
     .map((it) => mapAuctionItemToStaging(runId, it))
     .filter((r): r is Record<string, unknown> => r !== null);
 
@@ -247,7 +254,41 @@ async function upsertStateItems(
     });
   }
 
+  if (stats.skippedBankOwned > 0 || stats.skippedOutsideWindow > 0 || stats.skippedDuplicate > 0) {
+    console.log(
+      `[auction-apify-sync] ingest filter: kept=${stats.kept} bank_owned=${stats.skippedBankOwned} outside_window=${stats.skippedOutsideWindow} dup=${stats.skippedDuplicate}`,
+    );
+  }
+
   return rows.length;
+}
+
+/** Remove bank-owned and listings outside the 7-day window from staging. */
+async function pruneStaleListings(): Promise<void> {
+  const cutoff = listingWindowCutoffIso();
+  await supabase
+    .from("auction_listing_staging")
+    .delete()
+    .ilike("sale_type", "%bank owned%");
+  await supabase
+    .from("auction_listing_staging")
+    .delete()
+    .lt("auction_start_date", cutoff);
+}
+
+function applyListingQueryFilters<T extends { not: Function; gte: Function }>(q: T): T {
+  return q
+    .not("sale_type", "ilike", "%bank owned%")
+    .gte("auction_start_date", listingWindowCutoffIso()) as T;
+}
+
+async function countEligibleListings(): Promise<number> {
+  let q = supabase
+    .from("auction_listing_staging")
+    .select("*", { count: "exact", head: true });
+  q = applyListingQueryFilters(q);
+  const { count } = await q;
+  return count ?? 0;
 }
 
 async function startNextState(
@@ -509,6 +550,7 @@ async function processActiveRun(
   }
 
   if (!meta.active_run_id && pending.length === 0) {
+    await pruneStaleListings();
     await updateRun(runId, {
       status: "success",
       completed_at: new Date().toISOString(),
@@ -562,9 +604,7 @@ Deno.serve(async (req: Request) => {
       .order("started_at", { ascending: false })
       .limit(20);
 
-    const { count: totalListings } = await supabase
-      .from("auction_listing_staging")
-      .select("*", { count: "exact", head: true });
+    const totalListings = await countEligibleListings();
 
     const activeRun = (recentRuns ?? []).find((r) =>
       CONTROLLABLE.has(String(r.status))
@@ -572,7 +612,8 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse({
       recentRuns: recentRuns ?? [],
-      totalListings: totalListings ?? 0,
+      totalListings,
+      listingWindowDays: AUCTION_LISTING_WINDOW_DAYS,
       activeRun,
       syncInProgress: !!activeRun,
     });
@@ -598,21 +639,36 @@ Deno.serve(async (req: Request) => {
   if (action === "listings") {
     const state = typeof body.state === "string" ? body.state : undefined;
     const saleType = typeof body.saleType === "string" ? body.saleType : undefined;
+    const sort = typeof body.sort === "string" ? body.sort : "auction_date_desc";
     const limit = Math.min(100, Math.max(1, Number(body.limit ?? 50)));
     const offset = Math.max(0, Number(body.offset ?? 0));
 
     let q = supabase
       .from("auction_listing_staging")
-      .select("*", { count: "exact" })
-      .order("last_scraped_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .select("*", { count: "exact" });
+    q = applyListingQueryFilters(q);
 
     if (state) q = q.eq("state", state);
     if (saleType) q = q.eq("sale_type", saleType);
 
+    if (sort === "bid_asc") {
+      q = q.order("starting_bid_amount", { ascending: true, nullsFirst: false });
+    } else if (sort === "bid_desc") {
+      q = q.order("starting_bid_amount", { ascending: false, nullsFirst: false });
+    } else {
+      // Newest listed on Auction.com first
+      q = q.order("auction_start_date", { ascending: false, nullsFirst: false });
+    }
+
+    q = q.range(offset, offset + limit - 1);
+
     const { data, count, error } = await q;
     if (error) return jsonResponse({ error: error.message }, 500);
-    return jsonResponse({ listings: data ?? [], total: count ?? 0 });
+    return jsonResponse({
+      listings: data ?? [],
+      total: count ?? 0,
+      listingWindowDays: AUCTION_LISTING_WINDOW_DAYS,
+    });
   }
 
   if (action === "stop") {
@@ -654,6 +710,8 @@ Deno.serve(async (req: Request) => {
     } catch (err) {
       return jsonResponse({ error: err instanceof Error ? err.message : String(err) }, 400);
     }
+
+    await pruneStaleListings();
 
     const syncStates = resolveSyncStates(body);
     if (syncStates.states.length === 0) {
