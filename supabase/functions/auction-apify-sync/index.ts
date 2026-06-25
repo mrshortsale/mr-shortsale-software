@@ -23,8 +23,7 @@ import {
 } from "../_shared/apify.ts";
 import {
   filterAuctionItemsForIngest,
-  listingWindowCutoffIso,
-  AUCTION_LISTING_WINDOW_DAYS,
+  activeAuctionNoEndCutoffIso,
 } from "../_shared/auctionListingFilters.ts";
 
 const supabase = createClient(
@@ -254,32 +253,48 @@ async function upsertStateItems(
     });
   }
 
-  if (stats.skippedBankOwned > 0 || stats.skippedOutsideWindow > 0 || stats.skippedDuplicate > 0) {
+  if (stats.skippedBankOwned > 0 || stats.skippedInactive > 0 || stats.skippedDuplicate > 0) {
     console.log(
-      `[auction-apify-sync] ingest filter: kept=${stats.kept} bank_owned=${stats.skippedBankOwned} outside_window=${stats.skippedOutsideWindow} dup=${stats.skippedDuplicate}`,
+      `[auction-apify-sync] ingest filter: kept=${stats.kept} bank_owned=${stats.skippedBankOwned} inactive=${stats.skippedInactive} dup=${stats.skippedDuplicate}`,
     );
   }
 
   return rows.length;
 }
 
-/** Remove bank-owned and listings outside the 7-day window from staging. */
+/** Remove bank-owned and ended auctions from staging. */
 async function pruneStaleListings(): Promise<void> {
-  const cutoff = listingWindowCutoffIso();
+  const now = new Date().toISOString();
+  const noEndStaleCutoff = activeAuctionNoEndCutoffIso();
+
   await supabase
     .from("auction_listing_staging")
     .delete()
     .ilike("sale_type", "%bank owned%");
+
   await supabase
     .from("auction_listing_staging")
     .delete()
-    .lt("auction_start_date", cutoff);
+    .lt("auction_end_date", now);
+
+  await supabase
+    .from("auction_listing_staging")
+    .delete()
+    .is("auction_end_date", null)
+    .lt("auction_start_date", noEndStaleCutoff);
 }
 
-function applyListingQueryFilters<T extends { not: Function; gte: Function }>(q: T): T {
+function applyListingQueryFilters<T extends {
+  not: Function;
+  or: Function;
+}>(q: T): T {
+  const now = new Date().toISOString();
+  const noEndCutoff = activeAuctionNoEndCutoffIso();
   return q
     .not("sale_type", "ilike", "%bank owned%")
-    .gte("auction_start_date", listingWindowCutoffIso()) as T;
+    .or(
+      `and(auction_end_date.is.null,auction_start_date.gte.${noEndCutoff}),auction_end_date.gte.${now}`,
+    ) as T;
 }
 
 async function countEligibleListings(): Promise<number> {
@@ -613,7 +628,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       recentRuns: recentRuns ?? [],
       totalListings,
-      listingWindowDays: AUCTION_LISTING_WINDOW_DAYS,
+      activeAuctionsOnly: true,
       activeRun,
       syncInProgress: !!activeRun,
     });
@@ -667,7 +682,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       listings: data ?? [],
       total: count ?? 0,
-      listingWindowDays: AUCTION_LISTING_WINDOW_DAYS,
+      activeAuctionsOnly: true,
     });
   }
 

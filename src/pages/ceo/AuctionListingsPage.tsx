@@ -190,7 +190,6 @@ export default function AuctionListingsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [drawer, setDrawer] = useState<AuctionListing | null>(null);
   const [totalListings, setTotalListings] = useState(0);
-  const [listingWindowDays, setListingWindowDays] = useState(7);
 
   // Debounce search
   useEffect(() => {
@@ -200,15 +199,12 @@ export default function AuctionListingsPage() {
 
   // Load total count once
   useEffect(() => {
-    fetchAuctionSyncStatus().then((s) => {
-      setTotalListings(s.totalListings);
-      if (s.listingWindowDays) setListingWindowDays(s.listingWindowDays);
-    });
+    fetchAuctionSyncStatus().then((s) => setTotalListings(s.totalListings));
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { listings: l, total: t, listingWindowDays: windowDays } = await fetchAuctionListings({
+    const { listings: l, total: t } = await fetchAuctionListings({
       state: filterState || undefined,
       saleType: filterSaleType || undefined,
       sort: sortKey,
@@ -216,7 +212,6 @@ export default function AuctionListingsPage() {
       offset: (page - 1) * PAGE_SIZE,
     });
     setLoading(false);
-    if (windowDays) setListingWindowDays(windowDays);
 
     let filtered = l;
     if (debouncedSearch) {
@@ -250,7 +245,7 @@ export default function AuctionListingsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Auction Listings</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Foreclosure and private-seller listings from the last {listingWindowDays} days (newest listed first). Bank Owned excluded.
+            Active foreclosure and private-seller auctions (newest listed first). Bank Owned excluded.
           </p>
         </div>
         <Badge variant="secondary" className="shrink-0 text-sm">

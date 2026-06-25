@@ -2,43 +2,62 @@
  * Auction.com listing ingest + query filters.
  */
 
-export const AUCTION_LISTING_WINDOW_DAYS = 7;
+/** Grace after start for single-day / live auctions with no end date. */
+export const ACTIVE_AUCTION_NO_END_GRACE_MS = 2 * 24 * 60 * 60 * 1000;
 
 export function isBankOwnedSaleType(saleType: string | null | undefined): boolean {
   return (saleType ?? "").toLowerCase().replace(/-/g, " ").includes("bank owned");
 }
 
-export function listingWindowCutoffIso(days = AUCTION_LISTING_WINDOW_DAYS): string {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+/**
+ * Listing is still active on Auction.com when:
+ * - auction_end_date is in the future (or now), or
+ * - auction_end_date is missing and auction_start_date is upcoming / within grace window.
+ */
+export function isActiveAuctionListing(
+  auctionStartDate: string | null | undefined,
+  auctionEndDate: string | null | undefined,
+  nowMs = Date.now(),
+): boolean {
+  if (auctionEndDate) {
+    const end = new Date(auctionEndDate);
+    if (!Number.isNaN(end.getTime())) {
+      return end.getTime() >= nowMs;
+    }
+  }
+
+  if (auctionStartDate) {
+    const start = new Date(auctionStartDate);
+    if (Number.isNaN(start.getTime())) return false;
+    return start.getTime() + ACTIVE_AUCTION_NO_END_GRACE_MS >= nowMs;
+  }
+
+  return false;
 }
 
-export function isWithinListingWindow(
-  auctionStartDate: string | null | undefined,
-  days = AUCTION_LISTING_WINDOW_DAYS,
-): boolean {
-  if (!auctionStartDate) return false;
-  const listedAt = new Date(auctionStartDate);
-  if (Number.isNaN(listedAt.getTime())) return false;
-  return listedAt.getTime() >= new Date(listingWindowCutoffIso(days)).getTime();
+export function activeAuctionNoEndCutoffIso(
+  nowMs = Date.now(),
+): string {
+  return new Date(nowMs - ACTIVE_AUCTION_NO_END_GRACE_MS).toISOString();
 }
 
 export interface AuctionIngestFilterStats {
   input: number;
   kept: number;
   skippedBankOwned: number;
-  skippedOutsideWindow: number;
+  skippedInactive: number;
   skippedDuplicate: number;
   skippedMissingId: number;
 }
 
-/** Dedup by auction id; drop bank-owned and listings older than the window. */
+/** Dedup by auction id; drop bank-owned and ended auctions. */
 export function filterAuctionItemsForIngest<T extends {
   id?: string | number;
   saleType?: string;
   auction_start_date?: string | null;
+  auction_end_date?: string | null;
 }>(
   items: T[],
-  days = AUCTION_LISTING_WINDOW_DAYS,
 ): { items: T[]; stats: AuctionIngestFilterStats } {
   const seen = new Set<string>();
   const kept: T[] = [];
@@ -46,7 +65,7 @@ export function filterAuctionItemsForIngest<T extends {
     input: items.length,
     kept: 0,
     skippedBankOwned: 0,
-    skippedOutsideWindow: 0,
+    skippedInactive: 0,
     skippedDuplicate: 0,
     skippedMissingId: 0,
   };
@@ -65,8 +84,8 @@ export function filterAuctionItemsForIngest<T extends {
       stats.skippedBankOwned++;
       continue;
     }
-    if (!isWithinListingWindow(item.auction_start_date, days)) {
-      stats.skippedOutsideWindow++;
+    if (!isActiveAuctionListing(item.auction_start_date, item.auction_end_date)) {
+      stats.skippedInactive++;
       continue;
     }
     seen.add(auctionId);

@@ -70,7 +70,7 @@ export interface AuctionSyncStatus {
   totalListings: number;
   activeRun: AuctionSyncRun | null;
   syncInProgress: boolean;
-  listingWindowDays?: number;
+  activeAuctionsOnly?: boolean;
 }
 
 // ─── Sync controls ────────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ export async function fetchAuctionSyncStatus(): Promise<AuctionSyncStatus & { er
       totalListings: data.totalListings ?? 0,
       activeRun: data.activeRun ?? null,
       syncInProgress: data.syncInProgress ?? false,
-      listingWindowDays: data.listingWindowDays,
+      activeAuctionsOnly: data.activeAuctionsOnly,
     };
   } catch {
     return {
@@ -204,7 +204,7 @@ export interface FetchAuctionListingsOptions {
 
 export async function fetchAuctionListings(
   opts: FetchAuctionListingsOptions = {},
-): Promise<{ listings: AuctionListing[]; total: number; listingWindowDays?: number; error?: string }> {
+): Promise<{ listings: AuctionListing[]; total: number; activeAuctionsOnly?: boolean; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/auction-apify-sync`, {
       method: 'POST',
@@ -223,7 +223,7 @@ export async function fetchAuctionListings(
     return {
       listings: data.listings ?? [],
       total: data.total ?? 0,
-      listingWindowDays: data.listingWindowDays,
+      activeAuctionsOnly: data.activeAuctionsOnly,
     };
   } catch {
     return { listings: [], total: 0, error: 'Network error' };
