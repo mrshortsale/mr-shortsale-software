@@ -26,3 +26,10 @@ verify_jwt = false
 
 [functions.auth-reset-password]
 verify_jwt = false
+
+# Auth is handled inside the function (CEO x-auth-token, service role for cron).
+[functions.auction-apify-sync]
+verify_jwt = false
+
+[functions.auction-apify-cron]
+verify_jwt = false

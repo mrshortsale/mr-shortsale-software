@@ -21,6 +21,7 @@ import {
   Zap,
   RefreshCw,
   Database,
+  Gavel,
 } from 'lucide-react';
 import type { SidebarNavItem } from '@/components/AppSidebar';
 
@@ -37,14 +38,26 @@ export const ceoNavItems: SidebarNavItem[] = [
     defaultOpen: true,
     children: [
       { kind: 'item', id: 'inventory', label: 'Lead Inventory', icon: List, path: `${CEO_BASE}/inventory` },
-      { kind: 'item', id: 'sync-runs', label: 'Sync History', icon: History, path: `${CEO_BASE}/sync-runs` },
       { kind: 'item', id: 'data-sources', label: 'Data Sources', icon: Database, path: `${CEO_BASE}/data` },
       { kind: 'item', id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users, path: `${CEO_BASE}/realtor-queue` },
       { kind: 'item', id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2, path: `${CEO_BASE}/realtor-pipeline` },
       { kind: 'item', id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare, path: `${CEO_BASE}/realtor-scripts` },
       { kind: 'item', id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp, path: `${CEO_BASE}/realtor-reports` },
-      { kind: 'item', id: 'zillow-apify-sync', label: 'Zillow Apify Sync', icon: RefreshCw, path: `${CEO_BASE}/zillow-apify-sync` },
+      { kind: 'item', id: 'auction-listings', label: 'Auction Listings', icon: Gavel, path: `${CEO_BASE}/auction-listings` },
       { kind: 'item', id: 'zillow-realtor-queue', label: 'Zillow Realtor Queue', icon: Users, path: `${CEO_BASE}/zillow-realtor-queue` },
+    ],
+  },
+
+  {
+    kind: 'section',
+    id: 'sec-sync',
+    label: 'Data Sync',
+    icon: RefreshCw,
+    defaultOpen: true,
+    children: [
+      { kind: 'item', id: 'sync-runs', label: 'Sync History', icon: History, path: `${CEO_BASE}/sync-runs` },
+      { kind: 'item', id: 'zillow-apify-sync', label: 'Zillow Apify Sync', icon: RefreshCw, path: `${CEO_BASE}/zillow-apify-sync` },
+      { kind: 'item', id: 'auction-apify-sync', label: 'Auction.com Sync', icon: RefreshCw, path: `${CEO_BASE}/auction-apify-sync` },
     ],
   },
 

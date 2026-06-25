@@ -1,6 +1,6 @@
 /**
  * Shared Apify API client helpers.
- * Used by zillow-apify-sync and zillow-apify-manage.
+ * Used by zillow-apify-sync, zillow-apify-manage, and auction-apify-sync.
  */
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -12,6 +12,7 @@ export const APIFY_BASE = "https://api.apify.com/v2";
 // The CEO can override them via the UI once credentials are configured.
 export const DEFAULT_SEARCH_ACTOR_ID = "X46xKaa20oUA1fRiP";
 export const DEFAULT_AGENT_ACTOR_ID = "1NT8sDVAgchUDnHOc";
+export const DEFAULT_AUCTION_ACTOR_ID = "parseforge/auction-com-property-scraper";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,43 @@ export interface ApifyRunStatus {
   status: string; // READY | RUNNING | SUCCEEDED | FAILED | TIMING-OUT | TIMED-OUT | ABORTING | ABORTED
   defaultDatasetId: string;
   stats?: { inputBodyLen?: number; outputBodyLen?: number };
+}
+
+/** Shape of items returned by parseforge/auction-com-property-scraper. */
+export interface AuctionListingItem {
+  id?: string | number;
+  url?: string;
+  primary_photo_url?: string;
+  address?: string;
+  country_primary_subdivision?: string;
+  country_secondary_subdivision?: string;
+  municipality?: string;
+  postal_code?: string;
+  street_description?: string;
+  latitude?: number;
+  longitude?: number;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  lot_sqft?: number;
+  year_built?: number;
+  property_type?: string;
+  property_type_group?: string;
+  opening_bid?: number | null;
+  starting_bid_amount?: number | null;
+  auction_start_date?: string | null;
+  auction_end_date?: string | null;
+  saleType?: string;
+  auctionDate?: string;
+  auctionTime?: string;
+  auctionLocation?: string;
+  status?: string;
+  buyer_premium_available?: boolean;
+  interior_access_allowed?: boolean;
+  occupancy_status?: string;
+  is_first_look_enabled?: boolean;
+  is_direct_offer_enabled?: boolean;
+  [key: string]: unknown;
 }
 
 // ─── Credentials ──────────────────────────────────────────────────────────────
@@ -209,6 +247,21 @@ export async function fetchDatasetItems<T = unknown>(
   }
 
   return results;
+}
+
+/**
+ * Fetch current status of an Apify run (non-blocking poll).
+ */
+export async function getRunStatus(
+  apiToken: string,
+  runId: string,
+): Promise<ApifyRunStatus | null> {
+  const res = await fetch(`${APIFY_BASE}/actor-runs/${runId}`, {
+    headers: { Authorization: `Bearer ${apiToken}` },
+  });
+  if (!res.ok) return null;
+  const json = await res.json() as { data: ApifyRunStatus };
+  return json.data;
 }
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
