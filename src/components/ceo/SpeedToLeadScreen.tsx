@@ -1,4 +1,5 @@
 import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
+import SheetLeadsTable from '@/components/shared/SheetLeadsTable';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchSheetLeadMetrics, SHEET_TAB_NAMES } from '@/services/sheetsLeads';
@@ -67,6 +68,8 @@ export default function SpeedToLeadScreen() {
         />
       </div>
 
+      <SpeedToLeadFeed maxLeads={5} />
+
       <Tabs defaultValue="ad-leads" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
           {TAB_CONFIG.map((tab) => (
@@ -81,7 +84,7 @@ export default function SpeedToLeadScreen() {
 
         {TAB_CONFIG.map((tab) => (
           <TabsContent key={tab.id} value={tab.id}>
-            <SpeedToLeadFeed tab={tab.dataSource} maxLeads={20} />
+            <SheetLeadsTable tab={tab.dataSource} />
           </TabsContent>
         ))}
       </Tabs>

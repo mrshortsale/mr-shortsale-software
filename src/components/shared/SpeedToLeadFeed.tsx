@@ -4,9 +4,10 @@ import {
   fetchSheetLeads,
   subscribeSheetLeads,
   leadDisplaySubtitle,
+  pushSheetLeadsToMojo,
   type SheetLead,
 } from '@/services/sheetsLeads';
-import { Zap, Volume2, VolumeX, Clock, FileSpreadsheet, Info } from 'lucide-react';
+import { Zap, Volume2, VolumeX, Clock, FileSpreadsheet, Info, ArrowUpToLine, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function fmtAge(ms: number) {
@@ -22,12 +23,13 @@ interface Props {
   maxLeads?: number;
 }
 
-export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads = 6 }: Props) {
+export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads = 5 }: Props) {
   const [leads, setLeads] = useState<SheetLead[]>([]);
   const [now, setNow] = useState(Date.now());
   const [soundOn, setSoundOn] = useState(false);
   const soundOnRef = useRef(soundOn);
   const [loading, setLoading] = useState(true);
+  const [pushing, setPushing] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -88,6 +90,23 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
     };
   }, [tab, maxLeads, t]);
 
+  const handlePushToMojo = async (lead: SheetLead) => {
+    setPushing((prev) => new Set(prev).add(lead.id));
+    const result = await pushSheetLeadsToMojo([lead]);
+    setPushing((prev) => {
+      const next = new Set(prev);
+      next.delete(lead.id);
+      return next;
+    });
+    if (result.ok) {
+      toast.success(t('speedFeed.pushedToMojo', { name: lead.owner }), {
+        description: t('speedFeed.pushedToMojoDesc'),
+      });
+    } else {
+      toast.error(result.errors[0] ?? t('speedFeed.pushFailed'));
+    }
+  };
+
   const title = tab ? t('speedFeed.titleTab', { tab }) : t('speedFeed.titleAll');
 
   return (
@@ -111,7 +130,7 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
       </div>
       <div className="px-4 py-1.5 bg-speed/5 border-b border-speed/20 text-[10.5px] text-muted-foreground flex items-center gap-1.5">
         <Info size={10} className="text-speed shrink-0" />
-        <span>{t('speedFeed.sheetsNote')}</span>
+        <span>{t('speedFeed.latestLeadsNote', { count: maxLeads })}</span>
       </div>
       <div className={`p-3 space-y-2 ${compact ? 'max-h-72 overflow-y-auto' : ''}`}>
         {loading && (
@@ -122,13 +141,11 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
         )}
         {leads.map((lead) => {
           const ageMs = now - lead.receivedAt;
-          const overdue = ageMs > 5 * 60_000;
+          const isPushing = pushing.has(lead.id);
           return (
             <div
               key={lead.id}
-              className={`rounded-lg border p-3 flex items-center gap-3 ${
-                overdue ? 'border-destructive/50 bg-destructive/5' : 'border-speed/30 bg-card'
-              }`}
+              className="rounded-lg border border-speed/30 bg-card p-3 flex items-center gap-3"
             >
               <div className="shrink-0 w-9 h-9 rounded-full bg-speed/15 text-speed flex items-center justify-center">
                 <FileSpreadsheet size={16} />
@@ -150,18 +167,20 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
                 <p className="text-[11px] text-muted-foreground truncate">{leadDisplaySubtitle(lead)}</p>
               </div>
               <div className="text-right shrink-0">
-                <div
-                  className={`flex items-center gap-1 text-xs font-mono font-bold ${
-                    overdue ? 'text-destructive animate-pulse' : 'text-speed'
-                  }`}
-                >
+                <div className="flex items-center gap-1 text-xs font-mono font-bold text-speed">
                   <Clock size={11} />
                   {fmtAge(ageMs)}
                 </div>
-                <p className="text-[9px] text-muted-foreground uppercase">
-                  {overdue ? t('speedFeed.overdue') : t('speedFeed.fresh')}
-                </p>
               </div>
+              <button
+                onClick={() => void handlePushToMojo(lead)}
+                disabled={isPushing || !lead.phone}
+                className="shrink-0 px-3 py-2 bg-speed text-speed-foreground rounded-lg text-xs font-bold flex items-center gap-1 hover:opacity-90 disabled:opacity-50"
+                title={t('speedFeed.pushToTopTitle')}
+              >
+                {isPushing ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpToLine size={12} />}
+                {t('speedFeed.pushToTop')}
+              </button>
             </div>
           );
         })}

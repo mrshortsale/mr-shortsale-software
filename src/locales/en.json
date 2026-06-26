@@ -838,12 +838,31 @@
     "enableSound": "Enable sound",
     "live": "Live",
     "sheetsNote": "Leads sync from Google Sheets via Zapier — assigned to reps automatically.",
+    "latestLeadsNote": "Latest {{count}} leads across all tabs — push to Mojo to dial.",
     "loading": "Loading leads…",
-    "waiting": "Waiting for the next Google Sheets lead…",
+    "waiting": "No leads yet.",
     "overdue": "Overdue",
     "fresh": "Fresh",
+    "pushToTop": "Push to Mojo",
+    "pushToTopTitle": "Send this lead to the Mojo dialer queue",
+    "pushFailed": "Failed to push to Mojo",
     "toastTitle": "⚡ Speed-to-Lead: {{name}}",
-    "toastDesc": "{{campaign}} · Respond within 5 min"
+    "toastDesc": "{{campaign}} · Respond within 5 min",
+    "pushedToMojo": "{{name}} pushed to Mojo",
+    "pushedToMojoDesc": "Mojo Triple Dialer will dial this lead on your next pickup"
+  },
+  "speedTable": {
+    "title": "All leads · {{tab}}",
+    "count": "{{count}} leads",
+    "empty": "No leads in this tab yet.",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "detail": "Campaign / detail",
+    "received": "Received",
+    "age": "Age",
+    "action": "Action"
   },
   "sourceProvenance": {
     "title": "Data sources",

@@ -165,3 +165,54 @@ export function leadDisplaySubtitle(lead: SheetLead): string {
   if (lead.tab) return lead.tab;
   return 'Google Sheets lead';
 }
+
+export async function pushSheetLeadsToMojo(
+  leads: SheetLead[],
+): Promise<{ ok: boolean; sent: number; failed: number; errors: string[] }> {
+  if (leads.length === 0) {
+    return { ok: false, sent: 0, failed: 0, errors: ['No leads selected'] };
+  }
+
+  const agents = leads.map((lead) => ({
+    id: lead.id,
+    agentName: lead.owner,
+    brokerage: lead.tab ?? 'Google Sheets',
+    agentPhone: lead.phone ?? '',
+    agentEmail: lead.email ?? '',
+    latestPropertyAddress: lead.address ?? '',
+    latestCity: lead.city ?? '',
+    latestState: lead.state ?? '',
+    latestListingId: lead.leadId ?? lead.id,
+    latestListPrice: 0,
+    latestDaysOnMarket: 0,
+    latestPublicRemarks: leadDisplaySubtitle(lead),
+    datasetId: 'GoogleSheets',
+    status: lead.status,
+    language: 'EN',
+  }));
+
+  try {
+    const res = await fetch(`${BASE_URL}/mojo-push`, {
+      method: 'POST',
+      headers: authedHeaders(),
+      body: JSON.stringify({ agents }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        ok: false,
+        sent: 0,
+        failed: leads.length,
+        errors: [data.error ?? `HTTP ${res.status}`],
+      };
+    }
+    return data as { ok: boolean; sent: number; failed: number; errors: string[] };
+  } catch (e) {
+    return {
+      ok: false,
+      sent: 0,
+      failed: leads.length,
+      errors: [(e as Error).message],
+    };
+  }
+}
