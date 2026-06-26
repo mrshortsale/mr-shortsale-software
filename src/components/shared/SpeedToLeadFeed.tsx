@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { generateMetaLead, MetaLead, seedMetaLeads } from '@/integrations/metaAds';
-import { Zap, ArrowUpToLine, Volume2, VolumeX, Clock, Facebook, Info } from 'lucide-react';
+import {
+  fetchSheetLeads,
+  subscribeSheetLeads,
+  leadDisplaySubtitle,
+  type SheetLead,
+} from '@/services/sheetsLeads';
+import { Zap, Volume2, VolumeX, Clock, FileSpreadsheet, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 function fmtAge(ms: number) {
@@ -11,61 +16,91 @@ function fmtAge(ms: number) {
   return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
 }
 
-interface Props { compact?: boolean; }
+interface Props {
+  compact?: boolean;
+  tab?: string | null;
+  maxLeads?: number;
+}
 
-export default function SpeedToLeadFeed({ compact = false }: Props) {
-  const [leads, setLeads] = useState<MetaLead[]>(() => seedMetaLeads());
+export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads = 6 }: Props) {
+  const [leads, setLeads] = useState<SheetLead[]>([]);
   const [now, setNow] = useState(Date.now());
   const [soundOn, setSoundOn] = useState(false);
+  const soundOnRef = useRef(soundOn);
+  const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
-  // Tick every second
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  // Simulate a new Meta lead arriving every ~25-45s
-  useEffect(() => {
-    const schedule = () => {
-      const delay = 25000 + Math.random() * 20000;
-      return setTimeout(() => {
-        const lead = generateMetaLead();
-        setLeads(prev => [lead, ...prev].slice(0, 6));
-        toast(t('speedFeed.toastTitle', { name: lead.name }), {
-          description: t('speedFeed.toastDesc', { campaign: lead.campaign }),
-        });
-        if (soundOn) {
-          try {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const o = ctx.createOscillator();
-            const g = ctx.createGain();
-            o.connect(g); g.connect(ctx.destination);
-            o.frequency.value = 880; g.gain.value = 0.05;
-            o.start(); o.stop(ctx.currentTime + 0.15);
-          } catch {}
-        }
-        timer = schedule();
-      }, delay);
-    };
-    let timer = schedule();
-    return () => clearTimeout(timer);
+    soundOnRef.current = soundOn;
   }, [soundOn]);
 
-  const handleCallNow = (lead: MetaLead) => {
-    toast.success(t('speedFeed.pushedToMojo', { name: lead.name }), {
-      description: t('speedFeed.pushedToMojoDesc'),
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    fetchSheetLeads(tab, maxLeads).then(({ leads: initial, error }) => {
+      if (cancelled) return;
+      if (error) {
+        toast.error(error);
+        setLeads([]);
+      } else {
+        setLeads(initial ?? []);
+      }
+      setLoading(false);
     });
-    setLeads(prev => prev.filter(l => l.id !== lead.id));
-  };
+
+    const unsubscribe = subscribeSheetLeads(tab, (lead) => {
+      setLeads((prev) => {
+        if (prev.some((l) => l.id === lead.id)) return prev;
+        return [lead, ...prev].slice(0, maxLeads);
+      });
+      toast(t('speedFeed.toastTitle', { name: lead.owner }), {
+        description: t('speedFeed.toastDesc', { campaign: leadDisplaySubtitle(lead) }),
+      });
+      if (soundOnRef.current) {
+        try {
+          const WebkitAudioContext = (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          const Ctx = window.AudioContext || WebkitAudioContext;
+          if (!Ctx) return;
+          const ctx = new Ctx();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g);
+          g.connect(ctx.destination);
+          o.frequency.value = 880;
+          g.gain.value = 0.05;
+          o.start();
+          o.stop(ctx.currentTime + 0.15);
+        } catch {
+          // ignore audio errors
+        }
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [tab, maxLeads, t]);
+
+  const title = tab ? t('speedFeed.titleTab', { tab }) : t('speedFeed.titleAll');
 
   return (
     <div className="rounded-xl border-2 border-speed/40 bg-gradient-to-br from-speed/5 to-card overflow-hidden">
       <div className="bg-speed text-speed-foreground px-4 py-2.5 flex items-center gap-2">
         <Zap size={16} className="animate-pulse" fill="currentColor" />
-        <span className="font-bold text-sm uppercase tracking-wider">{t('speedFeed.title')}</span>
+        <span className="font-bold text-sm uppercase tracking-wider">{title}</span>
         <span className="ml-auto flex items-center gap-3">
-          <button onClick={() => setSoundOn(s => !s)} className="opacity-90 hover:opacity-100" title={soundOn ? t('speedFeed.muteAlerts') : t('speedFeed.enableSound')}>
+          <button
+            onClick={() => setSoundOn((s) => !s)}
+            className="opacity-90 hover:opacity-100"
+            title={soundOn ? t('speedFeed.muteAlerts') : t('speedFeed.enableSound')}
+          >
             {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
           <span className="text-xs font-medium opacity-90 flex items-center gap-1">
@@ -76,41 +111,57 @@ export default function SpeedToLeadFeed({ compact = false }: Props) {
       </div>
       <div className="px-4 py-1.5 bg-speed/5 border-b border-speed/20 text-[10.5px] text-muted-foreground flex items-center gap-1.5">
         <Info size={10} className="text-speed shrink-0" />
-        <span>{t('speedFeed.mojoNote')}</span>
+        <span>{t('speedFeed.sheetsNote')}</span>
       </div>
       <div className={`p-3 space-y-2 ${compact ? 'max-h-72 overflow-y-auto' : ''}`}>
-        {leads.length === 0 && (
+        {loading && (
+          <div className="text-center py-6 text-xs text-muted-foreground">{t('speedFeed.loading')}</div>
+        )}
+        {!loading && leads.length === 0 && (
           <div className="text-center py-6 text-xs text-muted-foreground">{t('speedFeed.waiting')}</div>
         )}
-        {leads.map(lead => {
+        {leads.map((lead) => {
           const ageMs = now - lead.receivedAt;
           const overdue = ageMs > 5 * 60_000;
           return (
-            <div key={lead.id} className={`rounded-lg border p-3 flex items-center gap-3 ${overdue ? 'border-destructive/50 bg-destructive/5' : 'border-speed/30 bg-card'}`}>
+            <div
+              key={lead.id}
+              className={`rounded-lg border p-3 flex items-center gap-3 ${
+                overdue ? 'border-destructive/50 bg-destructive/5' : 'border-speed/30 bg-card'
+              }`}
+            >
               <div className="shrink-0 w-9 h-9 rounded-full bg-speed/15 text-speed flex items-center justify-center">
-                <Facebook size={16} />
+                <FileSpreadsheet size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-foreground truncate">{lead.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{lead.phone}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-foreground truncate">{lead.owner}</span>
+                  {lead.phone && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      {lead.phone}
+                    </span>
+                  )}
+                  {lead.tab && !tab && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-speed/10 text-speed font-medium">
+                      {lead.tab}
+                    </span>
+                  )}
                 </div>
-                <p className="text-[11px] text-muted-foreground truncate">{lead.campaign}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{leadDisplaySubtitle(lead)}</p>
               </div>
               <div className="text-right shrink-0">
-                <div className={`flex items-center gap-1 text-xs font-mono font-bold ${overdue ? 'text-destructive animate-pulse' : 'text-speed'}`}>
+                <div
+                  className={`flex items-center gap-1 text-xs font-mono font-bold ${
+                    overdue ? 'text-destructive animate-pulse' : 'text-speed'
+                  }`}
+                >
                   <Clock size={11} />
                   {fmtAge(ageMs)}
                 </div>
-                <p className="text-[9px] text-muted-foreground uppercase">{overdue ? t('speedFeed.overdue') : t('speedFeed.fresh')}</p>
+                <p className="text-[9px] text-muted-foreground uppercase">
+                  {overdue ? t('speedFeed.overdue') : t('speedFeed.fresh')}
+                </p>
               </div>
-              <button
-                onClick={() => handleCallNow(lead)}
-                className="shrink-0 px-3 py-2 bg-speed text-speed-foreground rounded-lg text-xs font-bold flex items-center gap-1 hover:opacity-90"
-                title={t('speedFeed.pushToTopTitle')}
-              >
-                <ArrowUpToLine size={12} /> {t('speedFeed.pushToTop')}
-              </button>
             </div>
           );
         })}

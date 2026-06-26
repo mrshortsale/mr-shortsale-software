@@ -3,6 +3,7 @@ import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 export const BATCH_INVENTORY_SCOPE = "batch_inventory";
 export const REALTOR_MLS_SCOPE = "realtor_mls";
 export const ZILLOW_APIFY_SCOPE = "zillow_apify";
+export const GOOGLE_SHEETS_SCOPE = "google_sheets";
 
 /**
  * Return UUIDs of all active sales reps ordered by name.

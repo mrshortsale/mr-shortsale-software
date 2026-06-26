@@ -33,3 +33,11 @@ verify_jwt = false
 
 [functions.auction-apify-cron]
 verify_jwt = false
+
+# Zapier inbound webhook — auth via X-Webhook-Secret header inside the function.
+[functions.sheets-webhook]
+verify_jwt = false
+
+# Auth handled inside the function (CEO/rep x-auth-token).
+[functions.sheets-leads]
+verify_jwt = false

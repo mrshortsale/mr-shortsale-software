@@ -1,8 +1,8 @@
-import { Database, Building2, Facebook, Layers, ArrowRight } from 'lucide-react';
+import { Database, Building2, Facebook, Layers, ArrowRight, FileSpreadsheet } from 'lucide-react';
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export type ProvenanceSource = 'Batch' | 'Zillow' | 'Meta' | 'ATOM' | 'Bridge MLS';
+export type ProvenanceSource = 'Batch' | 'Zillow' | 'Meta' | 'ATOM' | 'Bridge MLS' | 'Google Sheets';
 
 interface ChipDef {
   source: ProvenanceSource;
@@ -22,6 +22,7 @@ const ICONS: Record<ProvenanceSource, ReactNode> = {
   Meta: <Facebook size={12} />,
   ATOM: <Layers size={12} />,
   'Bridge MLS': <Building2 size={12} />,
+  'Google Sheets': <FileSpreadsheet size={12} />,
 };
 
 const STATUS_DOT: Record<NonNullable<ChipDef['status']>, string> = {

@@ -480,10 +480,16 @@
     "leadsToday": "Leads Today",
     "avgResponse": "Avg Response",
     "conversion": "Conversion %",
+    "tabsActive": "Sheet Tabs",
+    "topTabToday": "Top Tab Today",
     "status": "Status",
     "live": "Live",
     "howItWorks": "How Speed-to-Lead works",
-    "howItWorksNote": "Note: Mr. Short Sale app does not place calls. All dialing happens inside Mojo Triple Dialer — we just push leads to it via API."
+    "howItWorksNote": "Leads arrive from Google Sheets via Zapier and are assigned to reps automatically.",
+    "step1": "A new row is added to AD Leads, New Campaign Leads, Updated Leads, or realtors in Google Sheets",
+    "step2": "Zapier POSTs the row to our sheets-webhook endpoint within minutes",
+    "step3": "The lead appears here in real time with a freshness timer — red after 5 minutes",
+    "step4": "Each new lead is round-robin assigned to an active sales rep automatically"
   },
   "pipeline": {
     "title": "Active Pipeline",
@@ -823,23 +829,21 @@
     "close": "Close"
   },
   "speedFeed": {
-    "title": "Speed-to-Lead · Meta Ads",
+    "titleAll": "Speed-to-Lead · Google Sheets",
+    "titleTab": "Speed-to-Lead · {{tab}}",
     "newLead": "New lead",
     "responded": "Responded",
     "assigned": "Assigned",
     "muteAlerts": "Mute alerts",
     "enableSound": "Enable sound",
     "live": "Live",
-    "mojoNote": "App pushes leads to Mojo via API — Mojo dials from your headset.",
-    "waiting": "Waiting for next Meta lead…",
+    "sheetsNote": "Leads sync from Google Sheets via Zapier — assigned to reps automatically.",
+    "loading": "Loading leads…",
+    "waiting": "Waiting for the next Google Sheets lead…",
     "overdue": "Overdue",
     "fresh": "Fresh",
-    "pushToTop": "Push to Top",
-    "pushToTopTitle": "Insert this lead at position 1 in the Mojo dialer queue",
     "toastTitle": "⚡ Speed-to-Lead: {{name}}",
-    "toastDesc": "{{campaign}} · Call within 5 min",
-    "pushedToMojo": "{{name}} pushed to top of Mojo queue",
-    "pushedToMojoDesc": "Mojo Triple Dialer will dial this lead on your next pickup"
+    "toastDesc": "{{campaign}} · Respond within 5 min"
   },
   "sourceProvenance": {
     "title": "Data sources",
