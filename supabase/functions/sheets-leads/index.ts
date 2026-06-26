@@ -69,6 +69,9 @@ function rowToSheetLead(row: Record<string, unknown>) {
     leadType: row.lead_type ?? "Inbound",
     status: row.status,
     assignedRepId: row.assigned_rep_id ?? null,
+    mojoPushedAt: raw.mojo_pushed_at
+      ? new Date(String(raw.mojo_pushed_at)).getTime()
+      : null,
     receivedAt: new Date(String(row.received_at)).getTime(),
     ingestedAt: row.ingested_at ? new Date(String(row.ingested_at)).getTime() : null,
   };
@@ -83,15 +86,12 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Unauthorized" }, 403);
   }
 
-  if (req.method !== "GET") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
-  }
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action") ?? "list";
+    const todayIso = startOfTodayIso();
 
-  const url = new URL(req.url);
-  const action = url.searchParams.get("action") ?? "list";
-  const todayIso = startOfTodayIso();
-
-  if (action === "metrics") {
+    if (action === "metrics") {
     const counts: Record<string, number> = {};
     for (const tab of SHEET_TABS) {
       counts[tab] = 0;
@@ -149,5 +149,47 @@ Deno.serve(async (req) => {
 
   const leads = (rows ?? []).map((r) => rowToSheetLead(r as Record<string, unknown>));
 
-  return jsonResponse({ leads, tabs: SHEET_TABS });
+    return jsonResponse({ leads, tabs: SHEET_TABS });
+  }
+
+  if (req.method === "PATCH") {
+    let body: { leadId?: string; action?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    if (body.action !== "mojo_pushed" || !body.leadId) {
+      return jsonResponse({ error: "leadId and action=mojo_pushed required" }, 400);
+    }
+
+    const { data: row, error: fetchErr } = await supabase
+      .from("inventory_leads")
+      .select("id, raw_payload")
+      .eq("id", body.leadId)
+      .eq("source", "GoogleSheets")
+      .maybeSingle();
+
+    if (fetchErr || !row) {
+      return jsonResponse({ error: "Lead not found" }, 404);
+    }
+
+    const raw = (row.raw_payload ?? {}) as Record<string, unknown>;
+    const pushedAt = new Date().toISOString();
+    const { error: updateErr } = await supabase
+      .from("inventory_leads")
+      .update({
+        raw_payload: { ...raw, mojo_pushed_at: pushedAt },
+      })
+      .eq("id", body.leadId);
+
+    if (updateErr) {
+      return jsonResponse({ error: "Failed to update lead" }, 500);
+    }
+
+    return jsonResponse({ ok: true, mojoPushedAt: pushedAt });
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405);
 });

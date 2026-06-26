@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   fetchSheetLeads,
   leadDisplaySubtitle,
-  pushSheetLeadsToMojo,
   type SheetLead,
 } from '@/services/sheetsLeads';
 import {
@@ -14,8 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowUpToLine, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import PushedToMojoCell from '@/components/shared/PushedToMojoCell';
+import { Loader2 } from 'lucide-react';
 
 const POLL_MS = 15_000;
 
@@ -46,7 +45,6 @@ export default function SheetLeadsTable({ tab }: Props) {
   const [leads, setLeads] = useState<SheetLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
-  const [pushing, setPushing] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -71,23 +69,6 @@ export default function SheetLeadsTable({ tab }: Props) {
       window.clearInterval(interval);
     };
   }, [tab]);
-
-  const handlePushToMojo = async (lead: SheetLead) => {
-    setPushing((prev) => new Set(prev).add(lead.id));
-    const result = await pushSheetLeadsToMojo([lead]);
-    setPushing((prev) => {
-      const next = new Set(prev);
-      next.delete(lead.id);
-      return next;
-    });
-    if (result.ok) {
-      toast.success(t('speedFeed.pushedToMojo', { name: lead.owner }), {
-        description: t('speedFeed.pushedToMojoDesc'),
-      });
-    } else {
-      toast.error(result.errors[0] ?? t('speedFeed.pushFailed'));
-    }
-  };
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
@@ -117,13 +98,12 @@ export default function SheetLeadsTable({ tab }: Props) {
                 <TableHead>{t('speedTable.detail')}</TableHead>
                 <TableHead>{t('speedTable.received')}</TableHead>
                 <TableHead>{t('speedTable.age')}</TableHead>
-                <TableHead className="text-right">{t('speedTable.action')}</TableHead>
+                <TableHead className="text-right">{t('speedTable.pushedToMojo')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {leads.map((lead) => {
                 const ageMs = now - lead.receivedAt;
-                const isPushing = pushing.has(lead.id);
                 return (
                   <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.owner}</TableCell>
@@ -138,19 +118,7 @@ export default function SheetLeadsTable({ tab }: Props) {
                     </TableCell>
                     <TableCell className="font-mono text-xs">{fmtAge(ageMs)}</TableCell>
                     <TableCell className="text-right">
-                      <button
-                        onClick={() => void handlePushToMojo(lead)}
-                        disabled={isPushing || !lead.phone}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-speed text-speed-foreground rounded-md text-[11px] font-bold hover:opacity-90 disabled:opacity-50"
-                        title={t('speedFeed.pushToTopTitle')}
-                      >
-                        {isPushing ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <ArrowUpToLine size={12} />
-                        )}
-                        {t('speedFeed.pushToTop')}
-                      </button>
+                      <PushedToMojoCell lead={lead} />
                     </TableCell>
                   </TableRow>
                 );

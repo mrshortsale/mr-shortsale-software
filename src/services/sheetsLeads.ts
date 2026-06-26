@@ -31,6 +31,7 @@ export interface SheetLead {
   leadType: string;
   status: string;
   assignedRepId: string | null;
+  mojoPushedAt: number | null;
   receivedAt: number;
   ingestedAt: number | null;
 }
@@ -166,6 +167,26 @@ export function leadDisplaySubtitle(lead: SheetLead): string {
   return 'Google Sheets lead';
 }
 
+export async function markSheetLeadPushedToMojo(
+  leadId: string,
+): Promise<{ ok: boolean; mojoPushedAt?: number; error?: string }> {
+  try {
+    const res = await fetch(`${BASE_URL}/sheets-leads`, {
+      method: 'PATCH',
+      headers: authedHeaders(),
+      body: JSON.stringify({ leadId, action: 'mojo_pushed' }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error ?? 'Failed to update lead' };
+    return {
+      ok: true,
+      mojoPushedAt: data.mojoPushedAt ? new Date(data.mojoPushedAt).getTime() : Date.now(),
+    };
+  } catch {
+    return { ok: false, error: 'Network error' };
+  }
+}
+
 export async function pushSheetLeadsToMojo(
   leads: SheetLead[],
 ): Promise<{ ok: boolean; sent: number; failed: number; errors: string[] }> {
@@ -206,7 +227,11 @@ export async function pushSheetLeadsToMojo(
         errors: [data.error ?? `HTTP ${res.status}`],
       };
     }
-    return data as { ok: boolean; sent: number; failed: number; errors: string[] };
+    const result = data as { ok: boolean; sent: number; failed: number; errors: string[] };
+    if (result.ok && leads.length === 1) {
+      await markSheetLeadPushedToMojo(leads[0].id);
+    }
+    return result;
   } catch (e) {
     return {
       ok: false,
