@@ -829,7 +829,7 @@
     "close": "Close"
   },
   "speedFeed": {
-    "titleAll": "Speed-to-Lead · Google Sheets",
+    "titleAll": "Speed-to-Lead · Meta Ads",
     "titleTab": "Speed-to-Lead · {{tab}}",
     "newLead": "New lead",
     "responded": "Responded",
@@ -862,7 +862,8 @@
     "detail": "Campaign / detail",
     "received": "Received",
     "age": "Age",
-    "pushedToMojo": "Pushed to Mojo"
+    "assignedRep": "Assigned rep",
+    "unassigned": "Unassigned"
   },
   "sourceProvenance": {
     "title": "Data sources",

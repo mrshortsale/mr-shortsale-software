@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   fetchSheetLeads,
   leadDisplaySubtitle,
   type SheetLead,
 } from '@/services/sheetsLeads';
+import { assignRep, fetchReps, type InventoryRep } from '@/services/inventory';
+import InventoryRepPicker from '@/components/ceo/InventoryRepPicker';
 import {
   Table,
   TableBody,
@@ -13,8 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import PushedToMojoCell from '@/components/shared/PushedToMojoCell';
-import { Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const POLL_MS = 15_000;
 
@@ -43,13 +45,25 @@ interface Props {
 
 export default function SheetLeadsTable({ tab }: Props) {
   const [leads, setLeads] = useState<SheetLead[]>([]);
+  const [reps, setReps] = useState<InventoryRep[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
   const { t } = useTranslation();
 
+  const repNameById = useMemo(
+    () => new Map(reps.map((r) => [r.id, r.name])),
+    [reps],
+  );
+
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    fetchReps().then(({ reps: fetched }) => {
+      if (fetched) setReps(fetched);
+    });
   }, []);
 
   useEffect(() => {
@@ -69,6 +83,32 @@ export default function SheetLeadsTable({ tab }: Props) {
       window.clearInterval(interval);
     };
   }, [tab]);
+
+  const handleAssign = async (lead: SheetLead, repId: string | null) => {
+    const { error } = await assignRep([lead.id], repId);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    const repName = repId ? repNameById.get(repId) ?? null : null;
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === lead.id
+          ? { ...l, assignedRepId: repId, assignedRepName: repName }
+          : l,
+      ),
+    );
+
+    toast.success(
+      repId
+        ? t('inventory.toasts.assigned', {
+            count: 1,
+            rep: repName ?? t('speedTable.assignedRep'),
+          })
+        : t('inventory.toasts.unassigned', { count: 1 }),
+    );
+  };
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
@@ -98,12 +138,14 @@ export default function SheetLeadsTable({ tab }: Props) {
                 <TableHead>{t('speedTable.detail')}</TableHead>
                 <TableHead>{t('speedTable.received')}</TableHead>
                 <TableHead>{t('speedTable.age')}</TableHead>
-                <TableHead className="text-right">{t('speedTable.pushedToMojo')}</TableHead>
+                <TableHead>{t('speedTable.assignedRep')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {leads.map((lead) => {
                 const ageMs = now - lead.receivedAt;
+                const repColor =
+                  reps.find((r) => r.id === lead.assignedRepId)?.avatar_color ?? '#185FA5';
                 return (
                   <TableRow key={lead.id}>
                     <TableCell className="font-medium">{lead.owner}</TableCell>
@@ -117,8 +159,35 @@ export default function SheetLeadsTable({ tab }: Props) {
                       {fmtReceived(lead.receivedAt)}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{fmtAge(ageMs)}</TableCell>
-                    <TableCell className="text-right">
-                      <PushedToMojoCell lead={lead} />
+                    <TableCell>
+                      <InventoryRepPicker
+                        trigger={
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 text-xs rounded-md px-2 py-1 hover:bg-muted transition-colors max-w-[160px]"
+                            title={t('inventory.buttons.assignRep')}
+                          >
+                            {lead.assignedRepName ? (
+                              <>
+                                <span
+                                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+                                  style={{ background: repColor }}
+                                >
+                                  {lead.assignedRepName.slice(0, 1).toUpperCase()}
+                                </span>
+                                <span className="truncate font-medium text-foreground">
+                                  {lead.assignedRepName}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">{t('speedTable.unassigned')}</span>
+                            )}
+                            <ChevronDown size={12} className="text-muted-foreground shrink-0" />
+                          </button>
+                        }
+                        onPick={(repId) => void handleAssign(lead, repId)}
+                        allowUnassign={Boolean(lead.assignedRepId)}
+                      />
                     </TableCell>
                   </TableRow>
                 );

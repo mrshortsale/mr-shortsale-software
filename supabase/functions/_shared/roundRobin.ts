@@ -190,6 +190,47 @@ export async function assignUnassignedZillowLeadsRoundRobin(
 }
 
 /**
+ * Assign every unassigned Google Sheets lead to active reps in round-robin order.
+ */
+export async function assignUnassignedGoogleSheetLeadsRoundRobin(
+  supabase: SupabaseClient,
+): Promise<{ assigned: number; repCount: number; error: string | null }> {
+  const repIds = await loadActiveRepIds(supabase);
+  if (repIds.length === 0) {
+    return { assigned: 0, repCount: 0, error: "No active sales reps found" };
+  }
+
+  const { data: leads, error: listErr } = await supabase
+    .from("inventory_leads")
+    .select("id")
+    .eq("source", "GoogleSheets")
+    .is("assigned_rep_id", null)
+    .order("received_at", { ascending: true });
+
+  if (listErr) {
+    return { assigned: 0, repCount: repIds.length, error: "Failed to load unassigned leads" };
+  }
+
+  let rrIndex = await loadRoundRobinIndex(supabase, GOOGLE_SHEETS_SCOPE);
+  let assigned = 0;
+
+  for (const lead of leads ?? []) {
+    const { assignments, nextIndex } = assignRepsRoundRobin(repIds, rrIndex, 1);
+    const { error: updateErr } = await supabase
+      .from("inventory_leads")
+      .update({ assigned_rep_id: assignments[0] })
+      .eq("id", (lead as { id: string }).id);
+    if (!updateErr) {
+      assigned++;
+      rrIndex = nextIndex;
+    }
+  }
+
+  await saveRoundRobinIndex(supabase, rrIndex, repIds.length, GOOGLE_SHEETS_SCOPE);
+  return { assigned, repCount: repIds.length, error: null };
+}
+
+/**
  * Given the current cursor and a list of items that need assignment, return
  * one rep ID per item in round-robin order, plus the updated cursor.
  *

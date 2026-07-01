@@ -829,7 +829,7 @@
     "close": "Cerrar"
   },
   "speedFeed": {
-    "titleAll": "Velocidad de Respuesta · Google Sheets",
+    "titleAll": "Velocidad de Respuesta · Meta Ads",
     "titleTab": "Velocidad de Respuesta · {{tab}}",
     "newLead": "Nuevo lead",
     "responded": "Respondido",
@@ -862,7 +862,8 @@
     "detail": "Campaña / detalle",
     "received": "Recibido",
     "age": "Antigüedad",
-    "pushedToMojo": "Enviado a Mojo"
+    "assignedRep": "Rep asignado",
+    "unassigned": "Sin asignar"
   },
   "sourceProvenance": {
     "title": "Fuentes de datos",

@@ -31,7 +31,7 @@ export interface SheetLead {
   leadType: string;
   status: string;
   assignedRepId: string | null;
-  mojoPushedAt: number | null;
+  assignedRepName: string | null;
   receivedAt: number;
   ingestedAt: number | null;
 }
@@ -165,79 +165,4 @@ export function leadDisplaySubtitle(lead: SheetLead): string {
   if (lead.city && lead.state) return `${lead.city}, ${lead.state}`;
   if (lead.tab) return lead.tab;
   return 'Google Sheets lead';
-}
-
-export async function markSheetLeadPushedToMojo(
-  leadId: string,
-): Promise<{ ok: boolean; mojoPushedAt?: number; error?: string }> {
-  try {
-    const res = await fetch(`${BASE_URL}/sheets-leads`, {
-      method: 'PATCH',
-      headers: authedHeaders(),
-      body: JSON.stringify({ leadId, action: 'mojo_pushed' }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.error ?? 'Failed to update lead' };
-    return {
-      ok: true,
-      mojoPushedAt: data.mojoPushedAt ? new Date(data.mojoPushedAt).getTime() : Date.now(),
-    };
-  } catch {
-    return { ok: false, error: 'Network error' };
-  }
-}
-
-export async function pushSheetLeadsToMojo(
-  leads: SheetLead[],
-): Promise<{ ok: boolean; sent: number; failed: number; errors: string[] }> {
-  if (leads.length === 0) {
-    return { ok: false, sent: 0, failed: 0, errors: ['No leads selected'] };
-  }
-
-  const agents = leads.map((lead) => ({
-    id: lead.id,
-    agentName: lead.owner,
-    brokerage: lead.tab ?? 'Google Sheets',
-    agentPhone: lead.phone ?? '',
-    agentEmail: lead.email ?? '',
-    latestPropertyAddress: lead.address ?? '',
-    latestCity: lead.city ?? '',
-    latestState: lead.state ?? '',
-    latestListingId: lead.leadId ?? lead.id,
-    latestListPrice: 0,
-    latestDaysOnMarket: 0,
-    latestPublicRemarks: leadDisplaySubtitle(lead),
-    datasetId: 'GoogleSheets',
-    status: lead.status,
-    language: 'EN',
-  }));
-
-  try {
-    const res = await fetch(`${BASE_URL}/mojo-push`, {
-      method: 'POST',
-      headers: authedHeaders(),
-      body: JSON.stringify({ agents }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      return {
-        ok: false,
-        sent: 0,
-        failed: leads.length,
-        errors: [data.error ?? `HTTP ${res.status}`],
-      };
-    }
-    const result = data as { ok: boolean; sent: number; failed: number; errors: string[] };
-    if (result.ok && leads.length === 1) {
-      await markSheetLeadPushedToMojo(leads[0].id);
-    }
-    return result;
-  } catch (e) {
-    return {
-      ok: false,
-      sent: 0,
-      failed: leads.length,
-      errors: [(e as Error).message],
-    };
-  }
 }

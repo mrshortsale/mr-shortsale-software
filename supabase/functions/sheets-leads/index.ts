@@ -10,6 +10,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyJwt } from "../_shared/jwt.ts";
 import { handleCors, jsonResponse } from "../_shared/cors.ts";
+import { assignUnassignedGoogleSheetLeadsRoundRobin } from "../_shared/roundRobin.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -48,8 +49,12 @@ function startOfTodayIso(): string {
   return d.toISOString();
 }
 
-function rowToSheetLead(row: Record<string, unknown>) {
+function rowToSheetLead(
+  row: Record<string, unknown>,
+  repNames: Map<string, string>,
+) {
   const raw = (row.raw_payload ?? {}) as Record<string, unknown>;
+  const assignedRepId = row.assigned_rep_id ? String(row.assigned_rep_id) : null;
   return {
     id: row.id,
     tab: row.data_source,
@@ -68,13 +73,26 @@ function rowToSheetLead(row: Record<string, unknown>) {
     platform: raw.platform ?? null,
     leadType: row.lead_type ?? "Inbound",
     status: row.status,
-    assignedRepId: row.assigned_rep_id ?? null,
-    mojoPushedAt: raw.mojo_pushed_at
-      ? new Date(String(raw.mojo_pushed_at)).getTime()
-      : null,
+    assignedRepId,
+    assignedRepName: assignedRepId ? repNames.get(assignedRepId) ?? null : null,
     receivedAt: new Date(String(row.received_at)).getTime(),
     ingestedAt: row.ingested_at ? new Date(String(row.ingested_at)).getTime() : null,
   };
+}
+
+async function loadRepNames(repIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (repIds.length === 0) return map;
+
+  const { data } = await supabase
+    .from("users")
+    .select("id, name")
+    .in("id", repIds);
+
+  for (const rep of data ?? []) {
+    map.set((rep as { id: string }).id, (rep as { name: string }).name);
+  }
+  return map;
 }
 
 Deno.serve(async (req) => {
@@ -92,103 +110,75 @@ Deno.serve(async (req) => {
     const todayIso = startOfTodayIso();
 
     if (action === "metrics") {
-    const counts: Record<string, number> = {};
-    for (const tab of SHEET_TABS) {
-      counts[tab] = 0;
+      const counts: Record<string, number> = {};
+      for (const tab of SHEET_TABS) {
+        counts[tab] = 0;
+      }
+
+      const { data, error } = await supabase
+        .from("inventory_leads")
+        .select("data_source")
+        .eq("source", "GoogleSheets")
+        .gte("received_at", todayIso);
+
+      if (error) {
+        return jsonResponse({ error: "Failed to load metrics" }, 500);
+      }
+
+      for (const row of data ?? []) {
+        const tab = String((row as { data_source: string | null }).data_source ?? "");
+        if (tab in counts) counts[tab]++;
+      }
+
+      const totalToday = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+      return jsonResponse({
+        counts,
+        totalToday,
+        tabs: SHEET_TABS,
+      });
     }
 
-    const { data, error } = await supabase
+    // Backfill round-robin for any leads ingested before reps existed.
+    await assignUnassignedGoogleSheetLeadsRoundRobin(supabase);
+
+    const tab = url.searchParams.get("tab");
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "50")));
+    const sinceRaw = url.searchParams.get("since");
+    const sinceMs = sinceRaw ? Number(sinceRaw) : null;
+
+    let query = supabase
       .from("inventory_leads")
-      .select("data_source")
+      .select("*")
       .eq("source", "GoogleSheets")
-      .gte("received_at", todayIso);
+      .neq("status", "Dismissed")
+      .order("received_at", { ascending: false })
+      .limit(limit);
 
+    if (tab && tab !== "all") {
+      query = query.eq("data_source", tab);
+    }
+
+    if (sinceMs !== null && Number.isFinite(sinceMs) && sinceMs > 0) {
+      query = query.gt("received_at", new Date(sinceMs).toISOString());
+    }
+
+    const { data: rows, error } = await query;
     if (error) {
-      return jsonResponse({ error: "Failed to load metrics" }, 500);
+      return jsonResponse({ error: "Failed to fetch sheet leads" }, 500);
     }
 
-    for (const row of data ?? []) {
-      const tab = String((row as { data_source: string | null }).data_source ?? "");
-      if (tab in counts) counts[tab]++;
-    }
-
-    const totalToday = Object.values(counts).reduce((sum, n) => sum + n, 0);
-
-    return jsonResponse({
-      counts,
-      totalToday,
-      tabs: SHEET_TABS,
-    });
-  }
-
-  const tab = url.searchParams.get("tab");
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "50")));
-  const sinceRaw = url.searchParams.get("since");
-  const sinceMs = sinceRaw ? Number(sinceRaw) : null;
-
-  let query = supabase
-    .from("inventory_leads")
-    .select("*")
-    .eq("source", "GoogleSheets")
-    .neq("status", "Dismissed")
-    .order("received_at", { ascending: false })
-    .limit(limit);
-
-  if (tab && tab !== "all") {
-    query = query.eq("data_source", tab);
-  }
-
-  if (sinceMs !== null && Number.isFinite(sinceMs) && sinceMs > 0) {
-    query = query.gt("received_at", new Date(sinceMs).toISOString());
-  }
-
-  const { data: rows, error } = await query;
-  if (error) {
-    return jsonResponse({ error: "Failed to fetch sheet leads" }, 500);
-  }
-
-  const leads = (rows ?? []).map((r) => rowToSheetLead(r as Record<string, unknown>));
+    const repIds = [
+      ...new Set(
+        (rows ?? [])
+          .map((r) => (r as { assigned_rep_id: string | null }).assigned_rep_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const repNames = await loadRepNames(repIds);
+    const leads = (rows ?? []).map((r) => rowToSheetLead(r as Record<string, unknown>, repNames));
 
     return jsonResponse({ leads, tabs: SHEET_TABS });
-  }
-
-  if (req.method === "PATCH") {
-    let body: { leadId?: string; action?: string } = {};
-    try {
-      body = await req.json();
-    } catch {
-      return jsonResponse({ error: "Invalid JSON body" }, 400);
-    }
-
-    if (body.action !== "mojo_pushed" || !body.leadId) {
-      return jsonResponse({ error: "leadId and action=mojo_pushed required" }, 400);
-    }
-
-    const { data: row, error: fetchErr } = await supabase
-      .from("inventory_leads")
-      .select("id, raw_payload")
-      .eq("id", body.leadId)
-      .eq("source", "GoogleSheets")
-      .maybeSingle();
-
-    if (fetchErr || !row) {
-      return jsonResponse({ error: "Lead not found" }, 404);
-    }
-
-    const raw = (row.raw_payload ?? {}) as Record<string, unknown>;
-    const pushedAt = new Date().toISOString();
-    const { error: updateErr } = await supabase
-      .from("inventory_leads")
-      .update({
-        raw_payload: { ...raw, mojo_pushed_at: pushedAt },
-      })
-      .eq("id", body.leadId);
-
-    if (updateErr) {
-      return jsonResponse({ error: "Failed to update lead" }, 500);
-    }
-
-    return jsonResponse({ ok: true, mojoPushedAt: pushedAt });
   }
 
   return jsonResponse({ error: "Method not allowed" }, 405);
