@@ -4,9 +4,10 @@ import {
   fetchSheetLeads,
   subscribeSheetLeads,
   leadDisplaySubtitle,
+  categoryDisplayLabel,
   type SheetLead,
 } from '@/services/sheetsLeads';
-import { Zap, Volume2, VolumeX, Clock, FileSpreadsheet, Info } from 'lucide-react';
+import { Zap, Volume2, VolumeX, Clock, Facebook, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 function fmtAge(ms: number) {
@@ -43,7 +44,7 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
     let cancelled = false;
     setLoading(true);
 
-    fetchSheetLeads(tab, maxLeads).then(({ leads: initial, error }) => {
+    fetchSheetLeads(tab, { limit: maxLeads }).then(({ leads: initial, error }) => {
       if (cancelled) return;
       if (error) {
         toast.error(error);
@@ -88,7 +89,7 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
     };
   }, [tab, maxLeads, t]);
 
-  const title = tab ? t('speedFeed.titleTab', { tab }) : t('speedFeed.titleAll');
+  const title = tab ? t('speedFeed.titleTab', { tab: categoryDisplayLabel(tab) }) : t('speedFeed.titleAll');
 
   return (
     <div className="rounded-xl border-2 border-speed/40 bg-gradient-to-br from-speed/5 to-card overflow-hidden">
@@ -128,7 +129,7 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
               className="rounded-lg border border-speed/30 bg-card p-3 flex items-center gap-3"
             >
               <div className="shrink-0 w-9 h-9 rounded-full bg-speed/15 text-speed flex items-center justify-center">
-                <FileSpreadsheet size={16} />
+                <Facebook size={16} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -140,7 +141,7 @@ export default function SpeedToLeadFeed({ compact = false, tab = null, maxLeads 
                   )}
                   {lead.tab && !tab && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-speed/10 text-speed font-medium">
-                      {lead.tab}
+                      {categoryDisplayLabel(lead.tab)}
                     </span>
                   )}
                 </div>

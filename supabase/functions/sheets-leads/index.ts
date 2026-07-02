@@ -3,8 +3,8 @@
  *
  * Read API for Google Sheets speed-to-lead leads stored in inventory_leads.
  *
- * GET ?tab=AD+Leads&limit=50        → list leads for a tab (or all tabs)
- * GET ?action=metrics               → today's counts grouped by data_source tab
+ * GET ?tab=AD+Leads&limit=25&offset=0  → paginated list for a category (or all)
+ * GET ?action=metrics                  → today + total counts grouped by data_source
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -110,16 +110,18 @@ Deno.serve(async (req) => {
     const todayIso = startOfTodayIso();
 
     if (action === "metrics") {
-      const counts: Record<string, number> = {};
+      const countsToday: Record<string, number> = {};
+      const countsTotal: Record<string, number> = {};
       for (const tab of SHEET_TABS) {
-        counts[tab] = 0;
+        countsToday[tab] = 0;
+        countsTotal[tab] = 0;
       }
 
       const { data, error } = await supabase
         .from("inventory_leads")
-        .select("data_source")
+        .select("data_source, received_at")
         .eq("source", "GoogleSheets")
-        .gte("received_at", todayIso);
+        .neq("status", "Dismissed");
 
       if (error) {
         return jsonResponse({ error: "Failed to load metrics" }, 500);
@@ -127,14 +129,20 @@ Deno.serve(async (req) => {
 
       for (const row of data ?? []) {
         const tab = String((row as { data_source: string | null }).data_source ?? "");
-        if (tab in counts) counts[tab]++;
+        if (!(tab in countsTotal)) continue;
+        countsTotal[tab]++;
+        const receivedAt = String((row as { received_at: string }).received_at ?? "");
+        if (receivedAt >= todayIso) countsToday[tab]++;
       }
 
-      const totalToday = Object.values(counts).reduce((sum, n) => sum + n, 0);
+      const totalToday = Object.values(countsToday).reduce((sum, n) => sum + n, 0);
+      const totalAll = Object.values(countsTotal).reduce((sum, n) => sum + n, 0);
 
       return jsonResponse({
-        counts,
+        countsToday,
+        countsTotal,
         totalToday,
+        totalAll,
         tabs: SHEET_TABS,
       });
     }
@@ -143,17 +151,18 @@ Deno.serve(async (req) => {
     await assignUnassignedGoogleSheetLeadsRoundRobin(supabase);
 
     const tab = url.searchParams.get("tab");
-    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "50")));
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "25")));
+    const offset = Math.max(0, Number(url.searchParams.get("offset") ?? "0"));
     const sinceRaw = url.searchParams.get("since");
     const sinceMs = sinceRaw ? Number(sinceRaw) : null;
 
     let query = supabase
       .from("inventory_leads")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("source", "GoogleSheets")
       .neq("status", "Dismissed")
       .order("received_at", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (tab && tab !== "all") {
       query = query.eq("data_source", tab);
@@ -163,7 +172,7 @@ Deno.serve(async (req) => {
       query = query.gt("received_at", new Date(sinceMs).toISOString());
     }
 
-    const { data: rows, error } = await query;
+    const { data: rows, error, count } = await query;
     if (error) {
       return jsonResponse({ error: "Failed to fetch sheet leads" }, 500);
     }
@@ -178,7 +187,13 @@ Deno.serve(async (req) => {
     const repNames = await loadRepNames(repIds);
     const leads = (rows ?? []).map((r) => rowToSheetLead(r as Record<string, unknown>, repNames));
 
-    return jsonResponse({ leads, tabs: SHEET_TABS });
+    return jsonResponse({
+      leads,
+      total: count ?? leads.length,
+      offset,
+      limit,
+      tabs: SHEET_TABS,
+    });
   }
 
   return jsonResponse({ error: "Method not allowed" }, 405);

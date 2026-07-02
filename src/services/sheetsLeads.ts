@@ -12,6 +12,19 @@ export const SHEET_TAB_NAMES = [
 
 export type SheetTabName = (typeof SHEET_TAB_NAMES)[number];
 
+/** Maps internal data_source keys to user-facing category labels. */
+export const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
+  'AD Leads': 'AD Leads',
+  'New Campaign Leads': 'New Campaign',
+  'Updated Leads': 'Updated Leads',
+  realtors: 'Realtors',
+};
+
+export function categoryDisplayLabel(dataSource: string | null | undefined): string {
+  if (!dataSource) return '';
+  return CATEGORY_DISPLAY_LABELS[dataSource] ?? dataSource;
+}
+
 export interface SheetLead {
   id: string;
   tab: string | null;
@@ -37,9 +50,16 @@ export interface SheetLead {
 }
 
 export interface SheetLeadMetrics {
-  counts: Record<string, number>;
+  countsToday: Record<string, number>;
+  countsTotal: Record<string, number>;
   totalToday: number;
+  totalAll: number;
   tabs: string[];
+}
+
+export interface FetchSheetLeadsOptions {
+  limit?: number;
+  offset?: number;
 }
 
 function authedHeaders(): Record<string, string> {
@@ -54,12 +74,14 @@ function authedHeaders(): Record<string, string> {
 
 export async function fetchSheetLeads(
   tab?: string | null,
-  limit = 50,
-): Promise<{ leads?: SheetLead[]; error?: string }> {
+  options: FetchSheetLeadsOptions = {},
+): Promise<{ leads?: SheetLead[]; total?: number; error?: string }> {
   try {
+    const { limit = 25, offset = 0 } = options;
     const query = new URLSearchParams();
     if (tab) query.set('tab', tab);
     query.set('limit', String(limit));
+    query.set('offset', String(offset));
 
     const res = await fetch(`${BASE_URL}/sheets-leads?${query}`, {
       method: 'GET',
@@ -67,7 +89,7 @@ export async function fetchSheetLeads(
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error ?? 'Failed to fetch sheet leads' };
-    return { leads: data.leads ?? [] };
+    return { leads: data.leads ?? [], total: data.total ?? 0 };
   } catch {
     return { error: 'Network error' };
   }
@@ -86,8 +108,10 @@ export async function fetchSheetLeadMetrics(): Promise<{
     if (!res.ok) return { error: data.error ?? 'Failed to fetch metrics' };
     return {
       metrics: {
-        counts: data.counts ?? {},
+        countsToday: data.countsToday ?? {},
+        countsTotal: data.countsTotal ?? {},
         totalToday: data.totalToday ?? 0,
+        totalAll: data.totalAll ?? 0,
         tabs: data.tabs ?? [],
       },
     };
@@ -111,7 +135,7 @@ export function subscribeSheetLeads(
   let stopped = false;
 
   const seed = async () => {
-    const { leads } = await fetchSheetLeads(tab, 50);
+    const { leads } = await fetchSheetLeads(tab, { limit: 50 });
     for (const lead of leads ?? []) {
       knownIds.add(lead.id);
       if (lead.receivedAt > latestReceivedAt) latestReceivedAt = lead.receivedAt;
@@ -163,6 +187,6 @@ export function leadDisplaySubtitle(lead: SheetLead): string {
   if (lead.campaignName) return lead.campaignName;
   if (lead.intent) return lead.intent.replace(/_/g, ' ');
   if (lead.city && lead.state) return `${lead.city}, ${lead.state}`;
-  if (lead.tab) return lead.tab;
-  return 'Google Sheets lead';
+  if (lead.tab) return categoryDisplayLabel(lead.tab);
+  return 'Meta lead';
 }

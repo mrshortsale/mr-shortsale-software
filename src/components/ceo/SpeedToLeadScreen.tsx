@@ -2,12 +2,12 @@ import SpeedToLeadFeed from '@/components/shared/SpeedToLeadFeed';
 import SheetLeadsTable from '@/components/shared/SheetLeadsTable';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchSheetLeadMetrics, SHEET_TAB_NAMES } from '@/services/sheetsLeads';
-import { Zap, Clock, TrendingUp, FileSpreadsheet } from 'lucide-react';
+import { fetchSheetLeadMetrics } from '@/services/sheetsLeads';
+import { Zap, TrendingUp, Facebook } from 'lucide-react';
 import SourceProvenance from '@/components/shared/SourceProvenance';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const TAB_CONFIG = [
+const CATEGORY_CONFIG = [
   { id: 'ad-leads', label: 'AD Leads', dataSource: 'AD Leads' },
   { id: 'new-campaign', label: 'New Campaign', dataSource: 'New Campaign Leads' },
   { id: 'updated-leads', label: 'Updated Leads', dataSource: 'Updated Leads' },
@@ -16,7 +16,9 @@ const TAB_CONFIG = [
 
 export default function SpeedToLeadScreen() {
   const [totalToday, setTotalToday] = useState<number | null>(null);
-  const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+  const [totalAll, setTotalAll] = useState<number | null>(null);
+  const [countsToday, setCountsToday] = useState<Record<string, number>>({});
+  const [countsTotal, setCountsTotal] = useState<Record<string, number>>({});
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -24,7 +26,9 @@ export default function SpeedToLeadScreen() {
       fetchSheetLeadMetrics().then(({ metrics, error }) => {
         if (error || !metrics) return;
         setTotalToday(metrics.totalToday);
-        setTabCounts(metrics.counts);
+        setTotalAll(metrics.totalAll);
+        setCountsToday(metrics.countsToday);
+        setCountsTotal(metrics.countsTotal);
       });
     };
     load();
@@ -37,9 +41,9 @@ export default function SpeedToLeadScreen() {
       <SourceProvenance
         chips={[
           {
-            source: 'Google Sheets',
+            source: 'Meta',
             count: `${totalToday ?? 0} today`,
-            lastSync: 'Zapier webhook',
+            lastSync: t('speed.live'),
             status: 'live',
           },
         ]}
@@ -49,16 +53,16 @@ export default function SpeedToLeadScreen() {
         <Metric
           label={t('speed.leadsToday')}
           value={totalToday ?? '—'}
-          icon={<FileSpreadsheet size={18} className="text-speed" />}
+          icon={<Facebook size={18} className="text-speed" />}
         />
         <Metric
-          label={t('speed.tabsActive')}
-          value={SHEET_TAB_NAMES.length}
-          icon={<Clock size={18} className="text-secondary" />}
+          label={t('speed.totalLeads')}
+          value={totalAll ?? '—'}
+          icon={<Facebook size={18} className="text-secondary" />}
         />
         <Metric
-          label={t('speed.topTabToday')}
-          value={topTabLabel(tabCounts)}
+          label={t('speed.topCategoryToday')}
+          value={topCategoryLabel(countsToday)}
           icon={<TrendingUp size={18} className="text-accent" />}
         />
         <Metric
@@ -71,20 +75,25 @@ export default function SpeedToLeadScreen() {
       <SpeedToLeadFeed maxLeads={5} />
 
       <Tabs defaultValue="ad-leads" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
-          {TAB_CONFIG.map((tab) => (
-            <TabsTrigger key={tab.id} value={tab.id} className="text-xs sm:text-sm py-2">
-              {tab.label}
-              <span className="ml-1.5 text-[10px] text-muted-foreground">
-                ({tabCounts[tab.dataSource] ?? 0})
-              </span>
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-auto gap-1">
+          {CATEGORY_CONFIG.map((cat) => (
+            <TabsTrigger key={cat.id} value={cat.id} className="text-xs sm:text-sm py-2 whitespace-normal text-left">
+              {t('speed.categoryBadge', {
+                label: cat.label,
+                total: countsTotal[cat.dataSource] ?? 0,
+                today: countsToday[cat.dataSource] ?? 0,
+              })}
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {TAB_CONFIG.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id}>
-            <SheetLeadsTable tab={tab.dataSource} />
+        {CATEGORY_CONFIG.map((cat) => (
+          <TabsContent key={cat.id} value={cat.id}>
+            <SheetLeadsTable
+              category={cat.dataSource}
+              categoryLabel={cat.label}
+              initialTotal={countsTotal[cat.dataSource]}
+            />
           </TabsContent>
         ))}
       </Tabs>
@@ -103,14 +112,15 @@ export default function SpeedToLeadScreen() {
   );
 }
 
-function topTabLabel(counts: Record<string, number>): string {
+function topCategoryLabel(counts: Record<string, number>): string {
   const entries = Object.entries(counts);
   if (entries.length === 0) return '—';
-  const [topTab, topCount] = entries.reduce((best, current) =>
+  const [topKey, topCount] = entries.reduce((best, current) =>
     current[1] > best[1] ? current : best,
   );
   if (!topCount) return '—';
-  return topTab === 'realtors' ? 'Realtors' : topTab.split(' ')[0];
+  const match = CATEGORY_CONFIG.find((c) => c.dataSource === topKey);
+  return match?.label ?? topKey;
 }
 
 function Metric({
