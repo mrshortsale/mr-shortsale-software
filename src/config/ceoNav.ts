@@ -3,7 +3,6 @@ import {
   BarChart3,
   Bot,
   Briefcase,
-  Building2,
   Cpu,
   FileText,
   Home,
@@ -20,7 +19,6 @@ import {
   Users,
   Zap,
   RefreshCw,
-  Database,
   Gavel,
 } from 'lucide-react';
 import type { SidebarNavItem } from '@/components/AppSidebar';
@@ -37,14 +35,10 @@ export const ceoNavItems: SidebarNavItem[] = [
     icon: Briefcase,
     defaultOpen: true,
     children: [
-      { kind: 'item', id: 'inventory', label: 'Lead Inventory', icon: List, path: `${CEO_BASE}/inventory` },
-      { kind: 'item', id: 'data-sources', label: 'Data Sources', icon: Database, path: `${CEO_BASE}/data` },
-      { kind: 'item', id: 'realtor-queue', label: 'Realtor Lead Queue', icon: Users, path: `${CEO_BASE}/realtor-queue` },
-      { kind: 'item', id: 'realtor-pipeline', label: 'Realtor Pipeline', icon: Building2, path: `${CEO_BASE}/realtor-pipeline` },
-      { kind: 'item', id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare, path: `${CEO_BASE}/realtor-scripts` },
-      { kind: 'item', id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp, path: `${CEO_BASE}/realtor-reports` },
       { kind: 'item', id: 'auction-listings', label: 'Auction Listings', icon: Gavel, path: `${CEO_BASE}/auction-listings` },
       { kind: 'item', id: 'zillow-realtor-queue', label: 'Zillow Realtor Queue', icon: Users, path: `${CEO_BASE}/zillow-realtor-queue` },
+      { kind: 'item', id: 'realtor-scripts', label: 'Realtor Scripts', icon: MessageSquare, path: `${CEO_BASE}/realtor-scripts` },
+      { kind: 'item', id: 'realtor-reports', label: 'Realtor Reports', icon: TrendingUp, path: `${CEO_BASE}/realtor-reports` },
     ],
   },
 
@@ -141,6 +135,8 @@ export function getCeoNavItemId(pathname: string): string {
   if (pathname === `${CEO_BASE}/preview/ai-agents`) return 'ai-agents';
   if (pathname === `${CEO_BASE}/ai/agents`) return 'ai-agents';
   if (pathname === `${CEO_BASE}/ai/logs`) return 'ai-logs';
+  if (pathname === `${CEO_BASE}/realtor-queue`) return 'realtor-queue';
+  if (pathname === `${CEO_BASE}/realtor-pipeline`) return 'realtor-pipeline';
 
   return 'dashboard';
 }
