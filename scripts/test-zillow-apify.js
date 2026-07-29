@@ -8,8 +8,6 @@
  *
  * Usage:
  *   APIFY_TOKEN=your_token node scripts/test-zillow-apify.js
- *
- * Or set APIFY_TOKEN directly in the constant below.
  */
 
 import { ApifyClient } from 'apify-client';
@@ -19,7 +17,12 @@ import { fileURLToPath } from 'url';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const APIFY_TOKEN     = 'apify_api_agCbMSGBxXC6C1WA3yOa4YIuBWeUav3Vb1bi';
+const APIFY_TOKEN     = process.env.APIFY_TOKEN;
+if (!APIFY_TOKEN) {
+  console.error('Usage: APIFY_TOKEN=... node scripts/test-zillow-apify.js');
+  process.exit(1);
+}
+
 const SEARCH_ACTOR_ID = 'X46xKaa20oUA1fRiP';
 const AGENT_ACTOR_ID  = '1NT8sDVAgchUDnHOc';
 const AGENT_BATCH_SIZE = 5;    // hard limit enforced by the agent actor
