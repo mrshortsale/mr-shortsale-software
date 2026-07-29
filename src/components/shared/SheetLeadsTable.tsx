@@ -22,13 +22,14 @@ const POLL_MS = 15_000;
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
 
 function fmtAge(ms: number): string {
-  const s = Math.floor(ms / 1000);
+  const s = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(s / 60);
   const h = Math.floor(m / 60);
-  const r = s % 60;
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h`;
   if (h > 0) return `${h}h ${m % 60}m`;
-  if (m > 0) return `${m}m ${String(r).padStart(2, '0')}s`;
-  return `${r}s`;
+  if (m > 0) return `${m}m ${String(s % 60).padStart(2, '0')}s`;
+  return `${s}s`;
 }
 
 function fmtReceived(ts: number): string {

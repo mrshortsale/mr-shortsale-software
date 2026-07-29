@@ -11,10 +11,14 @@ import { Zap, Volume2, VolumeX, Clock, Facebook, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 function fmtAge(ms: number) {
-  const s = Math.floor(ms / 1000);
+  const s = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(s / 60);
-  const r = s % 60;
-  return m > 0 ? `${m}m ${String(r).padStart(2, '0')}s` : `${r}s`;
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h`;
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${String(s % 60).padStart(2, '0')}s`;
+  return `${s}s`;
 }
 
 interface Props {
