@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .agents
+
+# Local env files
+.env
+.env.*
