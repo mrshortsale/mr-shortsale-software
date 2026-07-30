@@ -17,7 +17,7 @@ export const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   'AD Leads': 'AD Leads',
   'New Campaign Leads': 'New Campaign',
   'Updated Leads': 'Updated Leads',
-  realtors: 'Realtors',
+  'realtors': 'Realtors',
 };
 
 export function categoryDisplayLabel(dataSource: string | null | undefined): string {
