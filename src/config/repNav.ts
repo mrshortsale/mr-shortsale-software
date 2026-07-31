@@ -12,7 +12,7 @@ export const repNavItems: SidebarNavItem[] = [
     defaultOpen: true,
     children: [
       { kind: 'item', id: 'queue', label: 'Foreclosure Queue', icon: List, path: `${REP_BASE}/queue` },
-      { kind: 'item', id: 'realtor', label: 'Realtor Queue', icon: Building2, path: `${REP_BASE}/realtor` },
+      { kind: 'item', id: 'realtor', label: 'Zillow Realtor Queue', icon: Building2, path: `${REP_BASE}/realtor` },
     ],
   },
   {

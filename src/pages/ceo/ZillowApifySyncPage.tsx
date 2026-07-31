@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Plus, Pencil, Trash2, Play, Pause, Square, RefreshCw, Loader2,
   ChevronDown, ChevronUp, ExternalLink, Globe, ToggleLeft, ToggleRight,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,59 @@ function fmtDate(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
 }
+
+/** Turn raw Apify / sync errors into plain-language text for the UI. */
+function friendlySyncError(raw: string): string {
+  const lower = raw.toLowerCase();
+
+  if (/monthly usage|hard limit exceeded|platform-feature-disabled/.test(lower)) {
+    return 'Apify monthly usage limit reached. Raise the limit or upgrade your plan in Apify Console, then try again.';
+  }
+  if (/concurrency|max concurrent|too many.*run/.test(lower)) {
+    return 'Too many Apify runs are already in progress. Wait a minute and try again.';
+  }
+  if (/402|payment|billing|insufficient credit|not enough credit/.test(lower)) {
+    return 'Apify account has no credits left. Add billing or credits in Apify Console, then try again.';
+  }
+  if (/401|unauthorized|invalid.*token|credentials not configured|api token is empty/.test(lower)) {
+    return 'Apify API token is missing or invalid. Update it in Admin › Integrations › Apify.';
+  }
+  if (/403/.test(lower) && /apify/.test(lower)) {
+    return 'Apify blocked this request (permission or plan limit). Check your Apify account settings.';
+  }
+  if (/429|rate limit/.test(lower)) {
+    return 'Apify rate limit hit. Wait a few minutes and try again.';
+  }
+  if (/timed? ?out|did not complete within/.test(lower)) {
+    return 'The scrape took too long and timed out. Try a narrower Zillow search URL.';
+  }
+  if (/none had a valid zpid|no valid|empty for all|0 items|returned 0/.test(lower)) {
+    return 'No listings found for this search URL. Open the URL in Zillow and confirm it shows results.';
+  }
+  if (/search actor failed/.test(lower)) {
+    return 'Zillow search scrape failed. Check the search URL and your Apify account, then try again.';
+  }
+  if (/agent actor failed/.test(lower)) {
+    return 'Agent enrichment failed partway through. Check Apify usage limits and try again.';
+  }
+  if (/network|fetch failed|failed to fetch/.test(lower)) {
+    return 'Could not reach Apify. Check your connection and try again.';
+  }
+
+  // Pull a short "message" from nested JSON if present
+  const jsonMsg = raw.match(/"message"\s*:\s*"([^"]+)"/);
+  if (jsonMsg?.[1]) {
+    return jsonMsg[1].replace(/\.$/, '') + '. Check Apify Console or Admin › Integrations if this keeps happening.';
+  }
+
+  // Strip technical prefixes so something readable remains
+  const cleaned = raw
+    .replace(/^Phase [A-Z][^:]*:\s*/i, '')
+    .replace(/^Apify startActorRun failed \(\d+\):\s*/i, '')
+    .trim();
+  return cleaned.length > 180 ? `${cleaned.slice(0, 180)}…` : cleaned;
+}
+
 
 // ─── Profile form ─────────────────────────────────────────────────────────────
 
@@ -145,30 +199,33 @@ function RunHistory({ profileId }: { profileId: string }) {
   if (runs.length === 0) return <p className="text-xs text-muted-foreground">No sync runs yet.</p>;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b text-muted-foreground">
-            <th className="py-1.5 pr-3 text-left font-medium">Status</th>
-            <th className="py-1.5 pr-3 text-left font-medium">Started</th>
-            <th className="py-1.5 pr-3 text-right font-medium">Listings</th>
-            <th className="py-1.5 pr-3 text-right font-medium">Agents</th>
-            <th className="py-1.5 text-left font-medium">Completed</th>
-          </tr>
-        </thead>
-        <tbody>
-          {runs.map((r) => (
-            <tr key={r.id} className="border-b last:border-0">
-              <td className="py-1.5 pr-3">{statusBadge(r.status)}</td>
-              <td className="py-1.5 pr-3 text-muted-foreground">{fmtDate(r.started_at)}</td>
-              <td className="py-1.5 pr-3 text-right">{r.listings_scraped}</td>
-              <td className="py-1.5 pr-3 text-right">{r.agents_upserted}</td>
-              <td className="py-1.5 text-muted-foreground">{fmtDate(r.completed_at)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ul className="space-y-2">
+      {runs.map((r) => {
+        const failedMsg = r.status === 'failed' && r.error_message
+          ? friendlySyncError(r.error_message)
+          : null;
+        return (
+          <li key={r.id} className="rounded-md border px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              {statusBadge(r.status)}
+              <span className="text-muted-foreground">{fmtDate(r.started_at)}</span>
+              <span className="text-muted-foreground">
+                {r.listings_scraped} listings · {r.agents_upserted} agents
+              </span>
+              {r.completed_at && (
+                <span className="ml-auto text-muted-foreground">Done {fmtDate(r.completed_at)}</span>
+              )}
+            </div>
+            {failedMsg && (
+              <div className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-destructive" />
+                <span>{failedMsg}</span>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -187,6 +244,12 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [historyTick, setHistoryTick] = useState(0);
+
+  // Reload run history when an active run finishes or changes status
+  useEffect(() => {
+    setHistoryTick((t) => t + 1);
+  }, [activeRun?.id, activeRun?.status, activeRun?.completed_at]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -257,9 +320,10 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
 
   const isActive = activeRun && (activeRun.status === 'running' || activeRun.status === 'paused' || activeRun.status === 'partial');
   const cfg = (profile.search_config ?? {}) as { rawUrl?: string };
+  const searchUrl = profile.search_url || cfg.rawUrl || '';
   const formInitial: ProfileFormState = {
     displayName: profile.display_name,
-    rawUrl: cfg.rawUrl ?? profile.search_url,
+    rawUrl: searchUrl,
     enabled: profile.enabled,
   };
 
@@ -346,22 +410,24 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
           <div className="mt-3 space-y-3">
             <div className="flex items-start gap-2">
               <Globe className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-              <a
-                href={profile.search_url ?? '#'}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-mono break-all text-primary hover:underline"
-              >
-                {(profile.search_url ?? '').length > 120
-                  ? `${(profile.search_url ?? '').slice(0, 120)}…`
-                  : (profile.search_url ?? '—')}
-                <ExternalLink className="inline ml-1 h-3 w-3" />
-              </a>
+              {searchUrl ? (
+                <a
+                  href={searchUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-mono break-all text-primary hover:underline"
+                >
+                  {searchUrl.length > 120 ? `${searchUrl.slice(0, 120)}…` : searchUrl}
+                  <ExternalLink className="inline ml-1 h-3 w-3" />
+                </a>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
             </div>
             <Separator />
             <div>
               <p className="text-xs font-medium mb-2">Run History</p>
-              <RunHistory profileId={profile.id} />
+              <RunHistory key={historyTick} profileId={profile.id} />
             </div>
           </div>
         )}

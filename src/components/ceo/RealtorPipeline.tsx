@@ -13,13 +13,12 @@ import {
 } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { realtorPipelineStages, RealtorLeadStatus } from '@/data/realtorLeads';
+import { fetchRealtorReps, type RealtorAgent } from '@/services/realtor';
 import {
-  assignRealtorRep,
-  fetchRealtorLeads,
-  fetchRealtorReps,
-  updateRealtorLeadStatus,
-  type RealtorAgent,
-} from '@/services/realtor';
+  fetchZillowLeads,
+  patchZillowLead,
+  zillowLeadToRealtorAgent,
+} from '@/services/zillowApify';
 import { Building2, Calendar, GripVertical, Home, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import RealtorLeadDetailDrawer from '@/components/shared/RealtorLeadDetailDrawer';
@@ -80,7 +79,7 @@ export default function RealtorPipeline() {
     const pageSize = 200;
 
     for (;;) {
-      const { leads, total: pageTotal, error } = await fetchRealtorLeads({ limit: pageSize, offset });
+      const { leads, total: pageTotal, error } = await fetchZillowLeads({ limit: pageSize, offset });
       if (error) {
         setLoadError(error);
         setAgents([]);
@@ -89,7 +88,7 @@ export default function RealtorPipeline() {
         return;
       }
       total = pageTotal;
-      all.push(...leads);
+      all.push(...leads.map(zillowLeadToRealtorAgent));
       if (all.length >= total || leads.length < pageSize) break;
       offset += pageSize;
     }
@@ -111,7 +110,7 @@ export default function RealtorPipeline() {
     const previousStatus = agent.status;
     patchAgent(agent.id, { status });
 
-    const { error } = await updateRealtorLeadStatus(agent.id, status);
+    const { error } = await patchZillowLead({ id: agent.id, status });
     if (error) {
       patchAgent(agent.id, { status: previousStatus });
       toast.error(error);
@@ -123,7 +122,7 @@ export default function RealtorPipeline() {
   const handleAssignRep = async (agent: RealtorAgent, rep: string) => {
     const repValue = rep === 'Unassigned' ? null : rep;
     patchAgent(agent.id, { assignedRep: repValue });
-    const { error } = await assignRealtorRep(agent.id, repValue);
+    const { error } = await patchZillowLead({ id: agent.id, assignedRep: repValue });
     if (error) {
       toast.error(`Failed to assign rep: ${error}`);
       patchAgent(agent.id, { assignedRep: agent.assignedRep });
@@ -165,7 +164,7 @@ export default function RealtorPipeline() {
 
   return (
     <div className="space-y-4">
-      <SourceProvenance chips={[{ source: 'Bridge MLS', count: t('realtorQueue.listingsCount', { count: totalCount }), lastSync: 'live', status: loadError ? 'pending' : totalCount > 0 ? 'connected' : 'pending' }]} />
+      <SourceProvenance chips={[{ source: 'Zillow Apify', count: t('realtorQueue.listingsCount', { count: totalCount }), lastSync: 'live', status: loadError ? 'pending' : totalCount > 0 ? 'connected' : 'pending' }]} />
 
       {loadError && (
         <div className="metric-card border-destructive/30 bg-destructive/5 text-sm text-destructive flex items-center justify-between gap-3">
@@ -376,12 +375,18 @@ function PipelineCardContent({
       <p className="text-[11px] text-muted-foreground truncate">{agent.brokerage}</p>
       <div className="flex items-center gap-1 mt-2 text-[11px] text-muted-foreground">
         <Home size={10} />
-        <span className="truncate">{agent.latestPropertyAddress}, {agent.latestCity}</span>
+        <span className="truncate">
+          {agent.latestPropertyAddress
+            ? `${agent.latestPropertyAddress}${agent.latestCity ? `, ${agent.latestCity}` : ''}`
+            : '—'}
+        </span>
       </div>
       <div className="flex items-center justify-between mt-2 text-[11px]">
-        <span className="text-foreground font-medium">${(agent.latestListPrice / 1000).toFixed(0)}k</span>
+        <span className="text-foreground font-medium">
+          {agent.latestListPrice > 0 ? `$${(agent.latestListPrice / 1000).toFixed(0)}k` : '—'}
+        </span>
         <span className="text-muted-foreground flex items-center gap-1">
-          <Calendar size={10} /> {agent.latestDaysOnMarket}d
+          <Calendar size={10} /> {agent.latestDaysOnMarket > 0 ? `${agent.latestDaysOnMarket}d` : '—'}
         </span>
       </div>
       {agent.listingCount > 1 && (

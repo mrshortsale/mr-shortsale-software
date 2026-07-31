@@ -5,13 +5,17 @@ import {
   relativeTime,
 } from '@/data/realtorLeads';
 import {
-  fetchRealtorLeads,
   isHotAgent,
   type RealtorAgent,
 } from '@/services/realtor';
 import {
-  Building2, Calendar, TrendingDown, ArrowUpToLine, Mail, ExternalLink,
-  Flame, RefreshCw, Filter, ArrowUpDown, Globe, Loader2,
+  fetchZillowLeads,
+  patchZillowLead,
+  zillowLeadToRealtorAgent,
+} from '@/services/zillowApify';
+import {
+  Building2, Calendar, TrendingDown, ArrowUpToLine, Mail,
+  Flame, RefreshCw, Filter, ArrowUpDown, Loader2,
 } from 'lucide-react';
 import { sendToMojo } from '@/integrations/mojoDialer';
 import { toast } from 'sonner';
@@ -33,7 +37,6 @@ export default function RealtorQueue() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [drawerAgent, setDrawerAgent] = useState<RealtorAgent | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('days');
-  const [esOnly, setEsOnly] = useState(false);
   const [hotOnly, setHotOnly] = useState(false);
   const [mojoPushing, setMojoPushing] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
@@ -56,9 +59,8 @@ export default function RealtorQueue() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { leads, error } = await fetchRealtorLeads({
+    const { leads, error } = await fetchZillowLeads({
       statuses: ['New', 'Contacted'],
-      language: esOnly ? 'ES' : undefined,
       hotOnly,
       limit: 100,
     });
@@ -69,10 +71,27 @@ export default function RealtorQueue() {
       return;
     }
     setLoadError(null);
-    setAgents(leads);
-  }, [esOnly, hotOnly]);
+    setAgents(leads.map(zillowLeadToRealtorAgent));
+  }, [hotOnly]);
 
   useEffect(() => { load(); }, [load]);
+
+  const patchAgent = (id: string, patch: Partial<RealtorAgent>) => {
+    setAgents(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
+    setDrawerAgent(prev => prev?.id === id ? { ...prev, ...patch } : prev);
+  };
+
+  const handleStatusChange = async (agent: RealtorAgent, status: RealtorLeadStatus) => {
+    const previous = agent.status;
+    patchAgent(agent.id, { status });
+    const { error } = await patchZillowLead({ id: agent.id, status });
+    if (error) {
+      patchAgent(agent.id, { status: previous });
+      toast.error(error);
+      return;
+    }
+    toast.success(`Moved to ${status}`);
+  };
 
   const queue = useMemo(() => {
     let l = [...agents];
@@ -96,7 +115,7 @@ export default function RealtorQueue() {
 
       <div className="rounded-xl bg-card border px-3 py-2 flex items-center gap-2 text-[11px] text-muted-foreground">
         {loading ? <Loader2 size={11} className="animate-spin text-secondary" /> : <RefreshCw size={11} className="text-secondary" />}
-        <span>{t('realtorQueueRep.sourceSynced')}</span>
+        <span>Zillow Apify · assigned to you</span>
         <span className="ml-auto">{t('realtorQueueRep.inQueue', { count: queue.length })}</span>
       </div>
 
@@ -113,7 +132,6 @@ export default function RealtorQueue() {
         </div>
       )}
 
-      {/* Filter / sort bar */}
       <div className="flex flex-wrap items-center gap-2">
         <Filter size={13} className="text-muted-foreground" />
         <button
@@ -121,12 +139,6 @@ export default function RealtorQueue() {
           className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 ${hotOnly ? 'bg-speed text-white' : 'bg-muted text-muted-foreground'}`}
         >
           <Flame size={11} /> {t('realtorQueue.filters.hotOnly')}
-        </button>
-        <button
-          onClick={() => setEsOnly(v => !v)}
-          className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 ${esOnly ? 'bg-secondary text-secondary-foreground' : 'bg-muted text-muted-foreground'}`}
-        >
-          <Globe size={11} /> {t('realtorQueue.filters.esOnly')}
         </button>
         <div className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground">
           <ArrowUpDown size={12} />
@@ -166,14 +178,19 @@ export default function RealtorQueue() {
                     <Flame size={9} /> {t('realtorQueue.hot')}
                   </span>
                 )}
-                {agent.language === 'ES' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/15 text-secondary font-bold">ES</span>}
               </div>
-              <p className="text-xs text-muted-foreground">{agent.brokerage} · MLS# {agent.latestListingId}</p>
-              <p className="text-xs text-foreground mt-1">{agent.latestPropertyAddress}, {agent.latestCity}, {agent.latestState}</p>
+              <p className="text-xs text-muted-foreground">{agent.brokerage}{agent.latestListingId ? ` · ZPID ${agent.latestListingId}` : ''}</p>
+              <p className="text-xs text-foreground mt-1">
+                {agent.latestPropertyAddress
+                  ? `${agent.latestPropertyAddress}${agent.latestCity ? `, ${agent.latestCity}` : ''}${agent.latestState ? `, ${agent.latestState}` : ''}`
+                  : '—'}
+              </p>
               <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
-                <span className="font-medium text-foreground">${(agent.latestListPrice / 1000).toFixed(0)}k</span>
+                <span className="font-medium text-foreground">
+                  {agent.latestListPrice > 0 ? `$${(agent.latestListPrice / 1000).toFixed(0)}k` : '—'}
+                </span>
                 <span className={`flex items-center gap-1 ${agent.latestDaysOnMarket >= 90 ? 'text-speed font-bold' : ''}`}>
-                  <Calendar size={10} /> {agent.latestDaysOnMarket}d
+                  <Calendar size={10} /> {agent.latestDaysOnMarket > 0 ? `${agent.latestDaysOnMarket}d` : '—'}
                 </span>
                 {agent.listingCount > 1 && (
                   <span className="flex items-center gap-1 text-speed">
@@ -193,21 +210,25 @@ export default function RealtorQueue() {
               >
                 {mojoPushing.has(agent.id) ? <Loader2 size={12} className="animate-spin" /> : <ArrowUpToLine size={12} />} {t('realtorQueue.pushToMojo')}
               </button>
-              <a
-                href={`mailto:${agent.agentEmail}`}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-secondary text-secondary-foreground text-xs font-bold hover:opacity-90"
-              >
-                <Mail size={12} /> {t('realtorQueueRep.email')}
-              </a>
+              {agent.agentEmail ? (
+                <a
+                  href={`mailto:${agent.agentEmail}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-secondary text-secondary-foreground text-xs font-bold hover:opacity-90"
+                >
+                  <Mail size={12} /> {t('realtorQueueRep.email')}
+                </a>
+              ) : null}
             </div>
           </div>
         );
       })}
 
       <RealtorLeadDetailDrawer
+        key={drawerAgent?.id ?? 'none'}
         agent={drawerAgent ?? ({} as RealtorAgent)}
         open={!!drawerAgent}
         onOpenChange={(open) => { if (!open) setDrawerAgent(null); }}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );

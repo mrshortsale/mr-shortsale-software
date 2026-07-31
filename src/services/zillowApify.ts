@@ -1,5 +1,6 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { getStoredToken } from './auth';
+import type { RealtorAgent } from './realtor';
 
 const BASE_URL = `${SUPABASE_URL}/functions/v1`;
 
@@ -350,4 +351,34 @@ export async function roundRobinAssignZillowLeads(): Promise<{
   } catch {
     return { error: 'Network error' };
   }
+}
+
+/** Map a Zillow lead into the shared RealtorAgent shape (drawer, Mojo, pipeline cards). */
+export function zillowLeadToRealtorAgent(l: ZillowAgentLead): RealtorAgent {
+  return {
+    id: l.id,
+    profileId: l.profileId,
+    datasetId: l.datasetId,
+    externalId: l.externalId,
+    listAgentKey: null,
+    agentName: l.agentName,
+    brokerage: l.brokerage,
+    agentPhone: l.agentPhone,
+    agentEmail: l.agentEmail,
+    language: 'EN',
+    listingCount: l.listingCount,
+    latestListingId: l.latestZpid ?? '',
+    latestPropertyAddress: l.latestPropertyAddress ?? '',
+    latestCity: l.latestCity ?? '',
+    latestState: l.latestState ?? '',
+    latestListPrice: l.latestListPrice ?? 0,
+    latestDaysOnMarket: l.latestDaysOnMarket ?? 0,
+    latestPublicRemarks: l.trueStatus ?? '',
+    status: l.status,
+    assignedRep: l.assignedRep,
+    lastContactAt: l.lastContactAt,
+    notes: l.notes,
+    createdAt: l.createdAt,
+    updatedAt: l.updatedAt,
+  };
 }

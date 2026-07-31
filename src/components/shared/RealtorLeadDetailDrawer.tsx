@@ -104,7 +104,8 @@ export default function RealtorLeadDetailDrawer({
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center gap-2 text-xs opacity-70 mb-1">
-                  <Building2 size={12} /> Realtor Lead · Bridge MLS
+                  <Building2 size={12} />{' '}
+                  {agent.datasetId === 'zillow-apify' ? 'Realtor Lead · Zillow' : 'Realtor Lead · Bridge MLS'}
                 </div>
                 <SheetTitle className="text-primary-foreground text-xl flex items-center gap-2">
                   {hot && <Flame size={16} className="text-amber-300 shrink-0" />}
@@ -123,7 +124,7 @@ export default function RealtorLeadDetailDrawer({
                 </span>
               )}
               <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-foreground/20">
-                MLS# {agent.latestListingId || '—'}
+                {agent.datasetId === 'zillow-apify' ? 'ZPID' : 'MLS#'} {agent.latestListingId || '—'}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary-foreground/20">
                 {agent.datasetId}

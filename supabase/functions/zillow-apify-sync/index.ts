@@ -607,7 +607,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profiles } = await supabase
       .from("zillow_apify_sync_profiles")
-      .select("id, display_name, enabled, last_synced_at")
+      .select("id, display_name, enabled, last_synced_at, search_url, search_config")
       .order("display_name");
 
     const profileIds = (profiles ?? []).map((p) => p.id as string);
