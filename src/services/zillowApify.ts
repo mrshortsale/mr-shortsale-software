@@ -80,14 +80,6 @@ export interface ZillowStats {
 
 export interface SearchConfig {
   rawUrl?: string;
-  state?: string;
-  regionId?: string;
-  listingType?: 'forSale' | 'forRent' | 'sold';
-  shortSaleOnly?: boolean;
-  foreclosureOnly?: boolean;
-  daysOnZillow?: number;
-  priceMin?: number;
-  priceMax?: number;
 }
 
 // ─── Profile CRUD ─────────────────────────────────────────────────────────────
@@ -113,8 +105,7 @@ export async function listZillowProfiles(): Promise<{
 
 export async function createZillowProfile(payload: {
   displayName: string;
-  searchUrl?: string;
-  searchConfig?: SearchConfig;
+  searchUrl: string;
   enabled?: boolean;
 }): Promise<{ profile?: ZillowSyncProfile; error?: string }> {
   try {
@@ -135,7 +126,6 @@ export async function updateZillowProfile(payload: {
   profileId: string;
   displayName?: string;
   searchUrl?: string;
-  searchConfig?: SearchConfig;
   enabled?: boolean;
 }): Promise<{ profile?: ZillowSyncProfile; error?: string }> {
   try {
@@ -164,23 +154,6 @@ export async function deleteZillowProfile(
     const data = await res.json();
     if (!res.ok) return { error: data.error };
     return {};
-  } catch {
-    return { error: 'Network error' };
-  }
-}
-
-export async function buildZillowSearchUrl(
-  searchConfig: SearchConfig,
-): Promise<{ url?: string; error?: string }> {
-  try {
-    const res = await fetch(`${BASE_URL}/zillow-apify-manage`, {
-      method: 'POST',
-      headers: authedHeaders(),
-      body: JSON.stringify({ action: 'BUILD_SEARCH_URL', searchConfig }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { error: data.error };
-    return { url: data.url };
   } catch {
     return { error: 'Network error' };
   }

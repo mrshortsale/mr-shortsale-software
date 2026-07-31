@@ -49,7 +49,7 @@ export const ceoNavItems: SidebarNavItem[] = [
     icon: RefreshCw,
     defaultOpen: true,
     children: [
-      { kind: 'item', id: 'sync-runs', label: 'Sync History', icon: History, path: `${CEO_BASE}/sync-runs` },
+      // { kind: 'item', id: 'sync-runs', label: 'Sync History', icon: History, path: `${CEO_BASE}/sync-runs` },
       { kind: 'item', id: 'zillow-apify-sync', label: 'Zillow Apify Sync', icon: RefreshCw, path: `${CEO_BASE}/zillow-apify-sync` },
       { kind: 'item', id: 'auction-apify-sync', label: 'Auction.com Sync', icon: RefreshCw, path: `${CEO_BASE}/auction-apify-sync` },
     ],

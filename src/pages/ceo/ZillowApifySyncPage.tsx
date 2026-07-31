@@ -24,7 +24,6 @@ import {
   collectZillowAgents,
   type ZillowSyncProfile,
   type ZillowSyncRun,
-  type SearchConfig,
 } from '@/services/zillowApify';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,45 +53,15 @@ function fmtDate(d: string | null) {
 
 interface ProfileFormState {
   displayName: string;
-  urlMode: 'builder' | 'paste';
   rawUrl: string;
-  // builder fields
-  state: string;
-  listingType: 'forSale' | 'forRent' | 'sold';
-  shortSaleOnly: boolean;
-  foreclosureOnly: boolean;
-  daysOnZillow: string;
-  priceMin: string;
-  priceMax: string;
   enabled: boolean;
 }
 
 const DEFAULT_FORM: ProfileFormState = {
   displayName: '',
-  urlMode: 'paste',
   rawUrl: '',
-  state: 'fl',
-  listingType: 'forSale',
-  shortSaleOnly: true,
-  foreclosureOnly: false,
-  daysOnZillow: '',
-  priceMin: '',
-  priceMax: '',
   enabled: false,
 };
-
-function formToSearchConfig(form: ProfileFormState): SearchConfig {
-  if (form.urlMode === 'paste') return { rawUrl: form.rawUrl };
-  return {
-    state: form.state || 'fl',
-    listingType: form.listingType,
-    shortSaleOnly: form.shortSaleOnly,
-    foreclosureOnly: form.foreclosureOnly,
-    daysOnZillow: form.daysOnZillow ? Number(form.daysOnZillow) : undefined,
-    priceMin: form.priceMin ? Number(form.priceMin) : undefined,
-    priceMax: form.priceMax ? Number(form.priceMax) : undefined,
-  };
-}
 
 interface ProfileFormProps {
   initial?: ProfileFormState;
@@ -108,7 +77,7 @@ function ProfileForm({ initial, onSave, onCancel, saving }: ProfileFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.displayName.trim()) { toast.error('Display name is required'); return; }
-    if (form.urlMode === 'paste' && !form.rawUrl.trim()) { toast.error('Paste a Zillow search URL'); return; }
+    if (!form.rawUrl.trim()) { toast.error('Paste a Zillow search URL'); return; }
     onSave(form);
   };
 
@@ -123,101 +92,17 @@ function ProfileForm({ initial, onSave, onCancel, saving }: ProfileFormProps) {
         />
       </div>
 
-      {/* URL input tabs */}
       <div className="space-y-2">
         <Label>Search URL</Label>
-        <div className="flex rounded-md border overflow-hidden text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => set({ urlMode: 'builder' })}
-            className={`flex-1 py-1.5 ${form.urlMode === 'builder' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-          >
-            Builder
-          </button>
-          <button
-            type="button"
-            onClick={() => set({ urlMode: 'paste' })}
-            className={`flex-1 py-1.5 ${form.urlMode === 'paste' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-          >
-            Paste URL
-          </button>
+        <div className="space-y-1">
+          <Input
+            placeholder="https://www.zillow.com/fl/?searchQueryState=..."
+            value={form.rawUrl}
+            onChange={(e) => set({ rawUrl: e.target.value })}
+            className="font-mono text-xs"
+          />
+          <p className="text-xs text-muted-foreground">Paste a Zillow search results URL directly from your browser.</p>
         </div>
-
-        {form.urlMode === 'paste' ? (
-          <div className="space-y-1">
-            <Input
-              placeholder="https://www.zillow.com/fl/?searchQueryState=..."
-              value={form.rawUrl}
-              onChange={(e) => set({ rawUrl: e.target.value })}
-              className="font-mono text-xs"
-            />
-            <p className="text-xs text-muted-foreground">Paste a Zillow search results URL directly from your browser.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">State (abbreviation)</Label>
-              <Input
-                placeholder="fl"
-                value={form.state}
-                onChange={(e) => set({ state: e.target.value.toLowerCase() })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Listing Type</Label>
-              <select
-                className="w-full border rounded-md px-2 py-1.5 text-sm bg-background"
-                value={form.listingType}
-                onChange={(e) => set({ listingType: e.target.value as ProfileFormState['listingType'] })}
-              >
-                <option value="forSale">For Sale</option>
-                <option value="forRent">For Rent</option>
-                <option value="sold">Sold</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Days on Zillow</Label>
-              <select
-                className="w-full border rounded-md px-2 py-1.5 text-sm bg-background"
-                value={form.daysOnZillow}
-                onChange={(e) => set({ daysOnZillow: e.target.value })}
-              >
-                <option value="">Any</option>
-                {[1, 3, 7, 14, 30, 90, 180, 365].map((d) => (
-                  <option key={d} value={d}>{d} days</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Min Price</Label>
-              <Input
-                placeholder="e.g. 200000"
-                value={form.priceMin}
-                onChange={(e) => set({ priceMin: e.target.value })}
-              />
-            </div>
-            <div className="col-span-2 flex gap-6">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.shortSaleOnly}
-                  onChange={(e) => set({ shortSaleOnly: e.target.checked })}
-                  className="rounded"
-                />
-                Short Sale Only
-              </label>
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.foreclosureOnly}
-                  onChange={(e) => set({ foreclosureOnly: e.target.checked })}
-                  className="rounded"
-                />
-                Foreclosure Only
-              </label>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="space-y-1.5">
@@ -348,11 +233,10 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
 
   const handleSaveEdit = async (form: ProfileFormState) => {
     setSavingEdit(true);
-    const searchConfig = formToSearchConfig(form);
     const { profile: updated, error } = await updateZillowProfile({
       profileId: profile.id,
       displayName: form.displayName,
-      searchConfig,
+      searchUrl: form.rawUrl.trim(),
       enabled: form.enabled,
     });
     setSavingEdit(false);
@@ -372,22 +256,10 @@ function ProfileCard({ profile, activeRun, onRefresh, onUpdate, onDelete }: Prof
   };
 
   const isActive = activeRun && (activeRun.status === 'running' || activeRun.status === 'paused' || activeRun.status === 'partial');
-  const cfg = (profile.search_config ?? {}) as {
-    rawUrl?: string; state?: string; listingType?: string;
-    shortSaleOnly?: boolean; foreclosureOnly?: boolean;
-    daysOnZillow?: number; priceMin?: number; priceMax?: number;
-  };
+  const cfg = (profile.search_config ?? {}) as { rawUrl?: string };
   const formInitial: ProfileFormState = {
     displayName: profile.display_name,
-    urlMode: cfg.rawUrl ? 'paste' : 'builder',
     rawUrl: cfg.rawUrl ?? profile.search_url,
-    state: cfg.state ?? 'fl',
-    listingType: (cfg.listingType as ProfileFormState['listingType']) ?? 'forSale',
-    shortSaleOnly: cfg.shortSaleOnly ?? true,
-    foreclosureOnly: cfg.foreclosureOnly ?? false,
-    daysOnZillow: String(cfg.daysOnZillow ?? ''),
-    priceMin: String(cfg.priceMin ?? ''),
-    priceMax: String(cfg.priceMax ?? ''),
     enabled: profile.enabled,
   };
 
@@ -547,10 +419,9 @@ export default function ZillowApifySyncPage() {
 
   const handleCreateProfile = async (form: ProfileFormState) => {
     setSavingNew(true);
-    const searchConfig = formToSearchConfig(form);
     const { profile, error } = await createZillowProfile({
       displayName: form.displayName,
-      searchConfig,
+      searchUrl: form.rawUrl.trim(),
       enabled: form.enabled,
     });
     setSavingNew(false);
