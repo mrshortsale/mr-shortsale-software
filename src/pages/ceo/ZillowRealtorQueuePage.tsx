@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Filter, ArrowUpDown, Phone, Flame, Building2, Users, RefreshCw,
   Loader2, Send, Mail, ChevronLeft, ChevronRight, ExternalLink,
@@ -510,7 +511,7 @@ export default function ZillowRealtorQueuePage() {
       ) : sorted.length === 0 ? (
         <div className="metric-card text-center py-10 text-muted-foreground text-sm">
           No Zillow agent leads found. Run a sync from{' '}
-          <a href="/ceo/zillow-apify-sync" className="underline underline-offset-2">Zillow Apify Sync</a>{' '}
+          <Link to="/ceo/zillow-apify-sync" className="underline underline-offset-2">Zillow Apify Sync</Link>{' '}
           to populate this queue.
         </div>
       ) : (

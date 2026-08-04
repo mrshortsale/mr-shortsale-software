@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus, Pencil, Trash2, Play, Pause, Square, RefreshCw, Loader2,
   ChevronDown, ChevronUp, ExternalLink, Globe, ToggleLeft, ToggleRight,
@@ -582,9 +583,9 @@ export default function ZillowApifySyncPage() {
       {profiles.length > 0 && (
         <p className="text-xs text-muted-foreground text-center">
           Configure your Apify API token in{' '}
-          <a href="/admin/integrations" className="underline underline-offset-2">
+          <Link to="/admin/integrations" className="underline underline-offset-2">
             Admin › Integrations › Apify
-          </a>{' '}
+          </Link>{' '}
           before starting a sync.
         </p>
       )}

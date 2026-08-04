@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   RealtorLeadStatus,
@@ -348,7 +349,7 @@ export default function RealtorLeadQueue() {
           <div className="text-center text-sm text-muted-foreground py-10 space-y-2">
             <p className="font-semibold text-foreground">No agent leads yet</p>
             <p className="text-xs">Run a Bridge MLS sync to populate this queue.</p>
-            <p className="text-xs">Go to <a href="/ceo/sync-runs" className="text-secondary underline underline-offset-2">Sync Runs</a> → Bridge MLS → Start Sync, or enable a feed in <a href="/integrations" className="text-secondary underline underline-offset-2">Integrations → Zillow Listings → MLS Feeds</a>.</p>
+            <p className="text-xs">Go to <Link to="/ceo/sync-runs" className="text-secondary underline underline-offset-2">Sync Runs</Link> → Bridge MLS → Start Sync, or enable a feed in <Link to="/admin/integrations" className="text-secondary underline underline-offset-2">Integrations → Zillow Listings → MLS Feeds</Link>.</p>
           </div>
         )}
         {!loading && list.map(agent => {

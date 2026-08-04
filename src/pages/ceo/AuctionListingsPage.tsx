@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Filter, RefreshCw, Loader2, ChevronLeft, ChevronRight,
   ExternalLink, Home, MapPin, Calendar, DollarSign, Gavel,
@@ -315,7 +316,7 @@ export default function AuctionListingsPage() {
         <div className="metric-card text-center py-12 text-muted-foreground text-sm space-y-2">
           <Gavel className="h-8 w-8 mx-auto opacity-30" />
           <p>No listings found. Run a sync from{' '}
-            <a href="/ceo/auction-apify-sync" className="underline underline-offset-2 text-primary">Auction.com Sync</a>
+            <Link to="/ceo/auction-apify-sync" className="underline underline-offset-2 text-primary">Auction.com Sync</Link>
             {' '}to populate this table.
           </p>
         </div>
