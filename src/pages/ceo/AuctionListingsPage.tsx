@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Filter, RefreshCw, Loader2, ChevronLeft, ChevronRight,
+  Filter, RefreshCw, Loader2,
   ExternalLink, Home, MapPin, Calendar, DollarSign, Gavel,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import TablePagination from '@/components/shared/TablePagination';
 import {
   fetchAuctionListings,
   fetchAuctionSyncStatus,
@@ -175,7 +176,7 @@ function ListingDrawer({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
 type SortKey = 'auction_date_desc' | 'bid_asc' | 'bid_desc';
 
@@ -184,6 +185,7 @@ export default function AuctionListingsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [filterState, setFilterState] = useState('');
   const [filterSaleType, setFilterSaleType] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('auction_date_desc');
@@ -208,36 +210,23 @@ export default function AuctionListingsPage() {
     const { listings: l, total: t } = await fetchAuctionListings({
       state: filterState || undefined,
       saleType: filterSaleType || undefined,
+      q: debouncedSearch || undefined,
       sort: sortKey,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     });
     setLoading(false);
-
-    let filtered = l;
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      filtered = l.filter(
-        (item) =>
-          item.address?.toLowerCase().includes(q) ||
-          item.municipality?.toLowerCase().includes(q) ||
-          item.postal_code?.includes(q) ||
-          item.auction_id.includes(q),
-      );
-    }
-    setListings(filtered);
+    setListings(l);
     setTotal(t);
-  }, [filterState, filterSaleType, page, debouncedSearch, sortKey]);
+  }, [filterState, filterSaleType, page, pageSize, debouncedSearch, sortKey]);
 
   useEffect(() => {
     setPage(1);
-  }, [filterState, filterSaleType, debouncedSearch]);
+  }, [filterState, filterSaleType, debouncedSearch, pageSize]);
 
   useEffect(() => {
     load();
   }, [load]);
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-4">
@@ -308,119 +297,111 @@ export default function AuctionListingsPage() {
       </div>
 
       {/* Table */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : listings.length === 0 ? (
-        <div className="metric-card text-center py-12 text-muted-foreground text-sm space-y-2">
-          <Gavel className="h-8 w-8 mx-auto opacity-30" />
-          <p>No listings found. Run a sync from{' '}
-            <Link to="/ceo/auction-apify-sync" className="underline underline-offset-2 text-primary">Auction.com Sync</Link>
-            {' '}to populate this table.
-          </p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3 text-left font-medium w-8"><Home size={13} /></th>
-                <th className="py-2 pr-3 text-left font-medium">Address</th>
-                <th className="py-2 pr-3 text-left font-medium">Sale Type</th>
-                <th className="py-2 pr-3 text-left font-medium">
-                  <span className="flex items-center gap-1"><Calendar size={12} /> Auction Date</span>
-                </th>
-                <th className="py-2 pr-3 text-left font-medium">Location</th>
-                <th className="py-2 pr-3 text-right font-medium">
-                  <span className="flex items-center gap-1 justify-end"><DollarSign size={12} /> Bid</span>
-                </th>
-                <th className="py-2 pr-3 text-center font-medium">Beds/Baths</th>
-                <th className="py-2 pr-3 text-right font-medium">Sqft</th>
-                <th className="py-2 text-left font-medium">
-                  <span className="flex items-center gap-1"><MapPin size={12} /> State</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {listings.map((listing) => (
-                <tr
-                  key={listing.id}
-                  className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => setDrawer(listing)}
-                >
-                  <td className="py-2 pr-3">
-                    {listing.primary_photo_url ? (
-                      <img
-                        src={listing.primary_photo_url}
-                        alt=""
-                        className="h-9 w-12 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="h-9 w-12 rounded bg-muted flex items-center justify-center">
-                        <Home size={14} className="text-muted-foreground" />
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-2 pr-3">
-                    <p className="font-medium truncate max-w-[200px]">
-                      {listing.street_description || listing.address?.split(',')[0] || '—'}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                      {listing.municipality}{listing.postal_code ? `, ${listing.postal_code}` : ''}
-                    </p>
-                  </td>
-                  <td className="py-2 pr-3">{saleTypeBadge(listing.sale_type)}</td>
-                  <td className="py-2 pr-3 text-xs whitespace-nowrap">
-                    {listing.auction_date ?? fmtDate(listing.auction_start_date)}
-                    {listing.auction_location === 'Live Auction' && (
-                      <span className="ml-1 text-[10px] text-muted-foreground">(Live)</span>
-                    )}
-                  </td>
-                  <td className="py-2 pr-3 text-xs text-muted-foreground whitespace-nowrap">
-                    {listing.auction_location ?? '—'}
-                  </td>
-                  <td className="py-2 pr-3 text-right text-xs font-mono">
-                    {fmtBid(listing.opening_bid ?? listing.starting_bid_amount)}
-                  </td>
-                  <td className="py-2 pr-3 text-center text-xs">
-                    {listing.beds != null || listing.baths != null
-                      ? `${listing.beds ?? '?'}bd / ${listing.baths ?? '?'}ba`
-                      : '—'}
-                  </td>
-                  <td className="py-2 pr-3 text-right text-xs">
-                    {listing.sqft ? listing.sqft.toLocaleString() : '—'}
-                  </td>
-                  <td className="py-2 text-xs font-mono">{listing.state ?? '—'}</td>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground text-sm space-y-2">
+            <Gavel className="h-8 w-8 mx-auto opacity-30" />
+            <p>No listings found. Run a sync from{' '}
+              <Link to="/ceo/auction-apify-sync" className="underline underline-offset-2 text-primary">Auction.com Sync</Link>
+              {' '}to populate this table.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="py-2 pr-3 pl-3 text-left font-medium w-8"><Home size={13} /></th>
+                  <th className="py-2 pr-3 text-left font-medium">Address</th>
+                  <th className="py-2 pr-3 text-left font-medium">Sale Type</th>
+                  <th className="py-2 pr-3 text-left font-medium">
+                    <span className="flex items-center gap-1"><Calendar size={12} /> Auction Date</span>
+                  </th>
+                  <th className="py-2 pr-3 text-left font-medium">Location</th>
+                  <th className="py-2 pr-3 text-right font-medium">
+                    <span className="flex items-center gap-1 justify-end"><DollarSign size={12} /> Bid</span>
+                  </th>
+                  <th className="py-2 pr-3 text-center font-medium">Beds/Baths</th>
+                  <th className="py-2 pr-3 text-right font-medium">Sqft</th>
+                  <th className="py-2 pr-3 text-left font-medium">
+                    <span className="flex items-center gap-1"><MapPin size={12} /> State</span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {listings.map((listing) => (
+                  <tr
+                    key={listing.id}
+                    className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
+                    onClick={() => setDrawer(listing)}
+                  >
+                    <td className="py-2 pr-3 pl-3">
+                      {listing.primary_photo_url ? (
+                        <img
+                          src={listing.primary_photo_url}
+                          alt=""
+                          className="h-9 w-12 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="h-9 w-12 rounded bg-muted flex items-center justify-center">
+                          <Home size={14} className="text-muted-foreground" />
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <p className="font-medium truncate max-w-[200px]">
+                        {listing.street_description || listing.address?.split(',')[0] || '—'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {listing.municipality}{listing.postal_code ? `, ${listing.postal_code}` : ''}
+                      </p>
+                    </td>
+                    <td className="py-2 pr-3">{saleTypeBadge(listing.sale_type)}</td>
+                    <td className="py-2 pr-3 text-xs whitespace-nowrap">
+                      {listing.auction_date ?? fmtDate(listing.auction_start_date)}
+                      {listing.auction_location === 'Live Auction' && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">(Live)</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {listing.auction_location ?? '—'}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-xs font-mono">
+                      {fmtBid(listing.opening_bid ?? listing.starting_bid_amount)}
+                    </td>
+                    <td className="py-2 pr-3 text-center text-xs">
+                      {listing.beds != null || listing.baths != null
+                        ? `${listing.beds ?? '?'}bd / ${listing.baths ?? '?'}ba`
+                        : '—'}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-xs">
+                      {listing.sqft ? listing.sqft.toLocaleString() : '—'}
+                    </td>
+                    <td className="py-2 pr-3 text-xs font-mono">{listing.state ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="p-1 rounded hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span>Page {page} of {totalPages} ({total.toLocaleString()} listings)</span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="p-1 rounded hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          disabled={loading}
+        />
+      </div>
 
       {/* Detail drawer */}
       {drawer && (

@@ -197,6 +197,7 @@ export async function listAuctionSyncRuns(): Promise<{ runs: AuctionSyncRun[]; e
 export interface FetchAuctionListingsOptions {
   state?: string;
   saleType?: string;
+  q?: string;
   sort?: 'auction_date_desc' | 'bid_asc' | 'bid_desc';
   limit?: number;
   offset?: number;
@@ -213,6 +214,7 @@ export async function fetchAuctionListings(
         action: 'listings',
         state: opts.state,
         saleType: opts.saleType,
+        q: opts.q,
         sort: opts.sort ?? 'auction_date_desc',
         limit: opts.limit ?? 50,
         offset: opts.offset ?? 0,

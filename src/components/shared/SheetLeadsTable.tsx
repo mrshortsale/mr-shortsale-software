@@ -7,6 +7,7 @@ import {
 } from '@/services/sheetsLeads';
 import { assignRep, fetchReps, type InventoryRep } from '@/services/inventory';
 import InventoryRepPicker from '@/components/ceo/InventoryRepPicker';
+import TablePagination from '@/components/shared/TablePagination';
 import {
   Table,
   TableBody,
@@ -15,11 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const POLL_MS = 15_000;
-const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
 function fmtAge(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -55,17 +56,12 @@ export default function SheetLeadsTable({ category, categoryLabel, initialTotal 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(25);
   const [now, setNow] = useState(Date.now());
-  const { t, i18n } = useTranslation();
-  const loc = i18n.language;
+  const { t } = useTranslation();
 
   const repNameById = useMemo(
     () => new Map(reps.map((r) => [r.id, r.name])),
     [reps],
   );
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const rangeEnd = Math.min(page * pageSize, total);
 
   useEffect(() => {
     setPage(1);
@@ -111,10 +107,6 @@ export default function SheetLeadsTable({ category, categoryLabel, initialTotal 
       window.clearInterval(interval);
     };
   }, [category, page, pageSize]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
 
   const handleAssign = async (lead: SheetLead, repId: string | null) => {
     const { error } = await assignRep([lead.id], repId);
@@ -231,54 +223,18 @@ export default function SheetLeadsTable({ category, categoryLabel, initialTotal 
         </div>
       )}
 
-      {!loading && total > 0 && (
-        <div className="px-3 py-2.5 text-[11px] text-muted-foreground bg-muted border-t flex flex-wrap items-center justify-between gap-3">
-          <span>
-            {`${t('inventory.pagination.showing')} ${rangeStart.toLocaleString(loc)}–${rangeEnd.toLocaleString(loc)} ${t('inventory.pagination.of')} ${total.toLocaleString(loc)}`}
-          </span>
-
-          <div className="flex items-center gap-1.5">
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-              disabled={loading}
-              title={t('inventory.buttons.rowsPerPage')}
-              aria-label={t('inventory.buttons.rowsPerPage')}
-              className="px-2 py-1 rounded border bg-card text-xs font-bold text-foreground outline-none focus:ring-1 focus:ring-primary disabled:opacity-40"
-            >
-              {PAGE_SIZE_OPTIONS.map((n) => (
-                <option key={n} value={n}>{n}/page</option>
-              ))}
-            </select>
-
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              {t('inventory.pagination.page')} {page.toLocaleString(loc)} {t('inventory.pagination.of')} {totalPages.toLocaleString(loc)}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-              aria-label={t('inventory.pagination.previousPage')}
-              className="p-1 rounded border bg-card hover:bg-muted disabled:opacity-40"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-              aria-label={t('inventory.pagination.nextPage')}
-              className="p-1 rounded border bg-card hover:bg-muted disabled:opacity-40"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+        pageSizeOptions={PAGE_SIZE_OPTIONS}
+        disabled={loading}
+      />
     </div>
   );
 }

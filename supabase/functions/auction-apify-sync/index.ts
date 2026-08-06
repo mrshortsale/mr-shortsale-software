@@ -654,30 +654,40 @@ Deno.serve(async (req: Request) => {
   if (action === "listings") {
     const state = typeof body.state === "string" ? body.state : undefined;
     const saleType = typeof body.saleType === "string" ? body.saleType : undefined;
+    const q = typeof body.q === "string" ? body.q.trim() : "";
     const sort = typeof body.sort === "string" ? body.sort : "auction_date_desc";
     const limit = Math.min(100, Math.max(1, Number(body.limit ?? 50)));
     const offset = Math.max(0, Number(body.offset ?? 0));
 
-    let q = supabase
+    let query = supabase
       .from("auction_listing_staging")
       .select("*", { count: "exact" });
-    q = applyListingQueryFilters(q);
+    query = applyListingQueryFilters(query);
 
-    if (state) q = q.eq("state", state);
-    if (saleType) q = q.eq("sale_type", saleType);
-
-    if (sort === "bid_asc") {
-      q = q.order("starting_bid_amount", { ascending: true, nullsFirst: false });
-    } else if (sort === "bid_desc") {
-      q = q.order("starting_bid_amount", { ascending: false, nullsFirst: false });
-    } else {
-      // Newest listed on Auction.com first
-      q = q.order("auction_start_date", { ascending: false, nullsFirst: false });
+    if (state) query = query.eq("state", state);
+    if (saleType) query = query.eq("sale_type", saleType);
+    if (q) {
+      // Escape PostgREST filter special chars used in or() values
+      const escaped = q.replace(/[%_,.()\\]/g, "").slice(0, 80);
+      if (escaped) {
+        query = query.or(
+          `address.ilike.%${escaped}%,street_description.ilike.%${escaped}%,municipality.ilike.%${escaped}%,postal_code.ilike.%${escaped}%,auction_id.ilike.%${escaped}%`,
+        );
+      }
     }
 
-    q = q.range(offset, offset + limit - 1);
+    if (sort === "bid_asc") {
+      query = query.order("starting_bid_amount", { ascending: true, nullsFirst: false });
+    } else if (sort === "bid_desc") {
+      query = query.order("starting_bid_amount", { ascending: false, nullsFirst: false });
+    } else {
+      // Newest listed on Auction.com first
+      query = query.order("auction_start_date", { ascending: false, nullsFirst: false });
+    }
 
-    const { data, count, error } = await q;
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, count, error } = await query;
     if (error) return jsonResponse({ error: error.message }, 500);
     return jsonResponse({
       listings: data ?? [],

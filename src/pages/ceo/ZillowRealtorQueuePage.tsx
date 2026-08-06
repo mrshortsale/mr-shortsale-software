@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Filter, ArrowUpDown, Phone, Flame, Building2, Users, RefreshCw,
-  Loader2, Send, Mail, ChevronLeft, ChevronRight, ExternalLink,
+  Loader2, Send, Mail, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import TablePagination from '@/components/shared/TablePagination';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { getStoredToken } from '@/services/auth';
 import {
@@ -272,6 +273,8 @@ function ZillowLeadDrawer({ lead, open, onOpenChange, reps, onStatusChange, onAs
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+
 export default function ZillowRealtorQueuePage() {
   const [leads, setLeads] = useState<ZillowAgentLead[]>([]);
   const [stats, setStats] = useState<ZillowStats>({
@@ -286,14 +289,19 @@ export default function ZillowRealtorQueuePage() {
   const [filterRep, setFilterRep] = useState('all');
   const [hotOnly, setHotOnly] = useState(false);
   const [searchQ, setSearchQ] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [repNames, setRepNames] = useState<string[]>([]);
   const [roundRobinAssigning, setRoundRobinAssigning] = useState(false);
   const [bulk, setBulk] = useState<Set<string>>(new Set());
   const [bulkRep, setBulkRep] = useState('');
   const [mojoPushing, setMojoPushing] = useState<Set<string>>(new Set());
 
-  const PAGE_SIZE = 50;
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQ), 300);
+    return () => clearTimeout(t);
+  }, [searchQ]);
 
   useEffect(() => {
     fetchRealtorReps().then(({ reps }) => {
@@ -310,20 +318,23 @@ export default function ZillowRealtorQueuePage() {
       state: filterState === 'all' ? undefined : filterState,
       hotOnly,
       assignedRep: filterRep === 'all' ? undefined : filterRep === 'unassigned' ? 'unassigned' : filterRep,
-      q: searchQ || undefined,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
+      q: debouncedSearch || undefined,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     });
     setLoading(false);
     if (error) { toast.error(error); return; }
     setLeads(l);
     setStats(s);
     setTotalMatching(total);
-  }, [filterStatus, filterState, hotOnly, filterRep, searchQ, page]);
+  }, [filterStatus, filterState, hotOnly, filterRep, debouncedSearch, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
-  const totalPages = Math.max(1, Math.ceil(totalMatching / PAGE_SIZE));
+  useEffect(() => {
+    setPage(1);
+    setBulk(new Set());
+  }, [filterStatus, filterState, hotOnly, filterRep, debouncedSearch, pageSize]);
 
   const sorted = useMemo(() => {
     const l = [...leads];
@@ -397,12 +408,12 @@ export default function ZillowRealtorQueuePage() {
             className="h-7 text-xs w-36"
             placeholder="Search..."
             value={searchQ}
-            onChange={(e) => { setPage(1); setSearchQ(e.target.value); }}
+            onChange={(e) => setSearchQ(e.target.value)}
           />
           <select
             className="bg-muted rounded px-2 py-1 border-0 outline-none text-xs"
             value={filterState}
-            onChange={(e) => { setPage(1); setFilterState(e.target.value); }}
+            onChange={(e) => setFilterState(e.target.value)}
           >
             <option value="all">All States</option>
             <option value="FL">Florida</option>
@@ -413,7 +424,7 @@ export default function ZillowRealtorQueuePage() {
           <select
             className="bg-muted rounded px-2 py-1 border-0 outline-none text-xs"
             value={filterStatus}
-            onChange={(e) => { setPage(1); setFilterStatus(e.target.value as 'all' | ZillowLeadStatus); }}
+            onChange={(e) => setFilterStatus(e.target.value as 'all' | ZillowLeadStatus)}
           >
             <option value="all">All Statuses</option>
             <option value="New">New</option>
@@ -425,7 +436,7 @@ export default function ZillowRealtorQueuePage() {
           <select
             className="bg-muted rounded px-2 py-1 border-0 outline-none text-xs"
             value={filterRep}
-            onChange={(e) => { setPage(1); setFilterRep(e.target.value); }}
+            onChange={(e) => setFilterRep(e.target.value)}
           >
             <option value="all">All Reps</option>
             <option value="unassigned">Unassigned</option>
@@ -433,7 +444,7 @@ export default function ZillowRealtorQueuePage() {
           </select>
           <button
             type="button"
-            onClick={() => { setPage(1); setHotOnly((v) => !v); }}
+            onClick={() => setHotOnly((v) => !v)}
             className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition-colors ${hotOnly ? 'bg-amber-500 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}
           >
             <Flame size={11} /> Hot Only
@@ -504,145 +515,137 @@ export default function ZillowRealtorQueuePage() {
       )}
 
       {/* Table */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : sorted.length === 0 ? (
-        <div className="metric-card text-center py-10 text-muted-foreground text-sm">
-          No Zillow agent leads found. Run a sync from{' '}
-          <Link to="/ceo/zillow-apify-sync" className="underline underline-offset-2">Zillow Apify Sync</Link>{' '}
-          to populate this queue.
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-xs text-muted-foreground">
-                <th className="py-2 pr-3 w-8">
-                  <input
-                    type="checkbox"
-                    checked={bulk.size === sorted.length && sorted.length > 0}
-                    onChange={(e) => setBulk(e.target.checked ? new Set(sorted.map((l) => l.id)) : new Set())}
-                    className="rounded"
-                  />
-                </th>
-                <th className="py-2 pr-3 text-left font-medium">Agent / Brokerage</th>
-                <th className="py-2 pr-3 text-left font-medium">Contact</th>
-                <th className="py-2 pr-3 text-left font-medium">Latest Listing</th>
-                <th className="py-2 pr-3 text-right font-medium">DOM</th>
-                <th className="py-2 pr-3 text-right font-medium">Price</th>
-                <th className="py-2 pr-3 text-left font-medium">Status</th>
-                <th className="py-2 pr-3 text-left font-medium">Rep</th>
-                <th className="py-2 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((lead) => (
-                <tr
-                  key={lead.id}
-                  className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
-                  onClick={() => setDrawerLead(lead)}
-                >
-                  <td className="py-2 pr-3" onClick={(e) => e.stopPropagation()}>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground text-sm">
+            No Zillow agent leads found. Run a sync from{' '}
+            <Link to="/ceo/zillow-apify-sync" className="underline underline-offset-2">Zillow Apify Sync</Link>{' '}
+            to populate this queue.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="py-2 pr-3 pl-3 w-8">
                     <input
                       type="checkbox"
-                      checked={bulk.has(lead.id)}
-                      onChange={(e) => {
-                        const next = new Set(bulk);
-                        if (e.target.checked) next.add(lead.id); else next.delete(lead.id);
-                        setBulk(next);
-                      }}
+                      checked={bulk.size === sorted.length && sorted.length > 0}
+                      onChange={(e) => setBulk(e.target.checked ? new Set(sorted.map((l) => l.id)) : new Set())}
                       className="rounded"
                     />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <div className="flex items-center gap-1.5">
-                      {isHot(lead) && <Flame size={12} className="text-amber-500 shrink-0" />}
-                      <div className="min-w-0">
-                        <p className="font-medium truncate max-w-[160px]">{lead.agentName || '—'}</p>
-                        <p className="text-xs text-muted-foreground truncate max-w-[160px]">{lead.brokerage || '—'}</p>
-                        {lead.mlsName && <p className="text-[10px] text-muted-foreground">{lead.mlsName}</p>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <p className="text-xs font-mono">{lead.agentPhone || '—'}</p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[140px]">{lead.agentEmail || ''}</p>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <div className="text-xs">
-                      {lead.latestPropertyAddress
-                        ? <p className="truncate max-w-[160px]">{lead.latestPropertyAddress}</p>
-                        : <span className="text-muted-foreground">—</span>}
-                      {lead.latestCity && (
-                        <p className="text-muted-foreground">{lead.latestCity}, {lead.latestState}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2 pr-3 text-right">
-                    {lead.latestDaysOnMarket != null ? (
-                      <span className={lead.latestDaysOnMarket >= 30 ? 'text-amber-600 font-semibold' : ''}>
-                        {lead.latestDaysOnMarket}
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td className="py-2 pr-3 text-right text-xs">{fmtPrice(lead.latestListPrice)}</td>
-                  <td className="py-2 pr-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_BADGE[lead.status]}`}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3 text-xs">
-                    {lead.assignedRep ?? <span className="text-muted-foreground italic">Unassigned</span>}
-                  </td>
-                  <td className="py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const pushing = new Set(mojoPushing).add(lead.id);
-                        setMojoPushing(pushing);
-                        sendZillowToMojo([lead])
-                          .then((r) => { if (r.ok) toast.success('Sent to Mojo'); else toast.error(r.errors?.[0] ?? 'Push failed'); })
-                          .catch(() => toast.error('Push failed'))
-                          .finally(() => setMojoPushing((p) => { const n = new Set(p); n.delete(lead.id); return n; }));
-                      }}
-                      disabled={mojoPushing.has(lead.id)}
-                      className="p-1 rounded hover:bg-muted disabled:opacity-50"
-                      title="Push to Mojo Dialer"
-                    >
-                      {mojoPushing.has(lead.id) ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                    </button>
-                  </td>
+                  </th>
+                  <th className="py-2 pr-3 text-left font-medium">Agent / Brokerage</th>
+                  <th className="py-2 pr-3 text-left font-medium">Contact</th>
+                  <th className="py-2 pr-3 text-left font-medium">Latest Listing</th>
+                  <th className="py-2 pr-3 text-right font-medium">DOM</th>
+                  <th className="py-2 pr-3 text-right font-medium">Price</th>
+                  <th className="py-2 pr-3 text-left font-medium">Status</th>
+                  <th className="py-2 pr-3 text-left font-medium">Rep</th>
+                  <th className="py-2 pr-3 text-right font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {sorted.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="border-b hover:bg-muted/30 cursor-pointer transition-colors"
+                    onClick={() => setDrawerLead(lead)}
+                  >
+                    <td className="py-2 pr-3 pl-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={bulk.has(lead.id)}
+                        onChange={(e) => {
+                          const next = new Set(bulk);
+                          if (e.target.checked) next.add(lead.id); else next.delete(lead.id);
+                          setBulk(next);
+                        }}
+                        className="rounded"
+                      />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <div className="flex items-center gap-1.5">
+                        {isHot(lead) && <Flame size={12} className="text-amber-500 shrink-0" />}
+                        <div className="min-w-0">
+                          <p className="font-medium truncate max-w-[160px]">{lead.agentName || '—'}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[160px]">{lead.brokerage || '—'}</p>
+                          {lead.mlsName && <p className="text-[10px] text-muted-foreground">{lead.mlsName}</p>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <p className="text-xs font-mono">{lead.agentPhone || '—'}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[140px]">{lead.agentEmail || ''}</p>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <div className="text-xs">
+                        {lead.latestPropertyAddress
+                          ? <p className="truncate max-w-[160px]">{lead.latestPropertyAddress}</p>
+                          : <span className="text-muted-foreground">—</span>}
+                        {lead.latestCity && (
+                          <p className="text-muted-foreground">{lead.latestCity}, {lead.latestState}</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      {lead.latestDaysOnMarket != null ? (
+                        <span className={lead.latestDaysOnMarket >= 30 ? 'text-amber-600 font-semibold' : ''}>
+                          {lead.latestDaysOnMarket}
+                        </span>
+                      ) : '—'}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-xs">{fmtPrice(lead.latestListPrice)}</td>
+                    <td className="py-2 pr-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_BADGE[lead.status]}`}>
+                        {lead.status}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3 text-xs">
+                      {lead.assignedRep ?? <span className="text-muted-foreground italic">Unassigned</span>}
+                    </td>
+                    <td className="py-2 pr-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pushing = new Set(mojoPushing).add(lead.id);
+                          setMojoPushing(pushing);
+                          sendZillowToMojo([lead])
+                            .then((r) => { if (r.ok) toast.success('Sent to Mojo'); else toast.error(r.errors?.[0] ?? 'Push failed'); })
+                            .catch(() => toast.error('Push failed'))
+                            .finally(() => setMojoPushing((p) => { const n = new Set(p); n.delete(lead.id); return n; }));
+                        }}
+                        disabled={mojoPushing.has(lead.id)}
+                        className="p-1 rounded hover:bg-muted disabled:opacity-50"
+                        title="Push to Mojo Dialer"
+                      >
+                        {mojoPushing.has(lead.id) ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="p-1 rounded hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span>Page {page} of {totalPages} ({totalMatching.toLocaleString()} total)</span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="p-1 rounded hover:bg-muted disabled:opacity-40"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          total={totalMatching}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          disabled={loading}
+        />
+      </div>
 
       {/* Drawer */}
       {drawerLead && (
