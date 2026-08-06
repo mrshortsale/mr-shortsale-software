@@ -86,7 +86,12 @@ function buildSignUpSchema(t: (key: string) => string) {
 
 type SignInValues = { email: string; password: string };
 type SignUpValues = { name: string; email: string; password: string; confirmPassword: string };
-type ForgotPasswordValues = { email: string };
+type ForgotPasswordValues = {
+  email: string;
+  currentPassword: string;
+  password: string;
+  confirmPassword: string;
+};
 
 // ─── Sign In form ─────────────────────────────────────────────────────────────
 
@@ -238,15 +243,31 @@ function SignInForm({
   );
 }
 
-// ─── Forgot password form ─────────────────────────────────────────────────────
+// ─── Change password form (email + current password; no email link) ───────────
 
 function buildForgotPasswordSchema(t: (key: string) => string) {
-  return z.object({
-    email: z
-      .string()
-      .min(1, t('login.validation.emailRequired'))
-      .email(t('login.validation.emailInvalid')),
-  });
+  return z
+    .object({
+      email: z
+        .string()
+        .min(1, t('login.validation.emailRequired'))
+        .email(t('login.validation.emailInvalid')),
+      currentPassword: z.string().min(1, t('login.validation.currentPasswordRequired')),
+      password: z
+        .string()
+        .min(8, t('login.validation.passwordMin'))
+        .regex(/[A-Z]/, t('login.validation.passwordUppercase'))
+        .regex(/[0-9]/, t('login.validation.passwordNumber')),
+      confirmPassword: z.string().min(1, t('login.validation.confirmPasswordRequired')),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: t('login.validation.passwordsMismatch'),
+      path: ['confirmPassword'],
+    })
+    .refine((data) => data.password !== data.currentPassword, {
+      message: t('login.validation.passwordSameAsCurrent'),
+      path: ['password'],
+    });
 }
 
 function ForgotPasswordForm({
@@ -262,14 +283,18 @@ function ForgotPasswordForm({
   const schema = buildForgotPasswordSchema(t);
   const form = useForm<ForgotPasswordValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '' },
+    defaultValues: { email: '', currentPassword: '', password: '', confirmPassword: '' },
   });
 
   const isSubmitting = form.formState.isSubmitting;
 
   const onSubmit = async (values: ForgotPasswordValues) => {
     setServerError('');
-    const result = await authService.forgotPassword(values.email);
+    const result = await authService.forgotPassword(
+      values.email,
+      values.currentPassword,
+      values.password,
+    );
     if (!result.success) {
       setServerError(result.error ?? t('login.forgot.requestFailed'));
       return;
@@ -306,6 +331,69 @@ function ForgotPasswordForm({
                       placeholder={t('login.signIn.emailPlaceholder')}
                       type="email"
                       autoComplete="email"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="currentPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.forgot.currentPassword')}
+                  </FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder={t('login.forgot.currentPasswordPlaceholder')}
+                      autoComplete="current-password"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.forgot.newPassword')}
+                  </FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder={t('login.signUp.passwordPlaceholder')}
+                      autoComplete="new-password"
+                      className="h-10"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-medium">
+                    {t('login.forgot.confirmPassword')}
+                  </FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      placeholder={t('login.signUp.confirmPasswordPlaceholder')}
+                      autoComplete="new-password"
                       className="h-10"
                       {...field}
                     />

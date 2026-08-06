@@ -102,7 +102,7 @@
       "emailPlaceholder": "tu@ejemplo.com",
       "password": "Contraseña",
       "passwordPlaceholder": "Ingresa tu contraseña",
-      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "forgotPassword": "¿Cambiar contraseña?",
       "submit": "Iniciar sesión",
       "submitting": "Iniciando sesión...",
       "noAccount": "¿No tienes cuenta?",
@@ -133,14 +133,18 @@
       "defaultMessage": "Cuenta creada. Tu registro está pendiente de aprobación del CEO. Puedes iniciar sesión una vez aprobado."
     },
     "forgot": {
-      "title": "Restablecer contraseña",
-      "subtitle": "Ingresa tu correo y te enviaremos un enlace de restablecimiento",
-      "submit": "Enviar enlace",
-      "submitting": "Enviando...",
+      "title": "Cambiar contraseña",
+      "subtitle": "Ingresa tu correo, contraseña actual y una nueva contraseña",
+      "currentPassword": "Contraseña actual",
+      "currentPasswordPlaceholder": "Ingresa tu contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar nueva contraseña",
+      "submit": "Actualizar contraseña",
+      "submitting": "Actualizando...",
       "backToSignIn": "Volver al inicio de sesión",
-      "sentTitle": "Revisa tu correo",
-      "sentDefault": "Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña en breve.",
-      "requestFailed": "No se pudo enviar el enlace. Por favor intenta de nuevo."
+      "sentTitle": "Contraseña actualizada",
+      "sentDefault": "Tu contraseña ha sido cambiada. Ya puedes iniciar sesión con tu nueva contraseña.",
+      "requestFailed": "No se pudo actualizar la contraseña. Por favor intenta de nuevo."
     },
     "reset": {
       "title": "Elige una nueva contraseña",
@@ -166,7 +170,9 @@
       "nameMin": "El nombre debe tener al menos 2 caracteres",
       "emailDomain": "El registro requiere un correo @mrshortsale.net",
       "confirmPasswordRequired": "Por favor confirma tu contraseña",
-      "passwordsMismatch": "Las contraseñas no coinciden"
+      "passwordsMismatch": "Las contraseñas no coinciden",
+      "currentPasswordRequired": "La contraseña actual es obligatoria",
+      "passwordSameAsCurrent": "La nueva contraseña debe ser diferente de la actual"
     }
   },
   "inventory": {

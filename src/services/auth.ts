@@ -86,12 +86,16 @@ export async function signup(email: string, password: string, name: string): Pro
   }
 }
 
-export async function forgotPassword(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function forgotPassword(
+  email: string,
+  currentPassword: string,
+  password: string,
+): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/auth-forgot-password`, {
       method: 'POST',
       headers: baseHeaders(),
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, currentPassword, password }),
     });
 
     const data = await res.json();

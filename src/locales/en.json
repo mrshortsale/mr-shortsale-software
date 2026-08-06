@@ -102,7 +102,7 @@
       "emailPlaceholder": "you@example.com",
       "password": "Password",
       "passwordPlaceholder": "Enter your password",
-      "forgotPassword": "Forgot password?",
+      "forgotPassword": "Change password?",
       "submit": "Sign in",
       "submitting": "Signing in...",
       "noAccount": "Don't have an account?",
@@ -133,14 +133,18 @@
       "defaultMessage": "Account created. Your signup is pending CEO approval. You can sign in once approved."
     },
     "forgot": {
-      "title": "Reset your password",
-      "subtitle": "Enter your email and we'll send you a reset link",
-      "submit": "Send reset link",
-      "submitting": "Sending...",
+      "title": "Change your password",
+      "subtitle": "Enter your email, current password, and a new password",
+      "currentPassword": "Current password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "submit": "Update password",
+      "submitting": "Updating...",
       "backToSignIn": "Back to sign in",
-      "sentTitle": "Check your email",
-      "sentDefault": "If an account exists for that email, you will receive a password reset link shortly.",
-      "requestFailed": "Could not send reset link. Please try again."
+      "sentTitle": "Password updated",
+      "sentDefault": "Your password has been changed. You can now sign in with your new password.",
+      "requestFailed": "Could not update password. Please try again."
     },
     "reset": {
       "title": "Choose a new password",
@@ -166,7 +170,9 @@
       "nameMin": "Name must be at least 2 characters",
       "emailDomain": "Sign-up requires a @mrshortsale.net email address",
       "confirmPasswordRequired": "Please confirm your password",
-      "passwordsMismatch": "Passwords do not match"
+      "passwordsMismatch": "Passwords do not match",
+      "currentPasswordRequired": "Current password is required",
+      "passwordSameAsCurrent": "New password must be different from your current password"
     }
   },
   "inventory": {
