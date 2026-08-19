@@ -62,6 +62,44 @@ export async function loadActiveRepNames(
 }
 
 /**
+ * UUIDs of active reps who are in the round-robin pool.
+ * Excludes assignment_paused (vacation / sick) — those reps keep existing
+ * leads but do not receive new auto-assignments.
+ */
+export async function loadAssignableRepIds(
+  supabase: SupabaseClient,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .eq("role", "rep")
+    .eq("is_active", true)
+    .eq("assignment_paused", false)
+    .or("status.eq.active,status.is.null")
+    .order("name");
+
+  if (error || !data) return [];
+  return (data as Array<{ id: string }>).map((r) => r.id);
+}
+
+/** Display names of active reps who are in the round-robin pool. */
+export async function loadAssignableRepNames(
+  supabase: SupabaseClient,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("name")
+    .eq("role", "rep")
+    .eq("is_active", true)
+    .eq("assignment_paused", false)
+    .or("status.eq.active,status.is.null")
+    .order("name");
+
+  if (error || !data) return [];
+  return (data as Array<{ name: string }>).map((r) => r.name).filter(Boolean);
+}
+
+/**
  * Read the persisted round-robin cursor. Returns 0 when no row exists yet.
  */
 export async function loadRoundRobinIndex(
@@ -102,7 +140,8 @@ export async function saveRoundRobinIndex(
 export async function assignUnassignedRealtorLeadsRoundRobin(
   supabase: SupabaseClient,
 ): Promise<{ assigned: number; repCount: number; error: string | null }> {
-  const repNames = await loadActiveRepNames(supabase);
+  const activeRepNames = await loadActiveRepNames(supabase);
+  const repNames = await loadAssignableRepNames(supabase);
   if (repNames.length === 0) {
     return { assigned: 0, repCount: 0, error: "No active sales reps found" };
   }
@@ -119,7 +158,7 @@ export async function assignUnassignedRealtorLeadsRoundRobin(
   const toAssign = (leads ?? []).filter((lead) =>
     needsRealtorAssignment(
       (lead as { assigned_rep: string | null }).assigned_rep,
-      repNames,
+      activeRepNames,
     )
   );
 
@@ -149,7 +188,8 @@ export async function assignUnassignedRealtorLeadsRoundRobin(
 export async function assignUnassignedZillowLeadsRoundRobin(
   supabase: SupabaseClient,
 ): Promise<{ assigned: number; repCount: number; error: string | null }> {
-  const repNames = await loadActiveRepNames(supabase);
+  const activeRepNames = await loadActiveRepNames(supabase);
+  const repNames = await loadAssignableRepNames(supabase);
   if (repNames.length === 0) {
     return { assigned: 0, repCount: 0, error: "No active sales reps found" };
   }
@@ -166,7 +206,7 @@ export async function assignUnassignedZillowLeadsRoundRobin(
   const toAssign = (leads ?? []).filter((lead) =>
     needsRealtorAssignment(
       (lead as { assigned_rep: string | null }).assigned_rep,
-      repNames,
+      activeRepNames,
     )
   );
 
@@ -195,7 +235,7 @@ export async function assignUnassignedZillowLeadsRoundRobin(
 export async function assignUnassignedGoogleSheetLeadsRoundRobin(
   supabase: SupabaseClient,
 ): Promise<{ assigned: number; repCount: number; error: string | null }> {
-  const repIds = await loadActiveRepIds(supabase);
+  const repIds = await loadAssignableRepIds(supabase);
   if (repIds.length === 0) {
     return { assigned: 0, repCount: 0, error: "No active sales reps found" };
   }

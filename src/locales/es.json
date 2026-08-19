@@ -285,7 +285,8 @@
       "pending": "Pendiente",
       "rejected": "Rechazado",
       "active": "Activo",
-      "inactive": "Inactivo"
+      "inactive": "Inactivo",
+      "paused": "Asignación pausada"
     },
     "roles": {
       "ceo": "CEO",
@@ -321,6 +322,8 @@
       "approveImmediatelyDesc": "Si no se marca, la cuenta se creará como pendiente y debe aprobarse por separado.",
       "accountActive": "Cuenta activa",
       "accountActiveDesc": "Los usuarios desactivados no pueden iniciar sesión.",
+      "assignmentPaused": "Pausar asignación de leads",
+      "assignmentPausedDesc": "Omite a este asesor en el round-robin (vacaciones / enfermedad). Puede seguir iniciando sesión y conservar sus leads actuales.",
       "newPassword": "Nueva contraseña",
       "newPasswordOptional": "(opcional)",
       "newPasswordPlaceholder": "Dejar en blanco para mantener la actual",

@@ -13,7 +13,7 @@ import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import {
   assignRepsRoundRobin,
   GOOGLE_SHEETS_SCOPE,
-  loadActiveRepIds,
+  loadAssignableRepIds,
   loadRoundRobinIndex,
   saveRoundRobinIndex,
 } from "../_shared/roundRobin.ts";
@@ -168,7 +168,7 @@ async function processLead(
     (existing as { status: string } | null)?.status ?? "New";
 
   if (!existing) {
-    const repIds = await loadActiveRepIds(supabase);
+    const repIds = await loadAssignableRepIds(supabase);
     log("round_robin_reps", { repCount: repIds.length });
     if (repIds.length > 0) {
       let rrIndex = await loadRoundRobinIndex(supabase, GOOGLE_SHEETS_SCOPE);

@@ -3,7 +3,7 @@ import { handleCors, jsonResponse } from "../_shared/cors.ts";
 import { verifyJwt } from "../_shared/jwt.ts";
 import {
   assignRepsRoundRobin,
-  loadActiveRepIds,
+  loadAssignableRepIds,
   loadRoundRobinIndex,
   saveRoundRobinIndex,
 } from "../_shared/roundRobin.ts";
@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
 
     const rawPreview = markdown.slice(0, 500);
     const records = await extractCountyRecords(markdown);
-    const repIds = await loadActiveRepIds(supabase);
+    const repIds = await loadAssignableRepIds(supabase);
     let roundRobinIndex = await loadRoundRobinIndex(supabase, COUNTY_SCOPE);
     let recordsInserted = 0;
     let recordsSkipped = 0;

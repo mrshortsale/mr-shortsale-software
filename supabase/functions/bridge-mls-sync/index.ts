@@ -26,6 +26,7 @@ import {
 import {
   assignRepsRoundRobin,
   loadActiveRepNames,
+  loadAssignableRepNames,
   loadRoundRobinIndex,
   REALTOR_MLS_SCOPE,
   saveRoundRobinIndex,
@@ -171,7 +172,10 @@ function scheduleBackgroundContinue(runId: string, nextSkip: number): void {
  * Returns { newCount, updatedCount }.
  */
 type RealtorRoundRobin = {
+  /** Reps in the round-robin pool (excludes assignment_paused). */
   repNames: string[];
+  /** All active reps, including paused — used so existing leads are not stolen. */
+  validOwnerNames: string[];
   index: number;
 };
 
@@ -230,8 +234,8 @@ async function upsertAgentLeads(
         agent_phone: row.agent_phone || prev.agent_phone,
         agent_email: row.agent_email || prev.agent_email,
       };
-      const activeRepSet = new Set(rr?.repNames ?? []);
-      if (!prev.assigned_rep || !activeRepSet.has(prev.assigned_rep)) {
+      const validOwnerSet = new Set(rr?.validOwnerNames ?? []);
+      if (!prev.assigned_rep || !validOwnerSet.has(prev.assigned_rep)) {
         const repName = pickRep();
         if (repName) updates.assigned_rep = repName;
       }
@@ -310,7 +314,8 @@ async function syncProfile(params: {
   let { nextSkip } = params;
   const maxPages = params.maxPages ?? MAX_PAGES_PER_CHUNK;
 
-  const repNames = await loadActiveRepNames(supabase);
+  const validOwnerNames = await loadActiveRepNames(supabase);
+  const repNames = await loadAssignableRepNames(supabase);
   let rrIndex = repNames.length > 0
     ? await loadRoundRobinIndex(supabase, REALTOR_MLS_SCOPE)
     : 0;
@@ -393,7 +398,9 @@ async function syncProfile(params: {
       }
     }
 
-    const rr = repNames.length > 0 ? { repNames, index: rrIndex } : undefined;
+    const rr = repNames.length > 0
+      ? { repNames, validOwnerNames, index: rrIndex }
+      : undefined;
     const { newCount, updatedCount, nextIndex } = await upsertAgentLeads(agentRows, rr);
     rrIndex = nextIndex;
     if (repNames.length > 0) {

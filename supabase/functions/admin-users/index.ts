@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     let query = supabase
       .from("users")
-      .select("id, email, name, role, avatar_color, is_active, status, last_login_at, created_at")
+      .select("id, email, name, role, avatar_color, is_active, status, assignment_paused, last_login_at, created_at")
       .order("name");
 
     if (statusFilter === "pending") {
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
       .from("users")
       .update({ status: "active", is_active: true })
       .eq("id", userId)
-      .select("id, email, name, role, avatar_color, is_active, status, last_login_at, created_at")
+      .select("id, email, name, role, avatar_color, is_active, status, assignment_paused, last_login_at, created_at")
       .single();
 
     if (error || !user) return jsonResponse({ error: "Failed to approve user" }, 500);
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
       .from("users")
       .update({ status: "rejected", is_active: false })
       .eq("id", userId)
-      .select("id, email, name, role, avatar_color, is_active, status, last_login_at, created_at")
+      .select("id, email, name, role, avatar_color, is_active, status, assignment_paused, last_login_at, created_at")
       .single();
 
     if (error || !user) return jsonResponse({ error: "Failed to reject user" }, 500);
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
         status: approved ? "active" : "pending",
         is_active: approved,
       })
-      .select("id, email, name, role, avatar_color, is_active, status, created_at")
+      .select("id, email, name, role, avatar_color, is_active, status, assignment_paused, created_at")
       .single();
 
     if (insertError || !user) return jsonResponse({ error: "Failed to create user" }, 500);
@@ -177,9 +177,9 @@ Deno.serve(async (req) => {
 
   // --- UPDATE user ---
   if (action === "update") {
-    const { userId, name, role, avatarColor, isActive, password } = body as {
+    const { userId, name, role, avatarColor, isActive, assignmentPaused, password } = body as {
       userId?: string; name?: string; role?: string; avatarColor?: string;
-      isActive?: boolean; password?: string;
+      isActive?: boolean; assignmentPaused?: boolean; password?: string;
     };
 
     if (!userId) return jsonResponse({ error: "userId is required" }, 400);
@@ -192,6 +192,7 @@ Deno.serve(async (req) => {
     }
     if (avatarColor !== undefined) updates.avatar_color = avatarColor;
     if (isActive !== undefined) updates.is_active = Boolean(isActive);
+    if (assignmentPaused !== undefined) updates.assignment_paused = Boolean(assignmentPaused);
     if (password) {
       if (String(password).length < 8) return jsonResponse({ error: "Password must be at least 8 characters" }, 400);
       const { data: hash, error: hashError } = await supabase.rpc("hash_password", {
@@ -207,7 +208,7 @@ Deno.serve(async (req) => {
       .from("users")
       .update(updates)
       .eq("id", userId)
-      .select("id, email, name, role, avatar_color, is_active, status, last_login_at, created_at")
+      .select("id, email, name, role, avatar_color, is_active, status, assignment_paused, last_login_at, created_at")
       .single();
 
     if (updateError || !user) return jsonResponse({ error: "Failed to update user" }, 500);

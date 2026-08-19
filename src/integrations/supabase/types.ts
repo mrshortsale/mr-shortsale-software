@@ -929,6 +929,7 @@ export type Database = {
           google_id: string | null
           id: string
           is_active: boolean
+          assignment_paused: boolean
           last_login_at: string | null
           microsoft_id: string | null
           name: string
@@ -944,6 +945,7 @@ export type Database = {
           google_id?: string | null
           id?: string
           is_active?: boolean
+          assignment_paused?: boolean
           last_login_at?: string | null
           microsoft_id?: string | null
           name: string
@@ -959,6 +961,7 @@ export type Database = {
           google_id?: string | null
           id?: string
           is_active?: boolean
+          assignment_paused?: boolean
           last_login_at?: string | null
           microsoft_id?: string | null
           name?: string

@@ -285,7 +285,8 @@
       "pending": "Pending",
       "rejected": "Rejected",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "paused": "Assignment paused"
     },
     "roles": {
       "ceo": "CEO",
@@ -321,6 +322,8 @@
       "approveImmediatelyDesc": "If unchecked, account will be created as pending and must be approved separately.",
       "accountActive": "Account Active",
       "accountActiveDesc": "Deactivated users cannot log in.",
+      "assignmentPaused": "Pause lead assignment",
+      "assignmentPausedDesc": "Skip this rep in round-robin (vacation / sick). They can still sign in and keep existing leads.",
       "newPassword": "New Password",
       "newPasswordOptional": "(optional)",
       "newPasswordPlaceholder": "Leave blank to keep current",

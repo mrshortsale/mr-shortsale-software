@@ -58,6 +58,7 @@ const editUserSchema = z.object({
   role: z.enum(['ceo', 'rep']),
   avatarColor: z.string(),
   isActive: z.boolean(),
+  assignmentPaused: z.boolean(),
   password: z.string().optional(),
 });
 
@@ -90,9 +91,19 @@ function StatusBadge({ user }: { user: AdminUserRow }) {
   if (user.status === 'rejected') {
     return <span className="inline-flex items-center gap-1.5 text-xs text-destructive font-medium"><UserX size={11} />{t('users.status.rejected')}</span>;
   }
-  return user.is_active
-    ? <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />{t('users.status.active')}</span>
-    : <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />{t('users.status.inactive')}</span>;
+  if (!user.is_active) {
+    return <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium"><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />{t('users.status.inactive')}</span>;
+  }
+  return (
+    <span className="inline-flex items-center gap-2 flex-wrap">
+      <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />{t('users.status.active')}</span>
+      {user.assignment_paused && user.role === 'rep' && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          {t('users.status.paused')}
+        </span>
+      )}
+    </span>
+  );
 }
 
 function sortUsersByName(list: AdminUserRow[]): AdminUserRow[] {
@@ -242,14 +253,14 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
     resolver: zodResolver(editUserSchema),
     defaultValues: {
       name: user.name, role: user.role, avatarColor: user.avatar_color,
-      isActive: user.is_active, password: '',
+      isActive: user.is_active, assignmentPaused: user.assignment_paused ?? false, password: '',
     },
   });
 
   useEffect(() => {
     form.reset({
       name: user.name, role: user.role, avatarColor: user.avatar_color,
-      isActive: user.is_active, password: '',
+      isActive: user.is_active, assignmentPaused: user.assignment_paused ?? false, password: '',
     });
   }, [user, form]);
 
@@ -257,7 +268,8 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
     setServerError('');
     const result = await adminUpdateUser(user.id, {
       name: values.name, role: values.role, avatarColor: values.avatarColor,
-      isActive: values.isActive, password: values.password || undefined,
+      isActive: values.isActive, assignmentPaused: values.assignmentPaused,
+      password: values.password || undefined,
     });
     if (result.error) { setServerError(result.error); return; }
     if (!result.user) { setServerError('Failed to update user'); return; }
@@ -319,6 +331,20 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
                 </FormControl>
               </FormItem>
             )} />
+
+            {form.watch('role') === 'rep' && (
+              <FormField control={form.control} name="assignmentPaused" render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <FormLabel className="mb-0">{t('users.form.assignmentPaused')}</FormLabel>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('users.form.assignmentPausedDesc')}</p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )} />
+            )}
 
             <FormField control={form.control} name="password" render={({ field }) => (
               <FormItem>

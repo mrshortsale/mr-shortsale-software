@@ -16,7 +16,7 @@ import {
 } from "../_shared/batchleads.ts";
 import {
   assignRepsRoundRobin,
-  loadActiveRepIds,
+  loadAssignableRepIds,
   loadRoundRobinIndex,
   saveRoundRobinIndex,
 } from "../_shared/roundRobin.ts";
@@ -565,7 +565,7 @@ Deno.serve(async (req) => {
 
   // ─── Round-robin setup (once per invocation) ───────────────────────────────
 
-  const repIds = await loadActiveRepIds(supabase);
+  const repIds = await loadAssignableRepIds(supabase);
   const assignmentSkippedNoReps = repIds.length === 0;
   let rrIndex = assignmentSkippedNoReps ? 0 : await loadRoundRobinIndex(supabase);
 

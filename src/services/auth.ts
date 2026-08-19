@@ -169,6 +169,7 @@ export interface AdminUserRow {
   role: 'ceo' | 'rep';
   avatar_color: string;
   is_active: boolean;
+  assignment_paused: boolean;
   status: 'pending' | 'active' | 'rejected';
   last_login_at: string | null;
   created_at: string;
@@ -252,7 +253,7 @@ export async function adminCreateUser(payload: {
 
 export async function adminUpdateUser(
   userId: string,
-  updates: { name?: string; role?: 'ceo' | 'rep'; avatarColor?: string; isActive?: boolean; password?: string }
+  updates: { name?: string; role?: 'ceo' | 'rep'; avatarColor?: string; isActive?: boolean; assignmentPaused?: boolean; password?: string }
 ): Promise<{ user?: AdminUserRow; error?: string }> {
   try {
     const res = await fetch(`${BASE_URL}/admin-users`, {
