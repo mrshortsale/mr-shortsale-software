@@ -235,8 +235,12 @@ Deno.serve(async (req) => {
         .eq("assigned_rep", targetUser.name);
     }
 
+    // Clear FKs that lack ON DELETE SET NULL (blocks deleting CEOs who configured integrations / ran agents)
+    await supabase.from("integration_credentials").update({ configured_by: null }).eq("configured_by", userId);
+    await supabase.from("agent_runs").update({ triggered_by: null }).eq("triggered_by", userId);
+
     const { error: deleteError } = await supabase.from("users").delete().eq("id", userId);
-    if (deleteError) return jsonResponse({ error: "Failed to delete user" }, 500);
+    if (deleteError) return jsonResponse({ error: deleteError.message || "Failed to delete user" }, 500);
 
     return jsonResponse({ success: true });
   }

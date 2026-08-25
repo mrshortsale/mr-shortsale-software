@@ -15,6 +15,7 @@ import {
   adminUpdateUser, adminDeleteUser, adminApproveUser, adminRejectUser,
   type AdminUserRow,
 } from '@/services/auth';
+import { PasswordInput } from '@/components/auth/PasswordInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -183,7 +184,7 @@ function CreateUserDialog({ open, onClose, onCreated }: {
             )} />
 
             <FormField control={form.control} name="password" render={({ field }) => (
-              <FormItem><FormLabel>{t('users.form.tempPassword')}</FormLabel><FormControl><Input placeholder={t('users.form.tempPasswordPlaceholder')} type="password" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{t('users.form.tempPassword')}</FormLabel><FormControl><PasswordInput placeholder={t('users.form.tempPasswordPlaceholder')} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
 
             <FormField control={form.control} name="role" render={({ field }) => (
@@ -349,7 +350,7 @@ function EditUserDialog({ user, open, onClose, onUpdated }: {
             <FormField control={form.control} name="password" render={({ field }) => (
               <FormItem>
                 <FormLabel>{t('users.form.newPassword')} <span className="text-muted-foreground font-normal">{t('users.form.newPasswordOptional')}</span></FormLabel>
-                <FormControl><Input placeholder={t('users.form.newPasswordPlaceholder')} type="password" {...field} /></FormControl>
+                <FormControl><PasswordInput placeholder={t('users.form.newPasswordPlaceholder')} {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
