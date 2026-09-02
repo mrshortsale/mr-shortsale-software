@@ -501,7 +501,7 @@
     "categoryBadge": "{{label}} · {{total}} total ({{today}} hoy)",
     "howItWorks": "Cómo funciona Velocidad de Respuesta",
     "howItWorksNote": "Los leads de Meta Ads aparecen aquí automáticamente y se asignan a los reps en round-robin.",
-    "step1": "Un prospecto envía un formulario de Meta Ads (AD Leads, New Campaign, Updated Leads o Realtors)",
+    "step1": "Un prospecto envía un formulario de Meta Ads (AD Leads, Spanish Leads o Realtors)",
     "step2": "El lead se ingiere y aparece aquí en minutos con un temporizador de frescura",
     "step3": "Temporizador rojo después de 5 minutos — responde lo más rápido posible",
     "step4": "Cada lead nuevo se asigna automáticamente a un rep activo en round-robin"

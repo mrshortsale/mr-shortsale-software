@@ -501,7 +501,7 @@
     "categoryBadge": "{{label}} · {{total}} total ({{today}} today)",
     "howItWorks": "How Speed-to-Lead works",
     "howItWorksNote": "Meta Ads leads appear here automatically and are assigned to reps in round-robin.",
-    "step1": "A prospect submits a Meta Ads lead form (AD Leads, New Campaign, Updated Leads, or Realtors)",
+    "step1": "A prospect submits a Meta Ads lead form (AD Leads, Spanish Leads, or Realtors)",
     "step2": "The lead is ingested and appears here within minutes with a freshness timer",
     "step3": "Red timer after 5 minutes — respond as quickly as possible",
     "step4": "Each new lead is round-robin assigned to an active sales rep automatically"

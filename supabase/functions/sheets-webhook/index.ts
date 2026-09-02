@@ -27,6 +27,7 @@ const DEFAULT_TAB = "AD Leads";
 
 const VALID_TABS = new Set([
   "AD Leads",
+  "Spanish Leads",
   "New Campaign Leads",
   "Updated Leads",
   "realtors",
@@ -121,7 +122,7 @@ function resolveLeadId(body: SheetsLeadPayload): { leadId: string; warnings: str
 
 async function processLead(
   body: SheetsLeadPayload,
-): Promise<{ id: string; assigned: boolean; warnings: string[] }> {
+): Promise<{ id: string; assigned: boolean; updated: boolean; warnings: string[] }> {
   const tabResult = resolveTab(body);
   const leadIdResult = resolveLeadId(body);
   const tab = tabResult.tab;
@@ -138,7 +139,6 @@ async function processLead(
     warnings,
   });
 
-  const id = buildLeadId(tab, leadId);
   const owner = typeof body.name === "string" ? body.name.trim() : "";
   const phone = typeof body.phone === "string" ? body.phone.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim() : "";
@@ -147,25 +147,32 @@ async function processLead(
   const address = typeof body.address === "string" ? body.address.trim() : "";
   const campaignName = typeof body.campaign_name === "string" ? body.campaign_name.trim() : "";
   const leadType = tab === "realtors" ? "Realtor" : "Inbound";
+  const language = tab === "Spanish Leads" ? "ES" : "EN";
 
+  // Dedup key is UNIQUE (source, external_id), not the tab-prefixed primary id.
   const { data: existing, error: lookupErr } = await supabase
     .from("inventory_leads")
-    .select("id, assigned_rep_id, status")
-    .eq("id", id)
+    .select("id, assigned_rep_id, status, received_at")
+    .eq("source", "GoogleSheets")
+    .eq("external_id", leadId)
     .maybeSingle();
 
   if (lookupErr) {
-    logError("lookup_failed", { id, message: lookupErr.message });
+    logError("lookup_failed", { leadId, message: lookupErr.message });
     throw new Error(`Lookup failed: ${lookupErr.message}`);
   }
 
-  log("lookup_result", { id, exists: Boolean(existing) });
+  const id = (existing as { id: string } | null)?.id ?? buildLeadId(tab, leadId);
+  const updated = Boolean(existing);
+  log("lookup_result", { id, leadId, exists: updated });
 
   let assignedRepId: string | null =
     (existing as { assigned_rep_id: string | null } | null)?.assigned_rep_id ?? null;
   let assigned = false;
   const existingStatus =
     (existing as { status: string } | null)?.status ?? "New";
+  const existingReceivedAt =
+    (existing as { received_at: string } | null)?.received_at ?? null;
 
   if (!existing) {
     const repIds = await loadAssignableRepIds(supabase);
@@ -200,11 +207,11 @@ async function processLead(
     equity_pct: 0,
     days_to_auction: 999,
     score: 5,
-    language: "EN",
+    language,
     status: existingStatus,
     filing_type: "Inbound",
     lead_type: leadType,
-    received_at: parseReceivedAt(body.received_at),
+    received_at: existingReceivedAt ?? parseReceivedAt(body.received_at),
     ingested_at: new Date().toISOString(),
     assigned_rep_id: assignedRepId,
     raw_payload: body,
@@ -212,16 +219,16 @@ async function processLead(
 
   const { error } = await supabase
     .from("inventory_leads")
-    .upsert(row, { onConflict: "id" });
+    .upsert(row, { onConflict: "source,external_id" });
 
   if (error) {
-    logError("upsert_failed", { id, message: error.message, code: error.code });
+    logError("upsert_failed", { id, leadId, message: error.message, code: error.code });
     throw new Error(`Upsert failed: ${error.message}`);
   }
 
-  log("upsert_ok", { id, tab, owner: owner || "Unknown", assigned, assignedRepId });
+  log("upsert_ok", { id, tab, owner: owner || "Unknown", assigned, updated, assignedRepId });
 
-  return { id, assigned, warnings };
+  return { id, assigned, updated, warnings };
 }
 
 Deno.serve(async (req) => {
@@ -268,6 +275,7 @@ Deno.serve(async (req) => {
       received: true,
       id: result.id,
       assigned: result.assigned,
+      updated: result.updated,
       warnings: result.warnings.length > 0 ? result.warnings : undefined,
       warning: result.warnings[0],
       timestamp: new Date().toISOString(),
@@ -276,6 +284,6 @@ Deno.serve(async (req) => {
     const message = err instanceof Error ? err.message : "Unknown error";
     const latencyMs = Date.now() - startedAt;
     logError("request_failed", { message, latencyMs, keys: Object.keys(body) });
-    return jsonResponse({ received: true, warning: message, error: message }, 200);
+    return jsonResponse({ received: false, error: message }, 500);
   }
 });

@@ -9,8 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CATEGORY_CONFIG = [
   { id: 'ad-leads', label: 'AD Leads', dataSource: 'AD Leads' },
-  { id: 'new-campaign', label: 'New Campaign', dataSource: 'New Campaign Leads' },
-  { id: 'updated-leads', label: 'Updated Leads', dataSource: 'Updated Leads' },
+  { id: 'spanish-leads', label: 'Spanish Leads', dataSource: 'Spanish Leads' },
   { id: 'realtors', label: 'Realtors', dataSource: 'realtors' },
 ] as const;
 
@@ -75,7 +74,7 @@ export default function SpeedToLeadScreen() {
       <SpeedToLeadFeed maxLeads={5} />
 
       <Tabs defaultValue="ad-leads" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-auto gap-1">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto gap-1">
           {CATEGORY_CONFIG.map((cat) => (
             <TabsTrigger key={cat.id} value={cat.id} className="text-xs sm:text-sm py-2 whitespace-normal text-left">
               {t('speed.categoryBadge', {

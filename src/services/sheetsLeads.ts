@@ -5,8 +5,7 @@ const BASE_URL = `${SUPABASE_URL}/functions/v1`;
 
 export const SHEET_TAB_NAMES = [
   'AD Leads',
-  'New Campaign Leads',
-  'Updated Leads',
+  'Spanish Leads',
   'realtors',
 ] as const;
 
@@ -15,8 +14,7 @@ export type SheetTabName = (typeof SHEET_TAB_NAMES)[number];
 /** Maps internal data_source keys to user-facing category labels. */
 export const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   'AD Leads': 'AD Leads',
-  'New Campaign Leads': 'New Campaign',
-  'Updated Leads': 'Updated Leads',
+  'Spanish Leads': 'Spanish Leads',
   'realtors': 'Realtors',
 };
 

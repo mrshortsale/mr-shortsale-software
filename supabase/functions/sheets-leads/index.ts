@@ -19,8 +19,7 @@ const supabase = createClient(
 
 const SHEET_TABS = [
   "AD Leads",
-  "New Campaign Leads",
-  "Updated Leads",
+  "Spanish Leads",
   "realtors",
 ] as const;
 
