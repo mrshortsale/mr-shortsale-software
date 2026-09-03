@@ -1,0 +1,17 @@
+{
+  "schema_version": "1",
+  "feature_id": "normalize-state",
+  "title": "Normalize state",
+  "description": "Zapier webhook that converts messy US state values to two-letter abbreviations.",
+  "source_paths": [
+    "supabase/functions/normalize-state/",
+    "supabase/functions/_shared/usState.ts"
+  ],
+  "related_paths": [
+    "supabase/config.toml"
+  ],
+  "entrypoints": [
+    "supabase/functions/normalize-state/index.ts"
+  ],
+  "mapping_confidence": "high"
+}

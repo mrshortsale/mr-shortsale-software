@@ -38,6 +38,10 @@ verify_jwt = false
 [functions.sheets-webhook]
 verify_jwt = false
 
+# Zapier state normalizer — auth via X-Webhook-Secret inside the function.
+[functions.normalize-state]
+verify_jwt = false
+
 # Auth handled inside the function (CEO/rep x-auth-token).
 [functions.sheets-leads]
 verify_jwt = false
