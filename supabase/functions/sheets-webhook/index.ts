@@ -140,7 +140,7 @@ async function processLead(
   });
 
   const owner = typeof body.name === "string" ? body.name.trim() : "";
-  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
+  const phone = typeof body.phone === "string" ? body.phone.replace(/\D/g, "") : "";
   const email = typeof body.email === "string" ? body.email.trim() : "";
   const city = typeof body.city === "string" ? body.city.trim() : "";
   const state = typeof body.state === "string" ? body.state.trim() : "";
